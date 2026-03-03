@@ -154,13 +154,15 @@ export async function createMessageWithAutoReply(options: {
       ORDER BY depth ASC;
     `)) as LineageMessage[];
 
-    // 3. Convert lineage into the minimal LLM message array.
-    const llmMessages: LlmMessage[] = lineage.map((m) => ({
-      // Prisma `Role` enum values align with the OpenAI/Groq roles,
-      // so we can pass them through directly.
-      role: m.role,
-      content: m.content
-    }));
+    const llmMessages: LlmMessage[] = [
+      {
+        role: 'system',
+        content:
+          'Be concise and direct. Keep answers under 4 sentences unless the user asks for detail. ' +
+          'Use markdown for formatting. For math, use LaTeX with $...$ for inline and $$...$$ for display equations.'
+      },
+      ...lineage.map((m) => ({ role: m.role, content: m.content }))
+    ];
 
     // 4. Call Groq with the pruned context.
     const assistantContent = await callGroqWithContext(llmMessages);
@@ -197,41 +199,25 @@ async function callGroqWithContext(messages: LlmMessage[]): Promise<string> {
     throw new Error('GROQ_API_KEY is not configured in the environment.');
   }
 
-  const groq = new Groq({ apiKey });
+  const groq = new Groq({ apiKey, timeout: 30_000 });
 
-  // Hard timeout (in milliseconds) for the LLM call.
-  const TIMEOUT_MS = 30_000;
-
-  // Helper to actually perform one Groq call.
+  // Helper to perform one Groq call with a hard timeout wrapper.
   const performRequest = async () => {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => {
-      controller.abort();
-    }, TIMEOUT_MS);
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new LlmTimeoutError('LLM call exceeded 30s timeout.')), 30_000);
+    });
 
-    try {
-      const completion = await groq.chat.completions.create({
-        messages,
-        // Prefer llama-3.3-70b-versatile, fall back to gemma2-9b-it
-        model: process.env.GROQ_MODEL ?? 'llama-3.3-70b-versatile',
-        // Pass AbortSignal so the request can be cancelled on timeout.
-        signal: controller.signal
-      } as any);
+    const completionPromise = groq.chat.completions.create({
+      messages,
+      model: process.env.GROQ_MODEL ?? 'llama-3.3-70b-versatile'
+    });
 
-      const content =
-        completion.choices?.[0]?.message?.content ??
-        'The model did not return any content.';
+    const completion = await Promise.race([completionPromise, timeoutPromise]);
 
-      return content;
-    } catch (err: unknown) {
-      // Distinguish timeout from other errors.
-      if (err instanceof Error && err.name === 'AbortError') {
-        throw new LlmTimeoutError('LLM call exceeded 30s timeout.');
-      }
-      throw err;
-    } finally {
-      clearTimeout(timeout);
-    }
+    return (
+      completion.choices?.[0]?.message?.content ??
+      'The model did not return any content.'
+    );
   };
 
   // Wrap the Groq call in an exponential backoff retry strategy.

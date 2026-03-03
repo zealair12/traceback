@@ -1,12 +1,24 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-/* Global app shell styling for TraceBack.
- * We avoid any default margins and make the root fill the viewport
- * so the 3-column layout in `App.tsx` can use full-screen flexbox.
+/*
+ * Custom design tokens for TraceBack.
+ * Tailwind v4 uses @theme instead of tailwind.config.js.
+ * These become utility classes like `bg-background`, `bg-sidebar`, etc.
  */
+@theme {
+  --color-background: #0d0d0d;
+  --color-sidebar: #111111;
+  --color-tree: #111111;
+  --color-chat: #0d0d0d;
+  --color-bubbleUser: #2f2f2f;
+  --color-inputBg: #1e1e1e;
+  --color-borderSubtle: #1f2933;
+}
 
+/*
+ * Make the root elements fill the viewport so the flexbox
+ * layout in App.tsx can use h-screen / w-screen correctly.
+ */
 html,
 body,
 #root {
@@ -19,5 +31,138 @@ body,
 body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
   background-color: #0d0d0d;
-  color: #e5e7eb; /* tailwind gray-200 */
+  color: #e5e7eb;
+}
+
+/* Prose styling for rendered markdown in AI responses */
+.prose-tb {
+  line-height: 1.7;
+}
+.prose-tb p {
+  margin: 0.5em 0;
+}
+.prose-tb p:first-child {
+  margin-top: 0;
+}
+.prose-tb p:last-child {
+  margin-bottom: 0;
+}
+.prose-tb h1, .prose-tb h2, .prose-tb h3, .prose-tb h4 {
+  color: #e2e8f0;
+  font-weight: 600;
+  margin: 1em 0 0.4em;
+  line-height: 1.3;
+}
+.prose-tb h1 { font-size: 1.25em; }
+.prose-tb h2 { font-size: 1.1em; }
+.prose-tb h3 { font-size: 1em; }
+.prose-tb strong {
+  color: #f1f5f9;
+  font-weight: 600;
+}
+.prose-tb em {
+  color: #cbd5e1;
+}
+.prose-tb ul, .prose-tb ol {
+  padding-left: 1.5em;
+  margin: 0.5em 0;
+}
+.prose-tb ul {
+  list-style-type: disc;
+}
+.prose-tb ol {
+  list-style-type: decimal;
+}
+.prose-tb li {
+  margin: 0.25em 0;
+}
+.prose-tb li::marker {
+  color: #475569;
+}
+.prose-tb code {
+  background: #1e293b;
+  color: #a5f3fc;
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+  font-size: 0.88em;
+  font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', monospace;
+}
+.prose-tb pre {
+  background: #0f172a;
+  border: 1px solid #1e293b;
+  border-radius: 8px;
+  padding: 0.9em 1.1em;
+  margin: 0.6em 0;
+  overflow-x: auto;
+}
+.prose-tb pre code {
+  background: none;
+  padding: 0;
+  color: #e2e8f0;
+  font-size: 0.85em;
+  line-height: 1.6;
+}
+.prose-tb blockquote {
+  border-left: 3px solid #334155;
+  padding-left: 1em;
+  margin: 0.6em 0;
+  color: #94a3b8;
+}
+.prose-tb a {
+  color: #34d399;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.prose-tb a:hover {
+  color: #6ee7b7;
+}
+.prose-tb table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.6em 0;
+  font-size: 0.9em;
+}
+.prose-tb th, .prose-tb td {
+  border: 1px solid #1e293b;
+  padding: 0.4em 0.7em;
+  text-align: left;
+}
+.prose-tb th {
+  background: #0f172a;
+  color: #e2e8f0;
+  font-weight: 600;
+}
+.prose-tb tr:nth-child(even) {
+  background: rgba(15, 23, 42, 0.4);
+}
+.prose-tb hr {
+  border: none;
+  border-top: 1px solid #1e293b;
+  margin: 1em 0;
+}
+
+/* KaTeX overrides for dark theme */
+.katex {
+  color: #e2e8f0 !important;
+  font-size: 1em !important;
+}
+.katex-display {
+  margin: 0.6em 0 !important;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* React Flow controls: make icons contrast against dark backgrounds */
+.react-flow__controls-button {
+  background: #1a1a2e !important;
+  border: 1px solid #2a2a40 !important;
+  border-radius: 6px !important;
+  fill: #94a3b8 !important;
+}
+.react-flow__controls-button:hover {
+  background: #2a2a40 !important;
+  fill: #e2e8f0 !important;
+}
+.react-flow__controls-button svg {
+  fill: inherit !important;
 }

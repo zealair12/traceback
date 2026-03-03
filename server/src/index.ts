@@ -1,15 +1,8 @@
-// Entry point for the TraceBack Express server.
-// This file wires together:
-// - Express HTTP server and middleware.
-// - Core route for sending messages (`POST /message/send`).
-// - Error handling and graceful responses for edge cases.
-//
-// The actual business logic for dealing with messages and
-// database access lives in the `messageService` module.
-
 import express, { type Request, type Response, type NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+
+dotenv.config();
 
 import { prisma } from './prismaClient.js';
 import {
@@ -18,14 +11,9 @@ import {
   LlmTimeoutError
 } from './services/messageService.js';
 
-dotenv.config();
-
 const app = express();
 const port = process.env.PORT ?? 4000;
 
-// --- Middleware -------------------------------------------------------------
-
-// Allow the React client (running on another port) to talk to this API.
 app.use(
   cors({
     origin: process.env.CLIENT_ORIGIN ?? '*',
@@ -33,65 +21,53 @@ app.use(
   })
 );
 
-// Parse JSON bodies for incoming requests.
 app.use(express.json());
 
 // --- Routes -----------------------------------------------------------------
 
-// Simple endpoint to create a new session.
-// This is primarily used by scripts/tests and the frontend sidebar.
-//
-// Request body (minimal):
-// {
-//   name?: string
-// }
-//
-// Response:
-// {
-//   id: string,
-//   name?: string,
-//   createdAt: string,
-//   updatedAt: string
-// }
+app.get('/health', (_req: Request, res: Response) => {
+  res.json({ status: 'ok' });
+});
+
+// List all sessions (used by the sidebar).
+app.get('/sessions', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const sessions = await prisma.session.findMany({
+      orderBy: { updatedAt: 'desc' }
+    });
+    res.json(sessions);
+  } catch (error: unknown) {
+    next(error);
+  }
+});
+
+// Create a new session.
 app.post('/sessions', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { name } = req.body ?? {};
     const session = await prisma.session.create({
-      data: {
-        name: typeof name === 'string' ? name : null
-      }
+      data: { name: typeof name === 'string' ? name : null }
     });
-
     res.status(201).json(session);
   } catch (error: unknown) {
     next(error);
   }
 });
 
-// Health check endpoint so we can quickly verify the server is online.
-app.get('/health', (_req: Request, res: Response) => {
-  res.json({ status: 'ok' });
+// Fetch the full tree of messages for a session (for React Flow).
+app.get('/sessions/:id/messages', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const messages = await prisma.message.findMany({
+      where: { sessionId: req.params.id },
+      orderBy: { createdAt: 'asc' }
+    });
+    res.json(messages);
+  } catch (error: unknown) {
+    next(error);
+  }
 });
 
-// Core route used by the frontend to send a new user message.
-//
-// Request body:
-// {
-//   session_id: string,
-//   parent_id?: string | null,
-//   content: string
-// }
-//
-// Response body (simplified example):
-// {
-//   userMessage: Message,
-//   assistantMessage: Message,
-//   lineage: LineageMessage[]
-// }
-//
-// The frontend can:
-// - Use `lineage` to render the linear path in the chat panel.
-// - Use `userMessage` and `assistantMessage` to update the tree view.
+// Send a new user message -> get LLM reply.
 app.post('/message/send', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { session_id: sessionId, parent_id: parentIdRaw, content } = req.body ?? {};
@@ -107,11 +83,7 @@ app.post('/message/send', async (req: Request, res: Response, next: NextFunction
 
     const parentId = parentIdRaw ? String(parentIdRaw) : null;
 
-    const result = await createMessageWithAutoReply({
-      sessionId,
-      parentId,
-      content
-    });
+    const result = await createMessageWithAutoReply({ sessionId, parentId, content });
 
     res.status(201).json({
       userMessage: result.userMessage,
@@ -123,20 +95,31 @@ app.post('/message/send', async (req: Request, res: Response, next: NextFunction
   }
 });
 
+// Delete a message and its entire subtree (cascade via foreign key).
+app.delete('/messages/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    await prisma.$executeRaw`
+      WITH RECURSIVE subtree AS (
+        SELECT id FROM messages WHERE id = CAST(${id} AS uuid)
+        UNION ALL
+        SELECT m.id FROM messages m INNER JOIN subtree s ON m.parent_id = s.id
+      )
+      DELETE FROM messages WHERE id IN (SELECT id FROM subtree);
+    `;
+    res.json({ deleted: true });
+  } catch (error: unknown) {
+    next(error);
+  }
+});
+
 // --- Error handling ---------------------------------------------------------
 
-// Centralized error handler so that all errors are formatted consistently.
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   let status = 500;
   let label = 'Unknown Error';
 
-  if (
-    err instanceof Prisma.PrismaClientKnownRequestError ||
-    err instanceof Prisma.PrismaClientInitializationError ||
-    err instanceof Prisma.PrismaClientValidationError
-  ) {
-    label = 'Database Error';
-  } else if (err instanceof ApiRateLimitError) {
+  if (err instanceof ApiRateLimitError) {
     label = 'API Rate Limit';
     status = 429;
   } else if (err instanceof LlmTimeoutError) {
@@ -146,22 +129,14 @@ app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
     label = err.name || 'Application Error';
   }
 
-  // For now we just log to stdout with a clear label.
-  // eslint-disable-next-line no-console
   console.error(`[${label}]`, err);
 
   const message = err instanceof Error ? err.message : 'Internal server error';
-
-  res.status(status).json({
-    error: message,
-    type: label
-  });
+  res.status(status).json({ error: message, type: label });
 });
 
 // --- Server bootstrap -------------------------------------------------------
 
 app.listen(port, () => {
-  // eslint-disable-next-line no-console
   console.log(`TraceBack server listening on http://localhost:${port}`);
 });
-

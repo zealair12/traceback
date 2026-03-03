@@ -1,68 +1,74 @@
-import { useState, useRef, useEffect } from 'react';
-import type { Message } from '../types';
-import { BranchPopup } from './BranchPopup';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
+import type { ChatMessage } from '../App';
+import { ContextMenu, type ContextMenuAction } from './ContextMenu';
+import { normalizeLatex } from '../utils/text';
 
 interface MessageBubbleProps {
-  message: Message;
-  onBranchFromMessage: (messageId: string) => void;
+  message: ChatMessage;
+  onBranchFromMessage: (messageId: string, selectedText: string, action: 'dig' | 'ask') => void;
 }
 
 /**
- * Single message in the chat feed.
- *
- * Responsibilities:
- * - Render user vs assistant styling.
- * - Detect text selections within this bubble and surface a
- *   "Branch from here" popup via the `BranchPopup` component.
- * - Notify the parent (`ChatPanel`) when the branch action is chosen.
+ * Renders a single chat message with markdown formatting.
+ * Assistant messages support right-click context menu for branching.
  */
 export function MessageBubble({ message, onBranchFromMessage }: MessageBubbleProps) {
-  const [popupPosition, setPopupPosition] = useState<{ x: number; y: number } | null>(null);
-  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; text: string } | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const selectionRef = useRef<string>('');
 
+  // Track current selection within this bubble
   useEffect(() => {
-    const handleClickAnywhere = () => {
-      setPopupPosition(null);
+    const trackSelection = () => {
+      const sel = window.getSelection();
+      if (sel && !sel.isCollapsed && containerRef.current?.contains(sel.anchorNode)) {
+        selectionRef.current = sel.toString().trim();
+      } else {
+        selectionRef.current = '';
+      }
     };
-    window.addEventListener('click', handleClickAnywhere);
-    return () => window.removeEventListener('click', handleClickAnywhere);
+    document.addEventListener('selectionchange', trackSelection);
+    return () => document.removeEventListener('selectionchange', trackSelection);
   }, []);
 
-  const handleMouseUp = () => {
-    const selection = window.getSelection();
-    if (!selection || selection.isCollapsed) {
-      setPopupPosition(null);
-      return;
-    }
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    if (message.role !== 'assistant') return;
 
-    // Ensure selection is inside this bubble only.
-    const anchorNode = selection.anchorNode;
-    if (!anchorNode || !containerRef.current) {
-      setPopupPosition(null);
-      return;
-    }
-    const isInside = containerRef.current.contains(anchorNode);
-    if (!isInside) {
-      setPopupPosition(null);
-      return;
-    }
+    const text = selectionRef.current || window.getSelection()?.toString().trim() || '';
+    if (!text) return;
 
-    const range = selection.getRangeAt(0);
-    const rect = range.getBoundingClientRect();
-    if (!rect) {
-      setPopupPosition(null);
-      return;
-    }
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY, text });
+  }, [message.role]);
 
-    setPopupPosition({
-      x: rect.left + rect.width / 2,
-      y: rect.top
-    });
-  };
+  const closeContextMenu = useCallback(() => setContextMenu(null), []);
 
-  const handleBranch = () => {
-    setPopupPosition(null);
-    onBranchFromMessage(message.id);
+  const getActions = (): ContextMenuAction[] => {
+    if (!contextMenu) return [];
+    const text = contextMenu.text;
+    return [
+      {
+        label: 'Dig deeper',
+        icon: '↳',
+        onClick: () => onBranchFromMessage(message.id, text, 'dig')
+      },
+      {
+        label: 'Ask about this…',
+        icon: '?',
+        onClick: () => onBranchFromMessage(message.id, text, 'ask')
+      },
+      {
+        label: 'Copy',
+        icon: '⎘',
+        shortcut: '⌘C',
+        onClick: () => navigator.clipboard.writeText(text)
+      }
+    ];
   };
 
   const isUser = message.role === 'user';
@@ -70,33 +76,39 @@ export function MessageBubble({ message, onBranchFromMessage }: MessageBubblePro
   if (isUser) {
     return (
       <div className="flex justify-end">
-        <div
-          ref={containerRef}
-          onMouseUp={handleMouseUp}
-          className="max-w-xl rounded-3xl bg-bubbleUser px-4 py-3 text-sm text-white"
-        >
+        <div className="max-w-xl rounded-3xl bg-bubbleUser px-4 py-3 text-sm text-white whitespace-pre-wrap">
           {message.content}
         </div>
-        {popupPosition && <BranchPopup x={popupPosition.x} y={popupPosition.y} onBranch={handleBranch} />}
       </div>
     );
   }
 
-  // Assistant / system messages: left-aligned text with a simple avatar.
   return (
     <div className="flex items-start gap-3">
-      <div className="w-7 h-7 rounded-full bg-gray-800 flex items-center justify-center text-[10px] text-gray-200 mt-1">
+      <div className="w-7 h-7 rounded-full bg-gray-800 flex items-center justify-center text-[10px] text-gray-200 mt-1 flex-shrink-0">
         TB
       </div>
       <div
         ref={containerRef}
-        onMouseUp={handleMouseUp}
-        className="flex-1 text-sm text-gray-100 leading-relaxed"
+        onContextMenu={handleContextMenu}
+        className="flex-1 text-sm text-gray-100 leading-relaxed min-w-0 prose-tb"
       >
-        {message.content}
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm, remarkMath]}
+          rehypePlugins={[rehypeKatex]}
+        >
+          {normalizeLatex(message.content)}
+        </ReactMarkdown>
       </div>
-      {popupPosition && <BranchPopup x={popupPosition.x} y={popupPosition.y} onBranch={handleBranch} />}
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          actions={getActions()}
+          selectedText={contextMenu.text}
+          onClose={closeContextMenu}
+        />
+      )}
     </div>
   );
 }
-

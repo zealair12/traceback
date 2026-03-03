@@ -1,0 +1,101 @@
+/// Prisma schema for the TraceBack backend.
+/// This file defines the relational structure that enables
+/// non-linear, tree-based conversations while still allowing
+/// us to reconstruct a linear "context path" (root -> active node)
+/// for any point in the conversation.
+///
+/// The key design goals:
+/// - A `Session` groups related conversation trees.
+/// - A `Message` is a node in a directed acyclic graph (DAG)
+///   implemented as a parent/child tree with optional branching.
+/// - Each `Message` knows its depth, so we can enforce a MAX_DEPTH
+///   constraint without expensive recursive counting.
+/// - Recursive CTEs (implemented in raw SQL from the Node backend)
+///   are used to fetch the lineage (ancestors) of any message
+///   to build a minimal, non-polluted LLM context.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// A conversational session.
+/// Each session represents an independent tree of messages.
+model Session {
+  /// Primary key for the session.
+  id        String    @id @default(uuid())
+
+  /// Optional human-friendly name for the session
+  /// (e.g. "Research on retrieval-augmented generation").
+  name      String?
+
+  /// Timestamp for when the session was created.
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  /// Timestamp for last activity; can be updated whenever
+  /// new messages are added to this session.
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  /// One-to-many relation to messages belonging to this session.
+  messages  Message[]
+
+  @@map("sessions")
+}
+
+/// Role of a message in the conversation.
+/// This mirrors common LLM APIs (user / assistant / system).
+enum Role {
+  user
+  assistant
+  system
+}
+
+/// A single node in the conversation tree.
+/// This table is self-referential: each message may have a parent,
+/// and any message can have many children (branches).
+model Message {
+  /// Primary key for the message (UUID).
+  id         String    @id @default(uuid())
+
+  /// Foreign key pointing to the `Session` that owns this message.
+  sessionId  String    @map("session_id")
+  session    Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  /// Optional foreign key to the parent message.
+  /// Null indicates a root message within the session.
+  parentId   String?   @map("parent_id")
+  parent     Message?  @relation("MessageToChildren", fields: [parentId], references: [id], onDelete: Cascade)
+
+  /// Back-reference to children; this is how branches are formed.
+  children   Message[] @relation("MessageToChildren")
+
+  /// Role of the author of this message.
+  role       Role
+
+  /// Raw content of the message.
+  /// This is what will be sent to the LLM as part of context.
+  content    String
+
+  /// Depth of this node in the tree.
+  /// - 0 for root-level messages (no parent)
+  /// - parent.depth + 1 for children
+  /// This is maintained at the application layer (Node server)
+  /// whenever a new message is created.
+  depth      Int
+
+  /// Optional human-readable label for the branch stemming
+  /// from this message (e.g. "Alternative approach").
+  branchLabel String?  @map("branch_label")
+
+  /// Creation timestamp for ordering messages within a session.
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  @@index([sessionId])
+  @@index([parentId])
+  @@map("messages")
+}
+

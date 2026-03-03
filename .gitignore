@@ -1,0 +1,76 @@
+# Root .gitignore for the TraceBack full-stack project
+
+# ------------------------------
+# Node.js / JavaScript artifacts
+# ------------------------------
+
+# All node_modules for both server and client
+node_modules/
+server/node_modules/
+client/node_modules/
+
+# Lockfiles (optional, keep if you prefer to commit them)
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+# ------------------------------
+# Environment / secrets
+# ------------------------------
+
+# Root-level env files
+.env
+.env.*.local
+
+# Server env files
+server/.env
+server/.env.*.local
+
+# Client env files
+client/.env
+client/.env.*.local
+
+# ------------------------------
+# Build artifacts
+# ------------------------------
+
+# Common build / output directories
+dist/
+out/
+build/
+
+# Vite build outputs
+client/dist/
+
+# Server build output
+server/dist/
+
+# ------------------------------
+# IDE / editor settings
+# ------------------------------
+
+.vscode/
+.idea/
+*.sw*
+*.swo
+
+# ------------------------------
+# OS-specific files
+# ------------------------------
+
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Icon?
+
+# ------------------------------
+# Prisma / database artifacts
+# ------------------------------
+
+# SQLite or file-based dev databases (if ever used)
+dev.db
+*.db-journal
+
+# Prisma client cache and temporary files
+server/prisma/migrations/**/*.db
+

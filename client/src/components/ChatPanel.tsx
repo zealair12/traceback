@@ -117,7 +117,7 @@ export function ChatPanel({
 
       {/* Messages area */}
       <div ref={scrollRef} className="flex-1 h-0 overflow-y-auto">
-        <div className="max-w-2xl mx-auto px-4 py-6 space-y-5">
+        <div className="max-w-2xl mx-auto px-4 pt-4 pb-2 space-y-5">
           {threadPath.map((message) => (
             <MessageBubble
               key={message.id}

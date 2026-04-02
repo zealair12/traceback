@@ -26,6 +26,14 @@ export async function createSession(name?: string): Promise<SessionResponse> {
   return data;
 }
 
+export async function updateSessionName(
+  sessionId: string,
+  name: string | null
+): Promise<SessionResponse> {
+  const { data } = await api.patch<SessionResponse>(`/sessions/${sessionId}`, { name });
+  return data;
+}
+
 // --- Message API ---
 
 export interface MessageResponse {

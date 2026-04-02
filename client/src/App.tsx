@@ -7,6 +7,7 @@ import { TreePanel } from './components/TreePanel';
 import {
   fetchSessions,
   createSession,
+  updateSessionName,
   fetchSessionMessages,
   sendMessage,
   deleteSubtree,
@@ -15,6 +16,19 @@ import {
   type SendMessageResult
 } from './api/api';
 import { stripMarkdown } from './utils/text';
+
+function isUntitledSessionName(name: string | null): boolean {
+  return !name || !name.trim() || name.trim().toLowerCase() === 'new conversation';
+}
+
+function summarizeTopic(text: string): string {
+  const clean = stripMarkdown(text).replace(/\s+/g, ' ').trim();
+  if (!clean) return 'Untitled';
+  const simplified = clean.replace(/^(what is|how to|can you|please|explain|help me)\s+/i, '');
+  const words = simplified.split(' ').slice(0, 6).join(' ');
+  const titled = words.charAt(0).toUpperCase() + words.slice(1);
+  return titled.replace(/[?.!,;:]+$/, '') || 'Untitled';
+}
 
 export interface ChatMessage {
   id: string;
@@ -43,9 +57,33 @@ function App() {
 
   useEffect(() => {
     fetchSessions()
-      .then((s) => {
+      .then(async (s) => {
         setSessions(s);
         if (s.length > 0) setActiveSessionId(s[0].id);
+
+        // Backfill old unnamed sessions from their first user query.
+        const unnamed = s.filter((x) => isUntitledSessionName(x.name));
+        if (unnamed.length === 0) return;
+        const updates = await Promise.allSettled(
+          unnamed.map(async (session) => {
+            const msgs = await fetchSessionMessages(session.id);
+            const firstUser = msgs.find((m) => m.role === 'user');
+            if (!firstUser) return null;
+            const name = summarizeTopic(firstUser.content);
+            const updated = await updateSessionName(session.id, name);
+            return { id: updated.id, name: updated.name };
+          })
+        );
+
+        setSessions((prev) =>
+          prev.map((session) => {
+            const hit = updates
+              .filter((u): u is PromiseFulfilledResult<{ id: string; name: string | null } | null> => u.status === 'fulfilled')
+              .map((u) => u.value)
+              .find((u) => u && u.id === session.id);
+            return hit ? { ...session, name: hit.name } : session;
+          })
+        );
       })
       .catch((err) => console.error('Failed to load sessions:', err));
   }, []);
@@ -93,45 +131,66 @@ function App() {
     [threadPath]
   );
 
-  // --- Child count map: parentId -> number of children ---
-  const childCountMap = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const m of allMessages) {
-      if (m.parentId) {
-        map.set(m.parentId, (map.get(m.parentId) ?? 0) + 1);
-      }
-    }
-    return map;
-  }, [allMessages]);
 
-  // --- React Flow nodes (no role labels, just truncated content) ---
-  const nodes: Node[] = useMemo(
-    () =>
-      allMessages.map((m) => ({
-        id: m.id,
-        type: 'custom',
-        data: {
-          label: (() => { const t = stripMarkdown(m.content); return t.length > 40 ? t.slice(0, 40) + '…' : t; })(),
-          isActive: m.id === activeNodeId,
-          childCount: childCountMap.get(m.id) ?? 0,
-          isOnActivePath: activePathIds.has(m.id)
-        },
-        position: { x: 0, y: 0 }
-      })),
-    [allMessages, activeNodeId, childCountMap, activePathIds]
+  // Only show user messages (questions) as tree nodes.
+  const userMessages = useMemo(
+    () => allMessages.filter((m) => m.role === 'user'),
+    [allMessages]
   );
 
-  // --- React Flow edges ---
+  const userMessageIds = useMemo(
+    () => new Set(userMessages.map((m) => m.id)),
+    [userMessages]
+  );
+
+  // For each user message, find its nearest user-message ancestor
+  // (skipping assistant nodes in between) so tree edges connect questions only.
+  const userParentMap = useMemo(() => {
+    const map = new Map<string, string | null>();
+    for (const m of userMessages) {
+      let cur = m.parentId;
+      while (cur) {
+        if (userMessageIds.has(cur)) { map.set(m.id, cur); break; }
+        const parent = messageById.get(cur);
+        cur = parent?.parentId ?? null;
+      }
+      if (!map.has(m.id)) map.set(m.id, null);
+    }
+    return map;
+  }, [userMessages, userMessageIds, messageById]);
+
+  const nodes: Node[] = useMemo(
+    () =>
+      userMessages.map((m) => {
+        const t = stripMarkdown(m.content);
+        const d = new Date(m.createdAt);
+        const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        return {
+          id: m.id,
+          type: 'custom',
+          data: {
+            label: t.length > 40 ? t.slice(0, 40) + '…' : t,
+            timestamp: time,
+            isActive: m.id === activeNodeId || activePathIds.has(m.id),
+            childCount: userMessages.filter((c) => userParentMap.get(c.id) === m.id).length,
+            isOnActivePath: activePathIds.has(m.id)
+          },
+          position: { x: 0, y: 0 }
+        };
+      }),
+    [userMessages, activeNodeId, activePathIds, userParentMap]
+  );
+
   const edges: Edge[] = useMemo(
     () =>
-      allMessages
-        .filter((m) => m.parentId)
+      userMessages
+        .filter((m) => userParentMap.get(m.id))
         .map((m) => ({
-          id: `e-${m.parentId}-${m.id}`,
-          source: m.parentId!,
+          id: `e-${userParentMap.get(m.id)}-${m.id}`,
+          source: userParentMap.get(m.id)!,
           target: m.id
         })),
-    [allMessages]
+    [userMessages, userParentMap]
   );
 
   // --- Branching preview (shows selected text if available) ---
@@ -166,7 +225,7 @@ function App() {
 
   const handleNewSession = useCallback(async () => {
     try {
-      const session = await createSession('New conversation');
+      const session = await createSession();
       setSessions((prev) => [session, ...prev]);
       setActiveSessionId(session.id);
       setAllMessages([]);
@@ -180,6 +239,15 @@ function App() {
     setActiveSessionId(sessionId);
     setBranchingFromMessageId(null);
     setBranchingFromText(null);
+  }, []);
+
+  const handleRenameSession = useCallback(async (sessionId: string, name: string) => {
+    try {
+      const updated = await updateSessionName(sessionId, name.trim() || null);
+      setSessions((prev) => prev.map((s) => (s.id === sessionId ? updated : s)));
+    } catch (err) {
+      console.error('Failed to rename session:', err);
+    }
   }, []);
 
   const handleSendMessage = useCallback(
@@ -204,6 +272,14 @@ function App() {
         setActiveNodeId(result.assistantMessage.id);
         setBranchingFromMessageId(null);
         setBranchingFromText(null);
+
+        // Auto-name if this session is still untitled.
+        const current = sessions.find((s) => s.id === sessionId);
+        if (current && isUntitledSessionName(current.name)) {
+          const auto = summarizeTopic(content);
+          const updated = await updateSessionName(sessionId, auto);
+          setSessions((prev) => prev.map((s) => (s.id === sessionId ? updated : s)));
+        }
       } catch (err: any) {
         console.error('Send failed:', err);
         setError(err?.response?.data?.error ?? err?.message ?? 'Something went wrong');
@@ -211,7 +287,7 @@ function App() {
         setSending(false);
       }
     },
-    [activeSessionId, activeNodeId, branchingFromMessageId, sending]
+    [activeSessionId, activeNodeId, branchingFromMessageId, sending, sessions]
   );
 
   /**
@@ -251,10 +327,12 @@ function App() {
   );
 
   const handleSelectTreeNode = useCallback((nodeId: string) => {
-    setActiveNodeId(nodeId);
+    // Tree only shows user messages; find the assistant reply to show full Q&A.
+    const assistantChild = allMessages.find((m) => m.parentId === nodeId && m.role === 'assistant');
+    setActiveNodeId(assistantChild?.id ?? nodeId);
     setBranchingFromMessageId(null);
     setBranchingFromText(null);
-  }, []);
+  }, [allMessages]);
 
   const handleDeleteSubtree = useCallback(
     async (nodeId: string) => {
@@ -340,6 +418,7 @@ function App() {
           activeSessionId={activeSessionId}
           onNewSession={handleNewSession}
           onSelectSession={handleSelectSession}
+          onRenameSession={handleRenameSession}
         />
       )}
 

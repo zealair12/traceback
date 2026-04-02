@@ -54,6 +54,24 @@ app.post('/sessions', async (req: Request, res: Response, next: NextFunction) =>
   }
 });
 
+// Rename a session.
+app.patch('/sessions/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { name } = req.body ?? {};
+    if (name !== null && typeof name !== 'string') {
+      res.status(400).json({ error: 'name must be a string or null.' });
+      return;
+    }
+    const session = await prisma.session.update({
+      where: { id: req.params.id },
+      data: { name: name && name.trim() ? name.trim() : null }
+    });
+    res.json(session);
+  } catch (error: unknown) {
+    next(error);
+  }
+});
+
 // Fetch the full tree of messages for a session (for React Flow).
 app.get('/sessions/:id/messages', async (req: Request, res: Response, next: NextFunction) => {
   try {

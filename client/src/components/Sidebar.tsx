@@ -1,18 +1,24 @@
 import type { SessionResponse } from '../api/api';
+import { useState } from 'react';
 
 interface SidebarProps {
   sessions: SessionResponse[];
   activeSessionId: string | null;
   onNewSession: () => void;
   onSelectSession: (sessionId: string) => void;
+  onRenameSession: (sessionId: string, name: string) => void;
 }
 
 export function Sidebar({
   sessions,
   activeSessionId,
   onNewSession,
-  onSelectSession
+  onSelectSession,
+  onRenameSession
 }: SidebarProps) {
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState('');
+
   return (
     <aside className="w-64 h-full bg-sidebar text-gray-100 flex flex-col flex-shrink-0">
       <div className="px-4 py-4">
@@ -36,19 +42,57 @@ export function Sidebar({
         <div className="space-y-0.5">
           {sessions.map((session) => {
             const isActive = session.id === activeSessionId;
+            const displayName = session.name?.trim() ? session.name : 'Untitled';
+            const isEditing = editingId === session.id;
             return (
-              <button
+              <div
                 key={session.id}
-                type="button"
-                onClick={() => onSelectSession(session.id)}
-                className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors truncate ${
-                  isActive
-                    ? 'bg-gray-800 text-white'
-                    : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'
+                className={`w-full px-2 py-1.5 rounded-lg text-sm transition-colors ${
+                  isActive ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'
                 }`}
               >
-                {session.name ?? 'Untitled'}
-              </button>
+                <div className="flex items-center gap-1.5">
+                  {isEditing ? (
+                    <input
+                      autoFocus
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      onBlur={() => {
+                        onRenameSession(session.id, editValue);
+                        setEditingId(null);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          onRenameSession(session.id, editValue);
+                          setEditingId(null);
+                        } else if (e.key === 'Escape') {
+                          setEditingId(null);
+                        }
+                      }}
+                      className="flex-1 min-w-0 bg-gray-900 border border-gray-700 rounded px-2 py-1 text-xs text-gray-100 outline-none"
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => onSelectSession(session.id)}
+                      className="flex-1 min-w-0 truncate text-left"
+                    >
+                      {displayName}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingId(session.id);
+                      setEditValue(displayName === 'Untitled' ? '' : displayName);
+                    }}
+                    className="text-[11px] text-gray-500 hover:text-gray-200 px-1"
+                    title="Rename"
+                  >
+                    ✎
+                  </button>
+                </div>
+              </div>
             );
           })}
           {sessions.length === 0 && (

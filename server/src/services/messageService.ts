@@ -222,7 +222,7 @@ async function callGroqWithContext(messages: LlmMessage[]): Promise<string> {
 
   // Wrap the Groq call in an exponential backoff retry strategy.
   try {
-    const result = await retry(
+    const result = await retry<string>(
       async (bail, attempt) => {
         try {
           return await performRequest();
@@ -242,7 +242,8 @@ async function callGroqWithContext(messages: LlmMessage[]): Promise<string> {
 
           // Non-retryable DB / validation / other errors: bail out immediately.
           if (statusCode && statusCode < 500) {
-            return bail(err);
+            bail(err);
+            return 'unreachable';
           }
 
           // For network / 5xx errors, allow retry.

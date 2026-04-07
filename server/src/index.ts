@@ -29,6 +29,35 @@ app.get('/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok' });
 });
 
+// Lightweight local metrics for perf scripts / debugging.
+app.get('/debug/metrics', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const [sessionCount, messageCount] = await Promise.all([
+      prisma.session.count(),
+      prisma.message.count()
+    ]);
+    const mem = process.memoryUsage();
+    res.json({
+      pid: process.pid,
+      uptimeSec: Number(process.uptime().toFixed(2)),
+      memory: {
+        rss: mem.rss,
+        heapTotal: mem.heapTotal,
+        heapUsed: mem.heapUsed,
+        external: mem.external,
+        arrayBuffers: mem.arrayBuffers
+      },
+      counts: {
+        sessions: sessionCount,
+        messages: messageCount
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error: unknown) {
+    next(error);
+  }
+});
+
 // List all sessions (used by the sidebar).
 app.get('/sessions', async (_req: Request, res: Response, next: NextFunction) => {
   try {

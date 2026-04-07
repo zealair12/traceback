@@ -1,0 +1,128 @@
+{
+  "startedAt": "2026-04-07T17:01:33.120Z",
+  "baseUrl": "http://localhost:4000",
+  "initial": {
+    "pid": 92587,
+    "uptimeSec": 141.46,
+    "memory": {
+      "rss": 69140480,
+      "heapTotal": 19103744,
+      "heapUsed": 16393024,
+      "external": 3793872,
+      "arrayBuffers": 45057
+    },
+    "counts": {
+      "sessions": 7,
+      "messages": 64
+    },
+    "timestamp": "2026-04-07T17:01:33.135Z"
+  },
+  "finalMetrics": {
+    "pid": 92587,
+    "uptimeSec": 141.69,
+    "memory": {
+      "rss": 77053952,
+      "heapTotal": 20152320,
+      "heapUsed": 16863416,
+      "external": 3822335,
+      "arrayBuffers": 70950
+    },
+    "counts": {
+      "sessions": 8,
+      "messages": 64
+    },
+    "timestamp": "2026-04-07T17:01:33.361Z"
+  },
+  "steps": [
+    {
+      "name": "create_session",
+      "ms": 2.79,
+      "status": 201,
+      "ok": true,
+      "note": null,
+      "rssBefore": 69517312,
+      "rssAfter": 70402048,
+      "heapUsedBefore": 16455088,
+      "heapUsedAfter": 16595528,
+      "sessionsBefore": 7,
+      "sessionsAfter": 8,
+      "messagesBefore": 64,
+      "messagesAfter": 64
+    },
+    {
+      "name": "list_sessions",
+      "ms": 8.78,
+      "status": 200,
+      "ok": true,
+      "note": null,
+      "rssBefore": 70893568,
+      "rssAfter": 71155712,
+      "heapUsedBefore": 16664224,
+      "heapUsedAfter": 16773856,
+      "sessionsBefore": 8,
+      "sessionsAfter": 8,
+      "messagesBefore": 64,
+      "messagesAfter": 64
+    },
+    {
+      "name": "send_root_message",
+      "ms": 202.32,
+      "status": 500,
+      "ok": false,
+      "note": "403 {\"error\":{\"message\":\"Access denied. Please check your network settings.\"}}",
+      "rssBefore": 71204864,
+      "rssAfter": 76759040,
+      "heapUsedBefore": 16831064,
+      "heapUsedAfter": 16635248,
+      "sessionsBefore": 8,
+      "sessionsAfter": 8,
+      "messagesBefore": 64,
+      "messagesAfter": 64
+    },
+    {
+      "name": "send_branch_message",
+      "ms": 0,
+      "status": 0,
+      "ok": false,
+      "note": "Skipped because root message creation failed.",
+      "rssBefore": 76759040,
+      "rssAfter": 76759040,
+      "heapUsedBefore": 16635248,
+      "heapUsedAfter": 16635248,
+      "sessionsBefore": 8,
+      "sessionsAfter": 8,
+      "messagesBefore": 64,
+      "messagesAfter": 64
+    },
+    {
+      "name": "fetch_session_messages",
+      "ms": 1.65,
+      "status": 200,
+      "ok": true,
+      "note": null,
+      "rssBefore": 76791808,
+      "rssAfter": 76972032,
+      "heapUsedBefore": 16692752,
+      "heapUsedAfter": 16806688,
+      "sessionsBefore": 8,
+      "sessionsAfter": 8,
+      "messagesBefore": 64,
+      "messagesAfter": 64
+    },
+    {
+      "name": "delete_root_subtree",
+      "ms": 0,
+      "status": 0,
+      "ok": false,
+      "note": "Skipped because no root subtree was created.",
+      "rssBefore": 76972032,
+      "rssAfter": 76972032,
+      "heapUsedBefore": 16806688,
+      "heapUsedAfter": 16806688,
+      "sessionsBefore": 8,
+      "sessionsAfter": 8,
+      "messagesBefore": 64,
+      "messagesAfter": 64
+    }
+  ]
+}

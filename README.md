@@ -2,6 +2,20 @@
 
 How can we utilize relational database structures to enable non-linear, tree-based conversations that optimize LLM memory usage?
 
+## Repositories
+
+This repo is the **Traceback** stack: `server/` (Express + Prisma + Groq), `client/` (standalone tree UI), and `packages/traceback-shared` (HTTP client types).
+
+**River** ([zealair12/river](https://github.com/zealair12/river)) is a separate project. For local development, clone both next to each other (same parent folder), for example:
+
+```text
+your-workspace/
+  traceback/    ← this repo
+  river/        ← River UI + market stack
+```
+
+River’s client embeds Traceback chat via `VITE_TRACEBACK_API_URL` (see `river/.env.example`) and vendors a copy of `@traceback/shared` under `river/packages/traceback-shared` so the River repo builds on its own. Keep that package in sync with `traceback/packages/traceback-shared` when the API changes.
+
 ## Backend setup
 
 The backend lives in the `server/` directory and is built with:
@@ -19,7 +33,7 @@ npm install
 
 ### 2. Configure environment
 
-Copy or edit `server/.env` (a template is already checked in) and set:
+Copy `server/.env.example` to `server/.env` and set:
 
 - `PORT` – API port (default `4000`)
 - `DATABASE_URL` – PostgreSQL connection string

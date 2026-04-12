@@ -45,6 +45,12 @@ client/dist/
 # Server build output
 server/dist/
 
+# Generated performance reports (local only)
+server/reports/
+
+# Local River clone (separate repo); do not commit into Traceback
+river/
+
 # ------------------------------
 # IDE / editor settings
 # ------------------------------

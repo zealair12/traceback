@@ -8,15 +8,21 @@
 // -- no changes anywhere else in the app. Which provider is used by default is
 // controlled by the LLM_PROVIDER environment variable.
 
-import type { ChatProvider } from './types.js';
+import type { ChatProvider, ProviderInfo } from './types.js';
 import { ProviderNotAvailableError } from './types.js';
 import { createGroqProvider } from './groqProvider.js';
+import { createOpenAIProvider, createLocalProvider } from './openaiProvider.js';
+import { createAnthropicProvider } from './anthropicProvider.js';
 
 // Each entry maps a short id to a function that builds that provider on demand.
 // Building lazily means a provider that needs a missing API key does not break
-// the others just by being listed here.
+// the others just by being listed here. To add a new backend: write one file
+// that fulfils the ChatProvider contract and add one line here.
 const registry: Record<string, () => ChatProvider> = {
   groq: createGroqProvider,
+  openai: createOpenAIProvider,
+  anthropic: createAnthropicProvider,
+  local: createLocalProvider,
 };
 
 // Cache built providers so we reuse one instance per id within the process.
@@ -32,6 +38,21 @@ export function defaultProviderId(): string {
 // "which models can I pick" endpoint).
 export function availableProviderIds(): string[] {
   return Object.keys(registry);
+}
+
+// A frontend-friendly summary of every known provider: its id, default model,
+// suggested models, and whether it is configured (has its key). This is what a
+// "pick your model" UI reads. It never exposes the keys themselves.
+export function listProviders(): ProviderInfo[] {
+  return availableProviderIds().map((id) => {
+    const p = getProvider(id);
+    return {
+      id: p.id,
+      defaultModel: p.defaultModel,
+      suggestedModels: p.suggestedModels,
+      configured: p.isConfigured(),
+    };
+  });
 }
 
 // Hand back a provider by id (or the default). Throws a clear error if the id
@@ -52,6 +73,6 @@ export function getProvider(id?: string): ChatProvider {
   return provider;
 }
 
-export type { ChatProvider } from './types.js';
+export type { ChatProvider, ProviderInfo } from './types.js';
 export { ApiRateLimitError, LlmTimeoutError, ProviderNotAvailableError } from './types.js';
 export type { LlmMessage, CompletionOptions } from './types.js';

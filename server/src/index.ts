@@ -10,6 +10,7 @@ import {
   ApiRateLimitError,
   LlmTimeoutError
 } from './services/messageService.js';
+import { listProviders, defaultProviderId, ProviderNotAvailableError } from './providers/index.js';
 
 const app = express();
 const port = process.env.PORT ?? 4000;
@@ -56,6 +57,16 @@ app.get('/debug/metrics', async (_req: Request, res: Response, next: NextFunctio
   } catch (error: unknown) {
     next(error);
   }
+});
+
+// List the available LLM providers and their models, so a frontend can show a
+// "pick your model" menu (Cursor-style). Reports which provider is the default
+// and whether each one is configured, but never exposes any API keys.
+app.get('/providers', (_req: Request, res: Response) => {
+  res.json({
+    default: defaultProviderId(),
+    providers: listProviders()
+  });
 });
 
 // List all sessions (used by the sidebar).
@@ -117,7 +128,13 @@ app.get('/sessions/:id/messages', async (req: Request, res: Response, next: Next
 // Send a new user message -> get LLM reply.
 app.post('/message/send', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { session_id: sessionId, parent_id: parentIdRaw, content } = req.body ?? {};
+    const {
+      session_id: sessionId,
+      parent_id: parentIdRaw,
+      content,
+      provider: providerRaw,
+      model: modelRaw
+    } = req.body ?? {};
 
     if (!sessionId || typeof sessionId !== 'string') {
       res.status(400).json({ error: 'session_id is required and must be a string.' });
@@ -129,8 +146,12 @@ app.post('/message/send', async (req: Request, res: Response, next: NextFunction
     }
 
     const parentId = parentIdRaw ? String(parentIdRaw) : null;
+    // Optional per-message model choice. Left undefined when not supplied so
+    // the service falls back to the app's default provider and model.
+    const provider = typeof providerRaw === 'string' && providerRaw ? providerRaw : undefined;
+    const model = typeof modelRaw === 'string' && modelRaw ? modelRaw : undefined;
 
-    const result = await createMessageWithAutoReply({ sessionId, parentId, content });
+    const result = await createMessageWithAutoReply({ sessionId, parentId, content, provider, model });
 
     res.status(201).json({
       userMessage: result.userMessage,
@@ -172,6 +193,11 @@ app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   } else if (err instanceof LlmTimeoutError) {
     label = 'LLM Timeout';
     status = 504;
+  } else if (err instanceof ProviderNotAvailableError) {
+    // The caller asked for a provider/model we do not know about: that is a
+    // bad request, not a server fault.
+    label = 'Provider Not Available';
+    status = 400;
   } else if (err instanceof Error) {
     label = err.name || 'Application Error';
   }

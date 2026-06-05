@@ -31,7 +31,12 @@ function layoutTree(nodes: Node[], edges: Edge[]): Node[] {
   const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
   g.setGraph({ rankdir: 'TB', nodesep: 60, ranksep: 80 });
   nodes.forEach((n) => g.setNode(n.id, { width: 200, height: 50 }));
-  edges.forEach((e) => g.setEdge(e.source, e.target));
+  // Dagre lays a parent's children out in the REVERSE of the order its edges
+  // are added. The `edges` come in oldest-first creation order, which would put
+  // the newest branch on the left. We add them in reverse so the OLDEST branch
+  // ends up on the LEFT and the newest on the right -- and so the prev/next
+  // arrows (which step oldest -> newest) match left -> right.
+  [...edges].reverse().forEach((e) => g.setEdge(e.source, e.target));
   Dagre.layout(g);
   return nodes.map((n) => {
     const pos = g.node(n.id);

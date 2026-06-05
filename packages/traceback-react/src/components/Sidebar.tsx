@@ -1,4 +1,4 @@
-import type { SessionResponse } from '../api/api';
+import type { SessionResponse } from '@traceback/shared';
 import { useState } from 'react';
 
 interface SidebarProps {

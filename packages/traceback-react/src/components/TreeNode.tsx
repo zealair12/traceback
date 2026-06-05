@@ -5,18 +5,11 @@ export interface TreeNodeData {
   label: string;
   timestamp?: string;
   isActive: boolean;
-  childCount: number;
   isOnActivePath: boolean;
-  // How many steps this question is from the root (root = 1).
-  stepFromRoot: number;
-  // True only for the currently selected conversation (the deepest question on
-  // the active path). We badge that node with its step-distance.
-  isSelectedTip: boolean;
 }
 
 function TreeNodeComponent({ data }: NodeProps) {
-  const { label, timestamp, isActive, isOnActivePath, stepFromRoot, isSelectedTip } =
-    data as unknown as TreeNodeData;
+  const { label, timestamp, isActive, isOnActivePath } = data as unknown as TreeNodeData;
 
   return (
     <>
@@ -41,16 +34,6 @@ function TreeNodeComponent({ data }: NodeProps) {
         <div className="line-clamp-2">{label}</div>
         {timestamp && (
           <div className="text-[8px] mt-0.5 opacity-40">{timestamp}</div>
-        )}
-        {/* Badge on the currently selected conversation: how many steps from
-            the root it took to reach it. */}
-        {isSelectedTip && (
-          <div
-            className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 rounded-full bg-blue-500 text-white text-[8px] flex items-center justify-center font-bold px-1"
-            title={`${stepFromRoot} step${stepFromRoot === 1 ? '' : 's'} from the start of this conversation`}
-          >
-            {stepFromRoot}
-          </div>
         )}
       </div>
       <Handle type="source" position={Position.Bottom} className="!bg-transparent !border-0 !w-0 !h-0" />

@@ -64,8 +64,12 @@ export async function createMessageWithAutoReply(options: {
   // experience possible -- each message can be answered by a different model.
   provider?: string;
   model?: string;
+  // Optional sampling controls, passed through to the backend. Used by the
+  // OpenAI-compatible proxy, which forwards temperature / max_tokens.
+  temperature?: number;
+  maxTokens?: number;
 }): Promise<CreatedMessagePair> {
-  const { sessionId, parentId, content, provider, model } = options;
+  const { sessionId, parentId, content, provider, model, temperature, maxTokens } = options;
 
   // Fetch parent (if any) to derive the new depth and to validate
   // that we are not creating an orphaned node.
@@ -163,7 +167,11 @@ export async function createMessageWithAutoReply(options: {
     // Record exactly which backend and model were used, even when the request
     // left them unset, so the UI can show "answered by X" on each tree node.
     const usedModel = model ?? chosenProvider.defaultModel;
-    const assistantContent = await chosenProvider.complete(llmMessages, { model });
+    const assistantContent = await chosenProvider.complete(llmMessages, {
+      model,
+      temperature,
+      maxTokens
+    });
 
     // 5. Store assistant reply as a child of the user message.
     const assistantMessage = await tx.message.create({

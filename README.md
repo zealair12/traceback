@@ -86,3 +86,33 @@ If everything is configured correctly, you should see:
 ✅ Recursive CTE lineage validation PASSED.
 ```
 
+## Universal OpenAI-compatible proxy
+
+Traceback also speaks the OpenAI API format, so existing apps that talk to
+OpenAI can route through it with no code changes -- just point their base URL at
+the Traceback server. The endpoint is `POST /v1/chat/completions`.
+
+- The `model` field selects the backend and model as `provider/model`
+  (e.g. `groq/llama-3.3-70b-versatile` or `openai/gpt-4o`). A bare model name
+  uses the default provider (`LLM_PROVIDER`).
+- **Drop-in:** send a normal OpenAI request. Traceback stores the conversation
+  as a tree and answers the last message, replying in the standard
+  `chat.completion` shape.
+- **Branch-aware (opt-in):** include `session_id` (and optionally `parent_id`)
+  to attach the new turn at a specific point in an existing tree. Traceback then
+  forwards only the pruned root-to-node lineage to the model -- this is where the
+  context-saving really pays off. The response includes a `traceback` object
+  with `session_id`, `user_message_id`, and `assistant_message_id` so a
+  branch-aware client can continue the tree.
+
+Example:
+
+```bash
+curl http://localhost:4000/v1/chat/completions \
+  -H 'content-type: application/json' \
+  -d '{"model":"groq/llama-3.3-70b-versatile","messages":[{"role":"user","content":"Hello"}]}'
+```
+
+Notes: streaming (`stream: true`) is not supported yet; the proxy currently adds
+Traceback's own brief system instruction to the context.
+

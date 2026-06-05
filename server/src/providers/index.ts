@@ -11,12 +11,18 @@
 import type { ChatProvider } from './types.js';
 import { ProviderNotAvailableError } from './types.js';
 import { createGroqProvider } from './groqProvider.js';
+import { createOpenAIProvider, createLocalProvider } from './openaiProvider.js';
+import { createAnthropicProvider } from './anthropicProvider.js';
 
 // Each entry maps a short id to a function that builds that provider on demand.
 // Building lazily means a provider that needs a missing API key does not break
-// the others just by being listed here.
+// the others just by being listed here. To add a new backend: write one file
+// that fulfils the ChatProvider contract and add one line here.
 const registry: Record<string, () => ChatProvider> = {
   groq: createGroqProvider,
+  openai: createOpenAIProvider,
+  anthropic: createAnthropicProvider,
+  local: createLocalProvider,
 };
 
 // Cache built providers so we reuse one instance per id within the process.

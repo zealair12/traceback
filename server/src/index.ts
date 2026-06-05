@@ -163,13 +163,16 @@ app.post('/message/send', async (req: Request, res: Response, next: NextFunction
   }
 });
 
-// Delete a message and its entire subtree (cascade via foreign key).
+// Delete a message and its entire subtree.
+// The message id columns are stored as text, so we compare against the id
+// directly. (A previous version cast the id to a uuid, which always failed
+// with "operator does not exist: text = uuid" because the column is text.)
 app.delete('/messages/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     await prisma.$executeRaw`
       WITH RECURSIVE subtree AS (
-        SELECT id FROM messages WHERE id = CAST(${id} AS uuid)
+        SELECT id FROM messages WHERE id = ${id}
         UNION ALL
         SELECT m.id FROM messages m INNER JOIN subtree s ON m.parent_id = s.id
       )

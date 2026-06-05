@@ -17,6 +17,11 @@ export function createGroqProvider(): ChatProvider {
   return {
     id: 'groq',
     defaultModel: DEFAULT_MODEL,
+    suggestedModels: [
+      'llama-3.3-70b-versatile',
+      'llama-3.1-8b-instant',
+      'mixtral-8x7b-32768',
+    ],
 
     // Configured simply means: do we have the API key Groq requires.
     isConfigured() {

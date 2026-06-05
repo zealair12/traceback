@@ -58,8 +58,14 @@ export async function createMessageWithAutoReply(options: {
   sessionId: string;
   parentId: string | null;
   content: string;
+  // Optional per-message choice of which backend and model should answer.
+  // When omitted, the app's default provider and that provider's default
+  // model are used. This is what makes the Cursor-style "pick any LLM"
+  // experience possible -- each message can be answered by a different model.
+  provider?: string;
+  model?: string;
 }): Promise<CreatedMessagePair> {
-  const { sessionId, parentId, content } = options;
+  const { sessionId, parentId, content, provider, model } = options;
 
   // Fetch parent (if any) to derive the new depth and to validate
   // that we are not creating an orphaned node.
@@ -149,10 +155,11 @@ export async function createMessageWithAutoReply(options: {
       ...lineage.map((m) => ({ role: m.role, content: m.content }))
     ];
 
-    // 4. Ask the configured LLM provider for a reply, using only the pruned
-    //    context. Which provider answers (Groq, OpenAI, ...) is decided by the
-    //    provider registry, not by this conversation logic.
-    const assistantContent = await getProvider().complete(llmMessages);
+    // 4. Ask the chosen LLM provider for a reply, using only the pruned
+    //    context. If the caller named a provider/model, use those; otherwise
+    //    fall back to the app default. The conversation logic does not care
+    //    which backend answers.
+    const assistantContent = await getProvider(provider).complete(llmMessages, { model });
 
     // 5. Store assistant reply as a child of the user message.
     const assistantMessage = await tx.message.create({

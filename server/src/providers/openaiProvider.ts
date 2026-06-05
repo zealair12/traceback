@@ -21,6 +21,8 @@ interface OpenAICompatibleConfig {
   id: string;
   // Model used when the caller does not name one.
   defaultModel: string;
+  // Curated model names a picker UI can offer.
+  suggestedModels: string[];
   // Name of the environment variable that holds the API key.
   apiKeyEnv: string;
   // Optional fixed base web address (used for local servers like Ollama).
@@ -37,6 +39,7 @@ function buildOpenAICompatibleProvider(config: OpenAICompatibleConfig): ChatProv
   return {
     id: config.id,
     defaultModel: config.defaultModel,
+    suggestedModels: config.suggestedModels,
 
     isConfigured() {
       if (config.keyOptional) return true; // local servers usually need no key
@@ -79,6 +82,7 @@ export function createOpenAIProvider(): ChatProvider {
   return buildOpenAICompatibleProvider({
     id: 'openai',
     defaultModel: process.env.OPENAI_MODEL ?? 'gpt-4o-mini',
+    suggestedModels: ['gpt-4o-mini', 'gpt-4o', 'o4-mini'],
     apiKeyEnv: 'OPENAI_API_KEY',
     baseURLEnv: 'OPENAI_BASE_URL',
   });
@@ -89,6 +93,7 @@ export function createLocalProvider(): ChatProvider {
   return buildOpenAICompatibleProvider({
     id: 'local',
     defaultModel: process.env.LOCAL_MODEL ?? 'llama3.1',
+    suggestedModels: ['llama3.1', 'llama3.2', 'qwen2.5', 'mistral'],
     apiKeyEnv: 'LOCAL_API_KEY',
     baseURLEnv: 'LOCAL_BASE_URL',
     defaultBaseURL: 'http://localhost:11434/v1', // Ollama's default address

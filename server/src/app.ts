@@ -17,8 +17,14 @@ import {
   ApiRateLimitError,
   LlmTimeoutError
 } from './services/messageService.js';
-import { listProviders, defaultProviderId, ProviderNotAvailableError } from './providers/index.js';
+import {
+  listProviders,
+  defaultProviderId,
+  ProviderNotAvailableError,
+  InsecureKeyTransportError
+} from './providers/index.js';
 import { registerOpenAiProxy } from './routes/openaiProxy.js';
+import { resolveApiKey } from './auth/apiKey.js';
 
 export function createApp() {
   const app = express();
@@ -158,8 +164,10 @@ export function createApp() {
       // the service falls back to the app's default provider and model.
       const provider = typeof providerRaw === 'string' && providerRaw ? providerRaw : undefined;
       const model = typeof modelRaw === 'string' && modelRaw ? modelRaw : undefined;
+      // Optional per-request "bring your own key" from the request headers.
+      const apiKey = resolveApiKey(req);
 
-      const result = await createMessageWithAutoReply({ sessionId, parentId, content, provider, model });
+      const result = await createMessageWithAutoReply({ sessionId, parentId, content, provider, model, apiKey });
 
       res.status(201).json({
         userMessage: result.userMessage,
@@ -212,6 +220,10 @@ export function createApp() {
       // The caller asked for a provider/model we do not know about: that is a
       // bad request, not a server fault.
       label = 'Provider Not Available';
+      status = 400;
+    } else if (err instanceof InsecureKeyTransportError) {
+      // A key was sent over plain HTTP in production -- refuse it.
+      label = 'Insecure Key Transport';
       status = 400;
     } else if (err instanceof Error) {
       label = err.name || 'Application Error';

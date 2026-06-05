@@ -74,5 +74,5 @@ export function getProvider(id?: string): ChatProvider {
 }
 
 export type { ChatProvider, ProviderInfo } from './types.js';
-export { ApiRateLimitError, LlmTimeoutError, ProviderNotAvailableError } from './types.js';
+export { ApiRateLimitError, LlmTimeoutError, ProviderNotAvailableError, InsecureKeyTransportError } from './types.js';
 export type { LlmMessage, CompletionOptions } from './types.js';

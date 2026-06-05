@@ -7,6 +7,7 @@ interface SidebarProps {
   onNewSession: () => void;
   onSelectSession: (sessionId: string) => void;
   onRenameSession: (sessionId: string, name: string) => void;
+  onOpenKeys: () => void;
 }
 
 export function Sidebar({
@@ -14,7 +15,8 @@ export function Sidebar({
   activeSessionId,
   onNewSession,
   onSelectSession,
-  onRenameSession
+  onRenameSession,
+  onOpenKeys
 }: SidebarProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
@@ -101,6 +103,18 @@ export function Sidebar({
             </p>
           )}
         </div>
+      </div>
+
+      <div className="h-px bg-gray-800" />
+      <div className="px-3 py-3">
+        <button
+          type="button"
+          onClick={onOpenKeys}
+          className="w-full text-left text-[12px] text-gray-400 hover:text-white transition-colors"
+          title="Manage your API keys (stored only in this browser)"
+        >
+          API keys
+        </button>
       </div>
     </aside>
   );

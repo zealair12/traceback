@@ -18,6 +18,7 @@ import type { Express, Request, Response, NextFunction } from 'express';
 import { prisma } from '../prismaClient.js';
 import { createMessageWithAutoReply } from '../services/messageService.js';
 import { getProvider, defaultProviderId } from '../providers/index.js';
+import { resolveApiKey } from '../auth/apiKey.js';
 
 type Role = 'user' | 'assistant' | 'system';
 interface IncomingMessage {
@@ -106,6 +107,11 @@ export function registerOpenAiProxy(app: Express) {
       // unknown backend. getProvider throws ProviderNotAvailableError (-> 400).
       getProvider(providerId);
 
+      // Per-request "bring your own key" (Authorization: Bearer ... or
+      // x-provider-key). Resolved before any writes so an insecure-transport
+      // rejection happens before we create a session. Never stored or logged.
+      const apiKey = resolveApiKey(req);
+
       const sessionId = typeof sessionIdRaw === 'string' && sessionIdRaw ? sessionIdRaw : null;
       const parentId = typeof parentIdRaw === 'string' && parentIdRaw ? parentIdRaw : null;
 
@@ -149,7 +155,8 @@ export function registerOpenAiProxy(app: Express) {
         provider: providerId,
         model,
         temperature: typeof temperature === 'number' ? temperature : undefined,
-        maxTokens: typeof maxTokens === 'number' ? maxTokens : undefined
+        maxTokens: typeof maxTokens === 'number' ? maxTokens : undefined,
+        apiKey
       });
 
       // Respond in OpenAI's chat.completion shape, plus a small "traceback"

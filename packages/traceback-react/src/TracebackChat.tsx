@@ -12,6 +12,7 @@ import { useCallback, useRef, useState } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { ChatPanel } from './components/ChatPanel';
 import { TreePanel } from './components/TreePanel';
+import { KeyManager } from './components/KeyManager';
 import { useTraceback } from './useTraceback';
 
 export interface TracebackChatProps {
@@ -25,6 +26,7 @@ export function TracebackChat({ apiUrl }: TracebackChatProps) {
   // Layout-only state (how wide the tree panel is, whether it is fullscreen).
   const [treePanelWidth, setTreePanelWidth] = useState(360);
   const [treeFullscreen, setTreeFullscreen] = useState(false);
+  const [showKeys, setShowKeys] = useState(false);
   const isDragging = useRef(false);
 
   const handleDividerMouseDown = useCallback(() => {
@@ -56,6 +58,7 @@ export function TracebackChat({ apiUrl }: TracebackChatProps) {
           onNewSession={tb.handleNewSession}
           onSelectSession={tb.handleSelectSession}
           onRenameSession={tb.handleRenameSession}
+          onOpenKeys={() => setShowKeys(true)}
         />
       )}
 
@@ -76,6 +79,7 @@ export function TracebackChat({ apiUrl }: TracebackChatProps) {
           providers={tb.availableProviders}
           selectedProvider={tb.selectedProvider}
           selectedModel={tb.selectedModel}
+          keyedProviders={tb.keyedProviders}
           onSelectModel={tb.handleSelectModel}
         />
       )}
@@ -98,6 +102,16 @@ export function TracebackChat({ apiUrl }: TracebackChatProps) {
         isFullscreen={treeFullscreen}
         onToggleFullscreen={() => setTreeFullscreen((f) => !f)}
       />
+
+      {showKeys && (
+        <KeyManager
+          providers={tb.availableProviders}
+          keyedProviders={tb.keyedProviders}
+          onSave={tb.setProviderKey}
+          onClear={tb.clearProviderKey}
+          onClose={() => setShowKeys(false)}
+        />
+      )}
     </div>
   );
 }

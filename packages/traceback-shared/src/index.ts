@@ -42,6 +42,10 @@ export interface ProvidersResponse {
 export interface SendMessageOptions {
   provider?: string;
   model?: string;
+  // Optional "bring your own key": the user's API key for this request. Sent in
+  // a header (never the URL or body), used by the server for this request only,
+  // and never stored or logged.
+  apiKey?: string;
 }
 
 export interface SendMessageResult {
@@ -126,14 +130,20 @@ export function createTracebackClient(
       parentId: string | null,
       options?: SendMessageOptions
     ) {
-      const { data } = await api.post<SendMessageResult>('/message/send', {
-        session_id: sessionId,
-        parent_id: parentId,
-        content,
-        // Only included when the caller chose a specific backend/model.
-        provider: options?.provider,
-        model: options?.model
-      });
+      const { data } = await api.post<SendMessageResult>(
+        '/message/send',
+        {
+          session_id: sessionId,
+          parent_id: parentId,
+          content,
+          // Only included when the caller chose a specific backend/model.
+          provider: options?.provider,
+          model: options?.model
+        },
+        // The user's key (if any) goes in a header, not the body, so it never
+        // lands in request logs that record bodies/URLs.
+        options?.apiKey ? { headers: { 'x-provider-key': options.apiKey } } : undefined
+      );
       return data;
     }
   };

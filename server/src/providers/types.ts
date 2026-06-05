@@ -27,6 +27,10 @@ export interface CompletionOptions {
   temperature?: number;
   // Upper bound on reply length (tokens). Passed through when provided.
   maxTokens?: number;
+  // A caller-supplied API key for this single request ("bring your own key").
+  // When present it is used INSTEAD of the server's own env key, and is never
+  // stored or logged. When absent the provider falls back to its env key.
+  apiKey?: string;
 }
 
 // The contract itself. A "provider" is one company's/back-end's implementation.
@@ -72,6 +76,15 @@ export class LlmTimeoutError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'LlmTimeoutError';
+  }
+}
+
+// A caller tried to send their API key over an insecure (non-HTTPS) connection
+// in production. We refuse rather than let a key travel in the clear.
+export class InsecureKeyTransportError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'InsecureKeyTransportError';
   }
 }
 

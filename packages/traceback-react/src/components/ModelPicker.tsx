@@ -4,6 +4,9 @@ interface ModelPickerProps {
   providers: ProviderInfo[];
   selectedProvider: string | null;
   selectedModel: string | null;
+  // Backends the user has supplied their own key for (so they count as usable
+  // even if the server has no key for them).
+  keyedProviders?: Set<string>;
   // Called with the backend id and model name when the user picks one.
   onSelect: (providerId: string, model: string) => void;
 }
@@ -23,6 +26,7 @@ export function ModelPicker({
   providers,
   selectedProvider,
   selectedModel,
+  keyedProviders,
   onSelect
 }: ModelPickerProps) {
   if (providers.length === 0) return null;
@@ -56,8 +60,9 @@ export function ModelPicker({
           if (extraForCurrent && p.id === selectedProvider && !models.includes(selectedModel!)) {
             models.unshift(selectedModel!);
           }
+          const usable = p.configured || keyedProviders?.has(p.id);
           return (
-            <optgroup key={p.id} label={p.configured ? p.id : `${p.id} (no key)`}>
+            <optgroup key={p.id} label={usable ? p.id : `${p.id} (no key)`}>
               {models.map((m) => (
                 <option key={`${p.id}${SEP}${m}`} value={encode(p.id, m)}>
                   {p.id} / {m}

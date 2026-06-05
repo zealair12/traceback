@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import type { ChatMessage } from '../App';
-import type { ProviderInfo } from '../api/api';
+import type { ChatMessage } from '../types';
+import type { ProviderInfo } from '@traceback/shared';
 import { MessageBubble } from './MessageBubble';
 import { ModelPicker } from './ModelPicker';
 import { NodeNavBar } from './NodeNavBar';
@@ -29,8 +29,7 @@ interface ChatPanelProps {
   providers: ProviderInfo[];
   selectedProvider: string | null;
   selectedModel: string | null;
-  onSelectProvider: (providerId: string) => void;
-  onSelectModel: (model: string) => void;
+  onSelectModel: (providerId: string, model: string) => void;
 }
 
 export function ChatPanel({
@@ -49,7 +48,6 @@ export function ChatPanel({
   providers,
   selectedProvider,
   selectedModel,
-  onSelectProvider,
   onSelectModel
 }: ChatPanelProps) {
   const [input, setInput] = useState('');
@@ -172,8 +170,7 @@ export function ChatPanel({
           providers={providers}
           selectedProvider={selectedProvider}
           selectedModel={selectedModel}
-          onSelectProvider={onSelectProvider}
-          onSelectModel={onSelectModel}
+          onSelect={onSelectModel}
         />
         <div className="max-w-2xl mx-auto flex items-end gap-2">
           <div className="relative flex-1">
@@ -195,7 +192,7 @@ export function ChatPanel({
                 onSendMessage(input.trim());
                 setInput('');
               }}
-              className="absolute right-2 bottom-2 h-7 w-7 rounded-full bg-white text-black flex items-center justify-center text-xs hover:bg-gray-200 transition-colors disabled:opacity-30"
+              className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full bg-white text-black flex items-center justify-center text-xs hover:bg-gray-200 transition-colors disabled:opacity-30"
             >
               ↑
             </button>

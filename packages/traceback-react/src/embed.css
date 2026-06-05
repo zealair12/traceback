@@ -1,0 +1,28 @@
+/*
+ * Stylesheet for the standalone Traceback widget bundle.
+ *
+ * Plain-English: when Traceback is dropped into a plain website (not a React
+ * app), this file is compiled into a single CSS file shipped alongside the
+ * widget. It pulls in Tailwind, scans the component source for the utility
+ * classes they use, defines the colour theme, and adds the markdown/math/tree
+ * styles. The host page just links the produced CSS file.
+ */
+/* source(none) turns off Tailwind's broad auto-scan; we scan only our own
+ * component files below, so the produced CSS contains just the classes we use. */
+@import "tailwindcss" source(none);
+
+/* Scan this package's components for the Tailwind classes they use. */
+@source "./**/*.{ts,tsx}";
+
+@theme {
+  --color-background: #0d0d0d;
+  --color-sidebar: #111111;
+  --color-tree: #111111;
+  --color-chat: #0d0d0d;
+  --color-bubbleUser: #2f2f2f;
+  --color-inputBg: #1e1e1e;
+  --color-borderSubtle: #1f2933;
+}
+
+/* Component styles (markdown prose, math, tree controls). */
+@import "./styles.css";

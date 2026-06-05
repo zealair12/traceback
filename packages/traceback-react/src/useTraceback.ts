@@ -20,6 +20,7 @@ import {
 } from '@traceback/shared';
 import { stripMarkdown } from './utils/text';
 import type { ChatMessage } from './types';
+import { getStoredKey, setStoredKey, clearStoredKey } from './keys';
 
 function isUntitledSessionName(name: string | null): boolean {
   return !name || !name.trim() || name.trim().toLowerCase() === 'new conversation';
@@ -58,8 +59,12 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
 
+  // Which backends the user has saved their own key for (in the browser).
+  const [keyedProviders, setKeyedProviders] = useState<Set<string>>(new Set());
+
   // Load providers once (per client) and default the picker to the server's
-  // default backend + that backend's default model.
+  // default backend + that backend's default model. Also note which backends
+  // already have a user-supplied key saved in this browser tab.
   useEffect(() => {
     client
       .fetchProviders()
@@ -70,6 +75,7 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
           setSelectedProvider(def.id);
           setSelectedModel(def.defaultModel);
         }
+        setKeyedProviders(new Set(res.providers.filter((p) => getStoredKey(p.id)).map((p) => p.id)));
       })
       .catch((err) => console.error('Failed to load providers:', err));
   }, [client]);
@@ -78,6 +84,21 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
   const handleSelectModel = useCallback((providerId: string, model: string) => {
     setSelectedProvider(providerId);
     setSelectedModel(model);
+  }, []);
+
+  // Save / clear a user's own API key for a backend (browser-only storage).
+  const setProviderKey = useCallback((providerId: string, key: string) => {
+    setStoredKey(providerId, key);
+    setKeyedProviders((prev) => new Set(prev).add(providerId));
+  }, []);
+
+  const clearProviderKey = useCallback((providerId: string) => {
+    clearStoredKey(providerId);
+    setKeyedProviders((prev) => {
+      const next = new Set(prev);
+      next.delete(providerId);
+      return next;
+    });
   }, []);
 
   // Load the session list, backfilling names for old unnamed sessions.
@@ -207,7 +228,6 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
             label: t.length > 40 ? t.slice(0, 40) + '…' : t,
             timestamp: time,
             isActive: m.id === activeNodeId || activePathIds.has(m.id),
-            childCount: userMessages.filter((c) => userParentMap.get(c.id) === m.id).length,
             isOnActivePath: activePathIds.has(m.id)
           },
           position: { x: 0, y: 0 }
@@ -287,7 +307,8 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
         const sessionId = activeSessionId;
         const result: SendMessageResult = await client.sendMessage(sessionId, content, parentId, {
           provider: selectedProvider ?? undefined,
-          model: selectedModel ?? undefined
+          model: selectedModel ?? undefined,
+          apiKey: (selectedProvider && getStoredKey(selectedProvider)) || undefined
         });
         setAllMessages((prev) => [...prev, result.userMessage, result.assistantMessage]);
         setActiveNodeId(result.assistantMessage.id);
@@ -322,7 +343,8 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
         try {
           const result: SendMessageResult = await client.sendMessage(activeSessionId, prompt, messageId, {
             provider: selectedProvider ?? undefined,
-            model: selectedModel ?? undefined
+            model: selectedModel ?? undefined,
+            apiKey: (selectedProvider && getStoredKey(selectedProvider)) || undefined
           });
           setAllMessages((prev) => [...prev, result.userMessage, result.assistantMessage]);
           setActiveNodeId(result.assistantMessage.id);
@@ -420,7 +442,10 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
     availableProviders,
     selectedProvider,
     selectedModel,
+    keyedProviders,
     // actions
+    setProviderKey,
+    clearProviderKey,
     handleNewSession,
     handleSelectSession,
     handleRenameSession,

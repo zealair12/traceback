@@ -29,6 +29,7 @@ interface ChatPanelProps {
   providers: ProviderInfo[];
   selectedProvider: string | null;
   selectedModel: string | null;
+  keyedProviders: Set<string>;
   onSelectModel: (providerId: string, model: string) => void;
 }
 
@@ -48,6 +49,7 @@ export function ChatPanel({
   providers,
   selectedProvider,
   selectedModel,
+  keyedProviders,
   onSelectModel
 }: ChatPanelProps) {
   const [input, setInput] = useState('');
@@ -170,6 +172,7 @@ export function ChatPanel({
           providers={providers}
           selectedProvider={selectedProvider}
           selectedModel={selectedModel}
+          keyedProviders={keyedProviders}
           onSelect={onSelectModel}
         />
         <div className="max-w-2xl mx-auto flex items-end gap-2">

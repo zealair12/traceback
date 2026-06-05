@@ -5,12 +5,11 @@ export interface TreeNodeData {
   label: string;
   timestamp?: string;
   isActive: boolean;
-  childCount: number;
   isOnActivePath: boolean;
 }
 
 function TreeNodeComponent({ data }: NodeProps) {
-  const { label, timestamp, isActive, childCount, isOnActivePath } = data as unknown as TreeNodeData;
+  const { label, timestamp, isActive, isOnActivePath } = data as unknown as TreeNodeData;
 
   return (
     <>
@@ -35,11 +34,6 @@ function TreeNodeComponent({ data }: NodeProps) {
         <div className="line-clamp-2">{label}</div>
         {timestamp && (
           <div className="text-[8px] mt-0.5 opacity-40">{timestamp}</div>
-        )}
-        {childCount > 1 && (
-          <div className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 rounded-full bg-indigo-500 text-white text-[8px] flex items-center justify-center font-bold px-1">
-            {childCount}
-          </div>
         )}
       </div>
       <Handle type="source" position={Position.Bottom} className="!bg-transparent !border-0 !w-0 !h-0" />

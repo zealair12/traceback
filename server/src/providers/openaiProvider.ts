@@ -49,9 +49,10 @@ function buildOpenAICompatibleProvider(config: OpenAICompatibleConfig): ChatProv
     async complete(messages: LlmMessage[], options?: CompletionOptions): Promise<string> {
       if (messages.length === 0) return 'No prior context was provided.';
 
-      const apiKey = process.env[config.apiKeyEnv];
+      // A caller-supplied key (bring-your-own-key) wins over the server env key.
+      const apiKey = options?.apiKey ?? process.env[config.apiKeyEnv];
       if (!apiKey && !config.keyOptional) {
-        throw new Error(`${config.apiKeyEnv} is not configured in the environment.`);
+        throw new Error(`No API key for "${config.id}": set ${config.apiKeyEnv} or supply your own key.`);
       }
 
       const timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;

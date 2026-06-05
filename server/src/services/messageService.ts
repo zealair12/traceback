@@ -68,8 +68,11 @@ export async function createMessageWithAutoReply(options: {
   // OpenAI-compatible proxy, which forwards temperature / max_tokens.
   temperature?: number;
   maxTokens?: number;
+  // Optional caller-supplied API key (bring-your-own-key). Used for this request
+  // only and never stored or logged.
+  apiKey?: string;
 }): Promise<CreatedMessagePair> {
-  const { sessionId, parentId, content, provider, model, temperature, maxTokens } = options;
+  const { sessionId, parentId, content, provider, model, temperature, maxTokens, apiKey } = options;
 
   // Fetch parent (if any) to derive the new depth and to validate
   // that we are not creating an orphaned node.
@@ -170,7 +173,8 @@ export async function createMessageWithAutoReply(options: {
     const assistantContent = await chosenProvider.complete(llmMessages, {
       model,
       temperature,
-      maxTokens
+      maxTokens,
+      apiKey
     });
 
     // 5. Store assistant reply as a child of the user message.

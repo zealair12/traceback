@@ -31,9 +31,10 @@ export function createGroqProvider(): ChatProvider {
     async complete(messages: LlmMessage[], options?: CompletionOptions): Promise<string> {
       if (messages.length === 0) return 'No prior context was provided.';
 
-      const apiKey = process.env.GROQ_API_KEY;
+      // A caller-supplied key (bring-your-own-key) wins over the server env key.
+      const apiKey = options?.apiKey ?? process.env.GROQ_API_KEY;
       if (!apiKey) {
-        throw new Error('GROQ_API_KEY is not configured in the environment.');
+        throw new Error('No Groq API key: set GROQ_API_KEY or supply your own key.');
       }
 
       const timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;

@@ -34,9 +34,10 @@ export function createAnthropicProvider(): ChatProvider {
     async complete(messages: LlmMessage[], options?: CompletionOptions): Promise<string> {
       if (messages.length === 0) return 'No prior context was provided.';
 
-      const apiKey = process.env.ANTHROPIC_API_KEY;
+      // A caller-supplied key (bring-your-own-key) wins over the server env key.
+      const apiKey = options?.apiKey ?? process.env.ANTHROPIC_API_KEY;
       if (!apiKey) {
-        throw new Error('ANTHROPIC_API_KEY is not configured in the environment.');
+        throw new Error('No Anthropic API key: set ANTHROPIC_API_KEY or supply your own key.');
       }
 
       const timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;

@@ -82,15 +82,12 @@ function App() {
       .catch((err) => console.error('Failed to load providers:', err));
   }, []);
 
-  // When the user switches provider, reset the model to that provider's default.
-  const handleSelectProvider = useCallback(
-    (providerId: string) => {
-      setSelectedProvider(providerId);
-      const p = availableProviders.find((x) => x.id === providerId);
-      setSelectedModel(p ? p.defaultModel : null);
-    },
-    [availableProviders]
-  );
+  // Picking an entry from the single model dropdown sets both the backend and
+  // the model at once.
+  const handleSelectModel = useCallback((providerId: string, model: string) => {
+    setSelectedProvider(providerId);
+    setSelectedModel(model);
+  }, []);
 
   useEffect(() => {
     fetchSessions()
@@ -488,8 +485,7 @@ function App() {
           providers={availableProviders}
           selectedProvider={selectedProvider}
           selectedModel={selectedModel}
-          onSelectProvider={handleSelectProvider}
-          onSelectModel={setSelectedModel}
+          onSelectModel={handleSelectModel}
         />
       )}
 

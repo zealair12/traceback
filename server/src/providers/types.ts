@@ -30,11 +30,24 @@ export interface ChatProvider {
   readonly id: string;
   // The model this provider uses when the caller does not name one.
   readonly defaultModel: string;
+  // A short curated list of well-known model names a picker UI can offer.
+  // This is a convenience for the interface; callers may still request any
+  // model name the backend accepts.
+  readonly suggestedModels: string[];
   // Whether the necessary configuration (usually an API key) is present.
   // Lets the app fail early with a clear message instead of mid-request.
   isConfigured(): boolean;
   // Take the pruned conversation and return the model's reply as plain text.
   complete(messages: LlmMessage[], options?: CompletionOptions): Promise<string>;
+}
+
+// A plain summary of one provider, safe to send to a frontend so it can build a
+// model picker. Never includes secrets (only whether a key is present).
+export interface ProviderInfo {
+  id: string;
+  defaultModel: string;
+  suggestedModels: string[];
+  configured: boolean;
 }
 
 // --- Shared error types -----------------------------------------------------

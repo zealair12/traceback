@@ -20,6 +20,26 @@ export interface MessageResponse {
   createdAt: string;
 }
 
+/** One LLM backend the server can talk to, as advertised to a frontend. */
+export interface ProviderInfo {
+  id: string;
+  defaultModel: string;
+  suggestedModels: string[];
+  configured: boolean;
+}
+
+/** Response of GET /providers: the default backend and the full list. */
+export interface ProvidersResponse {
+  default: string;
+  providers: ProviderInfo[];
+}
+
+/** Optional per-message choice of which backend and model should answer. */
+export interface SendMessageOptions {
+  provider?: string;
+  model?: string;
+}
+
 export interface SendMessageResult {
   userMessage: MessageResponse;
   assistantMessage: MessageResponse;
@@ -42,10 +62,14 @@ export interface TracebackClient {
   updateSessionName(sessionId: string, name: string | null): Promise<SessionResponse>;
   fetchSessionMessages(sessionId: string): Promise<MessageResponse[]>;
   deleteSubtree(messageId: string): Promise<void>;
+  /** Ask the server which LLM providers/models are available. */
+  fetchProviders(): Promise<ProvidersResponse>;
   sendMessage(
     sessionId: string,
     content: string,
-    parentId: string | null
+    parentId: string | null,
+    // Optional: pick which backend/model answers this specific message.
+    options?: SendMessageOptions
   ): Promise<SendMessageResult>;
 }
 
@@ -87,11 +111,24 @@ export function createTracebackClient(
       await api.delete(`/messages/${messageId}`);
     },
 
-    async sendMessage(sessionId: string, content: string, parentId: string | null) {
+    async fetchProviders() {
+      const { data } = await api.get<ProvidersResponse>('/providers');
+      return data;
+    },
+
+    async sendMessage(
+      sessionId: string,
+      content: string,
+      parentId: string | null,
+      options?: SendMessageOptions
+    ) {
       const { data } = await api.post<SendMessageResult>('/message/send', {
         session_id: sessionId,
         parent_id: parentId,
-        content
+        content,
+        // Only included when the caller chose a specific backend/model.
+        provider: options?.provider,
+        model: options?.model
       });
       return data;
     }

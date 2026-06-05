@@ -21,6 +21,11 @@ export function createAnthropicProvider(): ChatProvider {
   return {
     id: 'anthropic',
     defaultModel: DEFAULT_MODEL,
+    suggestedModels: [
+      'claude-3-5-sonnet-latest',
+      'claude-3-5-haiku-latest',
+      'claude-3-opus-latest',
+    ],
 
     isConfigured() {
       return Boolean(process.env.ANTHROPIC_API_KEY);

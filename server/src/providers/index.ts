@@ -8,7 +8,7 @@
 // -- no changes anywhere else in the app. Which provider is used by default is
 // controlled by the LLM_PROVIDER environment variable.
 
-import type { ChatProvider } from './types.js';
+import type { ChatProvider, ProviderInfo } from './types.js';
 import { ProviderNotAvailableError } from './types.js';
 import { createGroqProvider } from './groqProvider.js';
 import { createOpenAIProvider, createLocalProvider } from './openaiProvider.js';
@@ -40,6 +40,21 @@ export function availableProviderIds(): string[] {
   return Object.keys(registry);
 }
 
+// A frontend-friendly summary of every known provider: its id, default model,
+// suggested models, and whether it is configured (has its key). This is what a
+// "pick your model" UI reads. It never exposes the keys themselves.
+export function listProviders(): ProviderInfo[] {
+  return availableProviderIds().map((id) => {
+    const p = getProvider(id);
+    return {
+      id: p.id,
+      defaultModel: p.defaultModel,
+      suggestedModels: p.suggestedModels,
+      configured: p.isConfigured(),
+    };
+  });
+}
+
 // Hand back a provider by id (or the default). Throws a clear error if the id
 // is unknown, so a typo in configuration fails loudly instead of silently.
 export function getProvider(id?: string): ChatProvider {
@@ -58,6 +73,6 @@ export function getProvider(id?: string): ChatProvider {
   return provider;
 }
 
-export type { ChatProvider } from './types.js';
+export type { ChatProvider, ProviderInfo } from './types.js';
 export { ApiRateLimitError, LlmTimeoutError, ProviderNotAvailableError } from './types.js';
 export type { LlmMessage, CompletionOptions } from './types.js';

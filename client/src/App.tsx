@@ -11,9 +11,11 @@ import {
   fetchSessionMessages,
   sendMessage,
   deleteSubtree,
+  fetchProviders,
   type SessionResponse,
   type MessageResponse,
-  type SendMessageResult
+  type SendMessageResult,
+  type ProviderInfo
 } from './api/api';
 import { stripMarkdown } from './utils/text';
 
@@ -34,6 +36,10 @@ export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
+  // Which backend/model produced this message (assistant messages only),
+  // used to show a small "answered by" badge in the chat.
+  provider?: string | null;
+  model?: string | null;
 }
 
 function App() {
@@ -49,11 +55,42 @@ function App() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Model picker: which LLM backends exist, and the one chosen for the next
+  // message. selectedModel is the specific model within the chosen provider.
+  const [availableProviders, setAvailableProviders] = useState<ProviderInfo[]>([]);
+  const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
+  const [selectedModel, setSelectedModel] = useState<string | null>(null);
+
   const [treePanelWidth, setTreePanelWidth] = useState(360);
   const [treeFullscreen, setTreeFullscreen] = useState(false);
   const isDragging = useRef(false);
 
   // --- Data fetching ---
+
+  // Load the available LLM providers once, and default the picker to the
+  // server's default provider and that provider's default model.
+  useEffect(() => {
+    fetchProviders()
+      .then((res) => {
+        setAvailableProviders(res.providers);
+        const def = res.providers.find((p) => p.id === res.default) ?? res.providers[0];
+        if (def) {
+          setSelectedProvider(def.id);
+          setSelectedModel(def.defaultModel);
+        }
+      })
+      .catch((err) => console.error('Failed to load providers:', err));
+  }, []);
+
+  // When the user switches provider, reset the model to that provider's default.
+  const handleSelectProvider = useCallback(
+    (providerId: string) => {
+      setSelectedProvider(providerId);
+      const p = availableProviders.find((x) => x.id === providerId);
+      setSelectedModel(p ? p.defaultModel : null);
+    },
+    [availableProviders]
+  );
 
   useEffect(() => {
     fetchSessions()
@@ -119,7 +156,13 @@ function App() {
     const path: ChatMessage[] = [];
     let current: MessageResponse | undefined = messageById.get(activeNodeId);
     while (current) {
-      path.unshift({ id: current.id, role: current.role, content: current.content });
+      path.unshift({
+        id: current.id,
+        role: current.role,
+        content: current.content,
+        provider: current.provider,
+        model: current.model
+      });
       current = current.parentId ? messageById.get(current.parentId) : undefined;
     }
     return path;
@@ -267,7 +310,10 @@ function App() {
           setActiveSessionId(sessionId);
         }
 
-        const result: SendMessageResult = await sendMessage(sessionId, content, parentId);
+        const result: SendMessageResult = await sendMessage(sessionId, content, parentId, {
+          provider: selectedProvider ?? undefined,
+          model: selectedModel ?? undefined
+        });
         setAllMessages((prev) => [...prev, result.userMessage, result.assistantMessage]);
         setActiveNodeId(result.assistantMessage.id);
         setBranchingFromMessageId(null);
@@ -287,7 +333,7 @@ function App() {
         setSending(false);
       }
     },
-    [activeSessionId, activeNodeId, branchingFromMessageId, sending, sessions]
+    [activeSessionId, activeNodeId, branchingFromMessageId, sending, sessions, selectedProvider, selectedModel]
   );
 
   /**
@@ -307,7 +353,10 @@ function App() {
         setBranchingFromText(selectedText);
 
         try {
-          const result: SendMessageResult = await sendMessage(activeSessionId, prompt, messageId);
+          const result: SendMessageResult = await sendMessage(activeSessionId, prompt, messageId, {
+            provider: selectedProvider ?? undefined,
+            model: selectedModel ?? undefined
+          });
           setAllMessages((prev) => [...prev, result.userMessage, result.assistantMessage]);
           setActiveNodeId(result.assistantMessage.id);
         } catch (err: any) {
@@ -323,7 +372,7 @@ function App() {
         setBranchingFromText(selectedText);
       }
     },
-    [activeSessionId, sending]
+    [activeSessionId, sending, selectedProvider, selectedModel]
   );
 
   const handleSelectTreeNode = useCallback((nodeId: string) => {
@@ -436,6 +485,11 @@ function App() {
           onNavigateToParent={handleNavigateToParent}
           onNavigateToSibling={handleNavigateToSibling}
           onNavigateToNode={handleNavigateToNode}
+          providers={availableProviders}
+          selectedProvider={selectedProvider}
+          selectedModel={selectedModel}
+          onSelectProvider={handleSelectProvider}
+          onSelectModel={setSelectedModel}
         />
       )}
 

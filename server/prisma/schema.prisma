@@ -91,6 +91,14 @@ model Message {
   /// from this message (e.g. "Alternative approach").
   branchLabel String?  @map("branch_label")
 
+  /// Which LLM backend produced this message (assistant messages only),
+  /// e.g. "groq" or "openai". Null for user messages and pre-existing rows.
+  provider    String?
+
+  /// The specific model that produced this message, e.g. "gpt-4o-mini".
+  /// Lets the UI show which model answered each branch of the tree.
+  model       String?
+
   /// Creation timestamp for ordering messages within a session.
   createdAt  DateTime  @default(now()) @map("created_at")
 

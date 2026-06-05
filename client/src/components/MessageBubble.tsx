@@ -99,6 +99,13 @@ export function MessageBubble({ message, onBranchFromMessage }: MessageBubblePro
         >
           {normalizeLatex(message.content)}
         </ReactMarkdown>
+        {/* Small "answered by" badge so you can see which model produced
+            this reply -- useful when branches use different models. */}
+        {message.model && (
+          <div className="mt-1.5 text-[10px] text-gray-600">
+            {message.provider ? `${message.provider} · ${message.model}` : message.model}
+          </div>
+        )}
       </div>
       {contextMenu && (
         <ContextMenu

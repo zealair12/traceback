@@ -194,6 +194,40 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
     return map;
   }, [userMessages, userMessageIds, messageById]);
 
+  // How many steps each question is from the root of its tree (root = step 1,
+  // its child = step 2, and so on). This lets the tree show "you are N steps in"
+  // for the currently selected conversation.
+  const stepFromRootById = useMemo(() => {
+    const steps = new Map<string, number>();
+    const calc = (id: string): number => {
+      const cached = steps.get(id);
+      if (cached !== undefined) return cached;
+      const parent = userParentMap.get(id) ?? null;
+      const value = parent ? calc(parent) + 1 : 1;
+      steps.set(id, value);
+      return value;
+    };
+    for (const m of userMessages) calc(m.id);
+    return steps;
+  }, [userMessages, userParentMap]);
+
+  // The "selected conversation" in the tree is the deepest question on the
+  // active path (the tip you are currently sitting at). We badge that one with
+  // its step-distance from the root.
+  const selectedTipId = useMemo(() => {
+    let best: string | null = null;
+    let bestStep = -1;
+    for (const m of userMessages) {
+      if (!activePathIds.has(m.id)) continue;
+      const s = stepFromRootById.get(m.id) ?? 1;
+      if (s > bestStep) {
+        bestStep = s;
+        best = m.id;
+      }
+    }
+    return best;
+  }, [userMessages, activePathIds, stepFromRootById]);
+
   const nodes: Node[] = useMemo(
     () =>
       userMessages.map((m) => {
@@ -208,12 +242,14 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
             timestamp: time,
             isActive: m.id === activeNodeId || activePathIds.has(m.id),
             childCount: userMessages.filter((c) => userParentMap.get(c.id) === m.id).length,
-            isOnActivePath: activePathIds.has(m.id)
+            isOnActivePath: activePathIds.has(m.id),
+            stepFromRoot: stepFromRootById.get(m.id) ?? 1,
+            isSelectedTip: m.id === selectedTipId
           },
           position: { x: 0, y: 0 }
         };
       }),
-    [userMessages, activeNodeId, activePathIds, userParentMap]
+    [userMessages, activeNodeId, activePathIds, userParentMap, stepFromRootById, selectedTipId]
   );
 
   const edges: Edge[] = useMemo(

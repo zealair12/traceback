@@ -12,8 +12,11 @@
 import { prisma } from '../prismaClient.js';
 import type { Role, Message } from '@prisma/client';
 import { Prisma } from '@prisma/client';
-import Groq from 'groq-sdk';
-import retry from 'async-retry';
+import { getProvider } from '../providers/index.js';
+import type { LlmMessage } from '../providers/index.js';
+// Re-exported from their new home (server/src/providers) so existing importers
+// of these error types keep working unchanged after the provider refactor.
+export { ApiRateLimitError, LlmTimeoutError } from '../providers/index.js';
 
 // Hard limit on how deep a conversation tree can go.
 // This is enforced at the application layer before we insert
@@ -34,11 +37,10 @@ export interface LineageMessage {
   created_at: Date;
 }
 
-// Shape used when sending context to the Groq API.
-export interface LlmMessage {
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-}
+// The LlmMessage shape (one conversation turn) now lives with the provider
+// contract in server/src/providers, and is imported above. The error types
+// (ApiRateLimitError / LlmTimeoutError) likewise moved there and are
+// re-exported at the top of this file for backward compatibility.
 
 // Public return type for `createMessageWithAutoReply`.
 export interface CreatedMessagePair {
@@ -47,34 +49,23 @@ export interface CreatedMessagePair {
   lineage: LineageMessage[];
 }
 
-// --- Error types ------------------------------------------------------------
-
-// These custom error classes allow the Express layer to distinguish
-// between different failure modes when logging and responding.
-export class ApiRateLimitError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'ApiRateLimitError';
-  }
-}
-
-export class LlmTimeoutError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'LlmTimeoutError';
-  }
-}
-
 // Create a new user message, compute its lineage via recursive CTE,
-// call the Groq API with the pruned context, and store the assistant reply.
+// ask the configured LLM provider for a reply using only that pruned context,
+// and store the assistant reply.
 //
 // This is the core of the "send message" flow used by the Express route.
 export async function createMessageWithAutoReply(options: {
   sessionId: string;
   parentId: string | null;
   content: string;
+  // Optional per-message choice of which backend and model should answer.
+  // When omitted, the app's default provider and that provider's default
+  // model are used. This is what makes the Cursor-style "pick any LLM"
+  // experience possible -- each message can be answered by a different model.
+  provider?: string;
+  model?: string;
 }): Promise<CreatedMessagePair> {
-  const { sessionId, parentId, content } = options;
+  const { sessionId, parentId, content, provider, model } = options;
 
   // Fetch parent (if any) to derive the new depth and to validate
   // that we are not creating an orphaned node.
@@ -164,8 +155,11 @@ export async function createMessageWithAutoReply(options: {
       ...lineage.map((m) => ({ role: m.role, content: m.content }))
     ];
 
-    // 4. Call Groq with the pruned context.
-    const assistantContent = await callGroqWithContext(llmMessages);
+    // 4. Ask the chosen LLM provider for a reply, using only the pruned
+    //    context. If the caller named a provider/model, use those; otherwise
+    //    fall back to the app default. The conversation logic does not care
+    //    which backend answers.
+    const assistantContent = await getProvider(provider).complete(llmMessages, { model });
 
     // 5. Store assistant reply as a child of the user message.
     const assistantMessage = await tx.message.create({
@@ -185,93 +179,3 @@ export async function createMessageWithAutoReply(options: {
     };
   });
 }
-
-// --- Groq API integration ---------------------------------------------------
-
-async function callGroqWithContext(messages: LlmMessage[]): Promise<string> {
-  // Basic guard to avoid accidental huge prompts.
-  if (messages.length === 0) {
-    return 'No prior context was provided.';
-  }
-
-  const apiKey = process.env.GROQ_API_KEY;
-  if (!apiKey) {
-    throw new Error('GROQ_API_KEY is not configured in the environment.');
-  }
-
-  const groq = new Groq({ apiKey, timeout: 30_000 });
-
-  // Helper to perform one Groq call with a hard timeout wrapper.
-  const performRequest = async () => {
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new LlmTimeoutError('LLM call exceeded 30s timeout.')), 30_000);
-    });
-
-    const completionPromise = groq.chat.completions.create({
-      messages,
-      model: process.env.GROQ_MODEL ?? 'llama-3.3-70b-versatile'
-    });
-
-    const completion = await Promise.race([completionPromise, timeoutPromise]);
-
-    return (
-      completion.choices?.[0]?.message?.content ??
-      'The model did not return any content.'
-    );
-  };
-
-  // Wrap the Groq call in an exponential backoff retry strategy.
-  try {
-    const result = await retry<string>(
-      async (bail, attempt) => {
-        try {
-          return await performRequest();
-        } catch (err: any) {
-          const statusCode: number | undefined =
-            err?.status ?? err?.statusCode ?? err?.response?.status;
-
-          // 429: API rate limit — log and retry.
-          if (statusCode === 429) {
-            // eslint-disable-next-line no-console
-            console.error(
-              `[Groq] API rate limit encountered on attempt ${attempt}.`,
-              err
-            );
-            throw new ApiRateLimitError('Groq API rate limit (HTTP 429).');
-          }
-
-          // Non-retryable DB / validation / other errors: bail out immediately.
-          if (statusCode && statusCode < 500) {
-            bail(err);
-            return 'unreachable';
-          }
-
-          // For network / 5xx errors, allow retry.
-          throw err;
-        }
-      },
-      {
-        retries: 3,
-        minTimeout: 500,
-        maxTimeout: 4_000,
-        factor: 2
-      }
-    );
-
-    return result;
-  } catch (err: unknown) {
-    // Final logging hook with clear categorization for operators.
-    if (err instanceof LlmTimeoutError) {
-      // eslint-disable-next-line no-console
-      console.error('[LLM Timeout]', err.message);
-    } else if (err instanceof ApiRateLimitError) {
-      // eslint-disable-next-line no-console
-      console.error('[API Rate Limit]', err.message);
-    } else {
-      // eslint-disable-next-line no-console
-      console.error('[Groq API Error]', err);
-    }
-    throw err;
-  }
-}
-

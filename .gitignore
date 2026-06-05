@@ -80,3 +80,6 @@ dev.db
 # Prisma client cache and temporary files
 server/prisma/migrations/**/*.db
 
+
+# Standalone widget build output
+dist-widget/

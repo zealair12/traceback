@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Traceback embedded widget demo</title>
+    <!--
+      This is a plain HTML page (no React, no build step). It shows how any
+      website can embed Traceback by including the built widget's CSS + JS and
+      dropping a <traceback-chat> tag. Point api-url at a running Traceback
+      server. The widget bundles React internally.
+    -->
+    <link rel="stylesheet" href="../dist-widget/react.css" />
+    <style>
+      html, body { height: 100%; margin: 0; background: #0d0d0d; }
+      .frame { height: 100vh; }
+    </style>
+  </head>
+  <body>
+    <div class="frame">
+      <traceback-chat api-url="http://localhost:4000"></traceback-chat>
+    </div>
+    <script src="../dist-widget/traceback-widget.js"></script>
+  </body>
+</html>

@@ -101,6 +101,12 @@ async function main() {
     const sendBody = await send.json();
     console.log('POST /message/send status:', send.status);
     console.log('assistant reply stored:', JSON.stringify(sendBody.assistantMessage?.content));
+    console.log(
+      'provenance recorded (provider/model):',
+      sendBody.assistantMessage?.provider,
+      '/',
+      sendBody.assistantMessage?.model
+    );
     console.log('lineage length (root user + this user):', sendBody.lineage?.length);
 
     // 3. A bad provider name must be rejected with 400.
@@ -121,6 +127,8 @@ async function main() {
       ids.includes('local') &&
       send.status === 201 &&
       sendBody.assistantMessage?.content === 'reply from fake local model' &&
+      sendBody.assistantMessage?.provider === 'local' &&
+      sendBody.assistantMessage?.model === 'test-model' &&
       bad.status === 400;
 
     cleanup();

@@ -17,6 +17,10 @@ export interface MessageResponse {
   content: string;
   depth: number;
   branchLabel: string | null;
+  // Which backend/model produced this message (assistant messages only).
+  // Null/absent for user messages and pre-existing rows.
+  provider?: string | null;
+  model?: string | null;
   createdAt: string;
 }
 

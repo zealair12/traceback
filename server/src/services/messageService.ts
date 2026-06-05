@@ -159,7 +159,11 @@ export async function createMessageWithAutoReply(options: {
     //    context. If the caller named a provider/model, use those; otherwise
     //    fall back to the app default. The conversation logic does not care
     //    which backend answers.
-    const assistantContent = await getProvider(provider).complete(llmMessages, { model });
+    const chosenProvider = getProvider(provider);
+    // Record exactly which backend and model were used, even when the request
+    // left them unset, so the UI can show "answered by X" on each tree node.
+    const usedModel = model ?? chosenProvider.defaultModel;
+    const assistantContent = await chosenProvider.complete(llmMessages, { model });
 
     // 5. Store assistant reply as a child of the user message.
     const assistantMessage = await tx.message.create({
@@ -168,6 +172,8 @@ export async function createMessageWithAutoReply(options: {
         parentId: userMessage.id,
         role: 'assistant',
         content: assistantContent,
+        provider: chosenProvider.id,
+        model: usedModel,
         depth: userMessage.depth + 1
       }
     });

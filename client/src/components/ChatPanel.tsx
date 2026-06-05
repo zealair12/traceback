@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import type { ChatMessage } from '../App';
+import type { ProviderInfo } from '../api/api';
 import { MessageBubble } from './MessageBubble';
+import { ModelPicker } from './ModelPicker';
 import { NodeNavBar } from './NodeNavBar';
 import { stripMarkdown } from '../utils/text';
 
@@ -23,6 +25,12 @@ interface ChatPanelProps {
   onNavigateToParent: () => void;
   onNavigateToSibling: (offset: number) => void;
   onNavigateToNode: (nodeId: string) => void;
+  // Model picker.
+  providers: ProviderInfo[];
+  selectedProvider: string | null;
+  selectedModel: string | null;
+  onSelectProvider: (providerId: string) => void;
+  onSelectModel: (model: string) => void;
 }
 
 export function ChatPanel({
@@ -37,7 +45,12 @@ export function ChatPanel({
   siblingInfo,
   onNavigateToParent,
   onNavigateToSibling,
-  onNavigateToNode
+  onNavigateToNode,
+  providers,
+  selectedProvider,
+  selectedModel,
+  onSelectProvider,
+  onSelectModel
 }: ChatPanelProps) {
   const [input, setInput] = useState('');
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
@@ -155,6 +168,13 @@ export function ChatPanel({
             <span className="text-gray-300 truncate max-w-[300px]">"{branchingFromPreview}"</span>
           </div>
         )}
+        <ModelPicker
+          providers={providers}
+          selectedProvider={selectedProvider}
+          selectedModel={selectedModel}
+          onSelectProvider={onSelectProvider}
+          onSelectModel={onSelectModel}
+        />
         <div className="max-w-2xl mx-auto flex items-end gap-2">
           <div className="relative flex-1">
             <textarea

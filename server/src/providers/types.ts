@@ -22,6 +22,11 @@ export interface CompletionOptions {
   model?: string;
   // Hard time budget for the whole request, in milliseconds.
   timeoutMs?: number;
+  // Sampling temperature (0 = focused, higher = more random). Passed through to
+  // the backend when provided. Mainly used by the OpenAI-compatible proxy.
+  temperature?: number;
+  // Upper bound on reply length (tokens). Passed through when provided.
+  maxTokens?: number;
 }
 
 // The contract itself. A "provider" is one company's/back-end's implementation.

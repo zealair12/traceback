@@ -65,7 +65,12 @@ function buildOpenAICompatibleProvider(config: OpenAICompatibleConfig): ChatProv
 
       return callWithRetry<string>(
         async () => {
-          const completion = await client.chat.completions.create({ model, messages });
+          const completion = await client.chat.completions.create({
+            model,
+            messages,
+            ...(options?.temperature !== undefined ? { temperature: options.temperature } : {}),
+            ...(options?.maxTokens !== undefined ? { max_tokens: options.maxTokens } : {})
+          });
           return (
             completion.choices?.[0]?.message?.content ??
             'The model did not return any content.'

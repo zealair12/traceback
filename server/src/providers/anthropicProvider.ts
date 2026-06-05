@@ -59,9 +59,12 @@ export function createAnthropicProvider(): ChatProvider {
         async () => {
           const response = await client.messages.create({
             model,
-            max_tokens: DEFAULT_MAX_TOKENS,
+            // Anthropic always requires a reply-length cap; the caller can
+            // override the default via maxTokens.
+            max_tokens: options?.maxTokens ?? DEFAULT_MAX_TOKENS,
             system: systemPrompt || undefined,
             messages: conversation,
+            ...(options?.temperature !== undefined ? { temperature: options.temperature } : {})
           });
           // Anthropic returns a list of content blocks; collect the text ones.
           const text = response.content

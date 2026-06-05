@@ -42,7 +42,12 @@ export function createGroqProvider(): ChatProvider {
 
       return callWithRetry<string>(
         async () => {
-          const completion = await groq.chat.completions.create({ messages, model });
+          const completion = await groq.chat.completions.create({
+            messages,
+            model,
+            ...(options?.temperature !== undefined ? { temperature: options.temperature } : {}),
+            ...(options?.maxTokens !== undefined ? { max_tokens: options.maxTokens } : {})
+          });
           return (
             completion.choices?.[0]?.message?.content ??
             'The model did not return any content.'

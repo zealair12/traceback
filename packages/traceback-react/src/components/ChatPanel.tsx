@@ -4,6 +4,7 @@ import type { ProviderInfo } from '@traceback/shared';
 import { MessageBubble } from './MessageBubble';
 import { ModelPicker } from './ModelPicker';
 import { NodeNavBar } from './NodeNavBar';
+import { BrandIcon } from './BrandIcon';
 import { stripMarkdown } from '../utils/text';
 
 interface SiblingInfo {
@@ -140,8 +141,8 @@ export function ChatPanel({
           ))}
           {sending && (
             <div className="flex items-start gap-3">
-              <div className="w-7 h-7 rounded-full bg-gray-800 flex items-center justify-center text-[10px] text-gray-400 mt-1 flex-shrink-0">
-                TB
+              <div className="w-7 h-7 rounded-full bg-gray-800 flex items-center justify-center text-emerald-500 mt-1 flex-shrink-0">
+                <BrandIcon size={15} />
               </div>
               <div className="text-sm text-gray-500 animate-pulse">Thinking…</div>
             </div>
@@ -168,24 +169,27 @@ export function ChatPanel({
             <span className="text-gray-300 truncate max-w-[300px]">"{branchingFromPreview}"</span>
           </div>
         )}
-        <ModelPicker
-          providers={providers}
-          selectedProvider={selectedProvider}
-          selectedModel={selectedModel}
-          keyedProviders={keyedProviders}
-          onSelect={onSelectModel}
-        />
-        <div className="max-w-2xl mx-auto flex items-end gap-2">
-          <div className="relative flex-1">
-            <textarea
-              ref={inputRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              rows={input.includes('\n') ? 3 : 1}
-              placeholder="Message TraceBack..."
-              disabled={sending}
-              className="block w-full resize-none rounded-2xl bg-inputBg text-sm text-gray-100 px-4 py-2.5 pr-10 border border-gray-800 focus:outline-none focus:ring-1 focus:ring-gray-600 disabled:opacity-50"
+        {/* One rounded frame holding the textarea with a slim controls row
+            inside its bottom edge: model pill on the left, send on the right
+            (the layout used by modern editors). */}
+        <div className="max-w-2xl mx-auto rounded-2xl bg-inputBg border border-gray-800 focus-within:ring-1 focus-within:ring-gray-600">
+          <textarea
+            ref={inputRef}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            rows={input.includes('\n') ? 3 : 1}
+            placeholder="Message TraceBack..."
+            disabled={sending}
+            className="block w-full resize-none bg-transparent text-sm text-gray-100 px-4 pt-3 pb-1 focus:outline-none disabled:opacity-50"
+          />
+          <div className="flex items-center justify-between px-2 pb-2">
+            <ModelPicker
+              providers={providers}
+              selectedProvider={selectedProvider}
+              selectedModel={selectedModel}
+              keyedProviders={keyedProviders}
+              onSelect={onSelectModel}
             />
             <button
               type="button"
@@ -195,7 +199,7 @@ export function ChatPanel({
                 onSendMessage(input.trim());
                 setInput('');
               }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full bg-white text-black flex items-center justify-center text-xs hover:bg-gray-200 transition-colors disabled:opacity-30"
+              className="h-7 w-7 rounded-full bg-white text-black flex items-center justify-center text-xs hover:bg-gray-200 transition-colors disabled:opacity-30"
             >
               ↑
             </button>

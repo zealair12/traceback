@@ -43,18 +43,19 @@ export function ModelPicker({
       .find((p) => p.id === selectedProvider)
       ?.suggestedModels.includes(selectedModel);
 
+  // A compact pill that sits inside the input frame's controls row (the
+  // editor-style placement). Shows just the model; the menu stays grouped by
+  // backend.
   return (
-    <div className="max-w-2xl mx-auto mb-2 flex items-center gap-2 text-[11px] text-gray-500">
-      <span className="text-gray-600">Answer with</span>
-      <select
-        value={currentValue}
-        onChange={(e) => {
-          const [providerId, model] = e.target.value.split(SEP);
-          onSelect(providerId, model);
-        }}
-        className="bg-gray-900 border border-gray-800 rounded-md px-2 py-1 text-[11px] text-gray-200 focus:outline-none focus:ring-1 focus:ring-emerald-600/50 hover:border-gray-700 cursor-pointer max-w-[260px] truncate"
-        title="Choose which model answers the next message"
-      >
+    <select
+      value={currentValue}
+      onChange={(e) => {
+        const [providerId, model] = e.target.value.split(SEP);
+        onSelect(providerId, model);
+      }}
+      className="bg-gray-900/70 border border-gray-800 rounded-full px-2.5 py-1 text-[11px] text-gray-300 focus:outline-none focus:ring-1 focus:ring-emerald-600/50 hover:border-gray-600 hover:text-gray-100 cursor-pointer max-w-[220px] truncate transition-colors"
+      title="Choose which model answers the next message"
+    >
         {providers.map((p) => {
           const models = [...p.suggestedModels];
           if (extraForCurrent && p.id === selectedProvider && !models.includes(selectedModel!)) {
@@ -71,7 +72,6 @@ export function ModelPicker({
             </optgroup>
           );
         })}
-      </select>
-    </div>
+    </select>
   );
 }

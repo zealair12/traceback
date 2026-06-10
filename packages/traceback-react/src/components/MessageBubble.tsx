@@ -6,6 +6,7 @@ import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
 import type { ChatMessage } from '../types';
 import { normalizeLatex } from '../utils/text';
+import { BrandIcon } from './BrandIcon';
 
 interface MessageBubbleProps {
   message: ChatMessage;
@@ -85,8 +86,8 @@ export function MessageBubble({ message, onBranchFromMessage }: MessageBubblePro
 
   return (
     <div className="group flex items-start gap-3">
-      <div className="w-7 h-7 rounded-full bg-gray-800 flex items-center justify-center text-[10px] text-gray-200 mt-1 flex-shrink-0">
-        TB
+      <div className="w-7 h-7 rounded-full bg-gray-800 flex items-center justify-center text-emerald-500 mt-1 flex-shrink-0">
+        <BrandIcon size={15} />
       </div>
       <div
         ref={containerRef}

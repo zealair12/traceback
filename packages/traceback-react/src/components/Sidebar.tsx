@@ -8,6 +8,7 @@ interface SidebarProps {
   onSelectSession: (sessionId: string) => void;
   onRenameSession: (sessionId: string, name: string) => void;
   onOpenKeys: () => void;
+  onOpenImport: () => void;
 }
 
 export function Sidebar({
@@ -16,7 +17,8 @@ export function Sidebar({
   onNewSession,
   onSelectSession,
   onRenameSession,
-  onOpenKeys
+  onOpenKeys,
+  onOpenImport
 }: SidebarProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
@@ -106,11 +108,19 @@ export function Sidebar({
       </div>
 
       <div className="h-px bg-gray-800" />
-      <div className="px-3 py-3">
+      <div className="px-3 py-3 space-y-2">
+        <button
+          type="button"
+          onClick={onOpenImport}
+          className="block w-full text-left text-[12px] text-gray-400 hover:text-white transition-colors"
+          title="Import chats exported from ChatGPT or other tools"
+        >
+          Import chats
+        </button>
         <button
           type="button"
           onClick={onOpenKeys}
-          className="w-full text-left text-[12px] text-gray-400 hover:text-white transition-colors"
+          className="block w-full text-left text-[12px] text-gray-400 hover:text-white transition-colors"
           title="Manage your API keys (stored only in this browser)"
         >
           API keys

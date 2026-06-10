@@ -21,7 +21,10 @@ export { ApiRateLimitError, LlmTimeoutError } from '../providers/index.js';
 // Hard limit on how deep a conversation tree can go.
 // This is enforced at the application layer before we insert
 // a new message, using the parent's depth.
-export const MAX_DEPTH = 32;
+// Raised from 32: imported histories (e.g. long ChatGPT conversations) can be
+// hundreds of turns deep, and users must be able to continue them here. The
+// recursive lineage query handles any depth; this is just a runaway guard.
+export const MAX_DEPTH = 1024;
 
 // Shape of a single lineage item returned by the recursive CTE.
 // This mirrors the `messages` table but only includes fields

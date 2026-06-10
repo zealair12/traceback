@@ -24,6 +24,7 @@ import {
   InsecureKeyTransportError
 } from './providers/index.js';
 import { registerOpenAiProxy } from './routes/openaiProxy.js';
+import { registerImportRoutes } from './routes/importRoutes.js';
 import { resolveApiKey } from './auth/apiKey.js';
 
 export function createApp() {
@@ -36,7 +37,9 @@ export function createApp() {
     })
   );
 
-  app.use(express.json());
+  // Imported chat-history files can be several megabytes, so allow bodies well
+  // beyond the 100kb default.
+  app.use(express.json({ limit: '50mb' }));
 
   // --- Routes ---------------------------------------------------------------
 
@@ -203,6 +206,10 @@ export function createApp() {
   // OpenAI-compatible proxy endpoint (POST /v1/chat/completions). Registered
   // before the error handler so its errors are handled the same way.
   registerOpenAiProxy(app);
+
+  // Conversation import endpoint (POST /import): writes exported histories
+  // (ChatGPT etc.) into the tree store.
+  registerImportRoutes(app);
 
   // --- Error handling -------------------------------------------------------
 

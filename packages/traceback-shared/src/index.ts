@@ -7,9 +7,11 @@ import type { ImportedConversation } from './importers/index.js';
 // neutral conversation shape they produce.
 export {
   parseImportFile,
+  parseImportText,
   detectImporter,
   conversationStats,
   chatgptImporter,
+  claudeCodeImporter,
   genericImporter
 } from './importers/index.js';
 export type {

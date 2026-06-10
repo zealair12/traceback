@@ -14,11 +14,12 @@ import { spawn } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { parseImportFile, conversationStats } from '../../packages/traceback-shared/src/importers/index.js';
+import { parseImportFile, parseImportText, conversationStats } from '../../packages/traceback-shared/src/importers/index.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const serverEntry = join(__dirname, '..', 'src', 'index.ts');
 const fixturePath = join(__dirname, 'fixtures', 'chatgpt-export.json');
+const claudeFixturePath = join(__dirname, 'fixtures', 'claude-code-session.jsonl');
 
 function startMockModelServer(): Promise<{ port: number; close: () => void }> {
   return new Promise((resolve) => {
@@ -74,6 +75,40 @@ async function main() {
   console.log('parser checks:', parseOk ? 'ok' : 'FAILED');
   if (!parseOk) process.exit(1);
 
+  // --- Step 1b: parse the Claude Code session fixture (.jsonl) ---------------
+  const claudeParsed = parseImportText(readFileSync(claudeFixturePath, 'utf8'));
+  const cc = claudeParsed.conversations[0];
+  const ccStats = conversationStats(cc);
+  const ccById = new Map(cc.messages.map((m) => [m.id, m]));
+  console.log(
+    'claude-code fixture:',
+    claudeParsed.importerId,
+    '| name:',
+    JSON.stringify(cc.name),
+    '| messages:',
+    ccStats.messageCount,
+    '| branches:',
+    ccStats.branchCount
+  );
+  const claudeOk =
+    claudeParsed.importerId === 'claude-code' &&
+    cc.name === 'Fixture: refactor the parser' &&
+    ccStats.messageCount === 6 && // thinking/tool/sidechain/command lines all skipped
+    ccStats.branchCount === 1 && // the retry branch under the merged reply
+    // two assistant text segments separated by tool activity merged into one
+    ccById.get('a1')?.content.includes('I will start by reading the parser.') === true &&
+    ccById.get('a1')?.content.includes('Done. The parser is now split into two functions.') === true &&
+    // the branch siblings both hang off the merged assistant reply
+    ccById.get('u2a')?.parentId === 'a1' &&
+    ccById.get('u2b')?.parentId === 'a1' &&
+    // provenance: which Claude model answered, recorded per message
+    ccById.get('a3b')?.model === 'claude-test-2' &&
+    ccById.get('a3b')?.provider === 'anthropic' &&
+    // sidechain (subagent) content must never be imported
+    !cc.messages.some((m) => m.content.includes('subagent internal prompt'));
+  console.log('claude-code parser checks:', claudeOk ? 'ok' : 'FAILED');
+  if (!claudeOk) process.exit(1);
+
   // --- Step 2: import over HTTP and check the stored tree --------------------
   const mock = await startMockModelServer();
   const PORT = 4558;
@@ -113,6 +148,16 @@ async function main() {
     console.log('stored messages:', stored.length, '| children at branch point:', branchChildren.length);
     console.log('stored provenance on a1:', a1s?.provider, '/', a1s?.model);
 
+    // Also import the Claude Code conversation and confirm it stores intact.
+    const ccResp = await fetch(`${base}/import`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ conversations: claudeParsed.conversations })
+    });
+    const ccBody = await ccResp.json();
+    const ccStored = await fetch(`${base}/sessions/${ccBody.imported?.[0]?.sessionId}/messages`).then((r) => r.json());
+    console.log('claude-code import status:', ccResp.status, '| stored messages:', ccStored.length);
+
     // --- Step 3: continue an imported branch with the mock model -------------
     const a2b = storedByContent.get('SQL stores tables; NoSQL stores documents.') as any;
     const cont = await fetch(`${base}/message/send`, {
@@ -138,6 +183,8 @@ async function main() {
     const ok =
       importResp.status === 201 &&
       importBody.imported.length === 2 &&
+      ccResp.status === 201 &&
+      ccStored.length === 6 &&
       stored.length === 6 &&
       branchChildren.length === 2 &&
       a1s?.provider === 'openai' &&

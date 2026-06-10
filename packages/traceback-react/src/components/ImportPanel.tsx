@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import {
-  parseImportFile,
+  parseImportText,
   conversationStats,
   type ImportedConversation
 } from '@traceback/shared';
@@ -34,21 +34,14 @@ export function ImportPanel({ onImport, onClose }: ImportPanelProps) {
   const handleFile = async (file: File) => {
     try {
       const text = await file.text();
-      const data = JSON.parse(text);
-      const { importerId, conversations } = parseImportFile(data);
+      const { importerId, conversations } = parseImportText(text);
       if (conversations.length === 0) {
         setPhase({ step: 'error', message: 'No importable conversations found in that file.' });
         return;
       }
       setPhase({ step: 'preview', importerId, conversations, selected: conversations.map(() => true) });
     } catch (err: any) {
-      setPhase({
-        step: 'error',
-        message:
-          err?.message?.includes('JSON')
-            ? 'That file is not valid JSON. For ChatGPT, unzip the export and drop conversations.json.'
-            : err?.message ?? 'Could not read that file.'
-      });
+      setPhase({ step: 'error', message: err?.message ?? 'Could not read that file.' });
     }
   };
 
@@ -78,9 +71,9 @@ export function ImportPanel({ onImport, onClose }: ImportPanelProps) {
           </button>
         </div>
         <p className="text-[11px] text-gray-500 mb-4 leading-relaxed">
-          Bring your history from ChatGPT (Settings, Data controls, Export data, then drop the
-          conversations.json from the zip) or any JSON list of messages. Conversations import as
-          trees; branches from edited or regenerated messages are preserved.
+          Bring your history from ChatGPT: Settings &gt;&gt; Data controls &gt;&gt; Export data
+          &gt;&gt; drop the conversations.json from the zip. Claude Code sessions (.jsonl) and
+          plain JSON message lists work too.
         </p>
 
         {phase.step === 'pick' && (
@@ -102,11 +95,11 @@ export function ImportPanel({ onImport, onClose }: ImportPanelProps) {
             }`}
           >
             <p className="text-[13px] text-gray-300">Drop your export file here</p>
-            <p className="text-[11px] text-gray-600 mt-1">or click to choose a .json file</p>
+            <p className="text-[11px] text-gray-600 mt-1">or click to choose a .json or .jsonl file</p>
             <input
               ref={fileRef}
               type="file"
-              accept=".json,application/json"
+              accept=".json,.jsonl,application/json"
               className="hidden"
               onChange={(e) => {
                 const f = e.target.files?.[0];

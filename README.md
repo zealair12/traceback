@@ -61,29 +61,22 @@ npm run dev
 
 The Express server will start on `http://localhost:4000` (or the port you configured).
 
-### 5. Headless recursive CTE test
+### 5. Verification suites
 
-Before wiring up the React UI, you can verify that the recursive CTE correctly prunes context (only returning the lineage from the root to the active node).
-
-With the server running:
+Eight headless scripts under `server/scripts/` prove the system end to end --
+no API key needed (they run against the local database and a built-in mock
+model). Each prints PASSED or FAILED:
 
 ```bash
 cd server
-npx ts-node-dev scripts/test-tree.ts
-```
-
-The script will:
-
-- Create a new session via `POST /sessions`
-- Send a root message and two child messages branching from the root via `POST /message/send`
-- Assert that:
-  - The lineage for Child A is `[Root, Child A]`
-  - The lineage for Child B is `[Root, Child B]`
-
-If everything is configured correctly, you should see:
-
-```text
-✅ Recursive CTE lineage validation PASSED.
+npx tsx scripts/verify-lineage.ts        # core context pruning (recursive CTE)
+npx tsx scripts/verify-delete.ts         # subtree deletion
+npx tsx scripts/verify-message-flow.ts   # providers + per-message model choice
+npx tsx scripts/verify-openai-proxy.ts   # the /v1/chat/completions proxy
+npx tsx scripts/verify-byok.ts           # bring-your-own-key handling
+npx tsx scripts/verify-import.ts         # chat-history importers
+npx tsx scripts/verify-multimodal.ts     # image and PDF attachments
+npx tsx scripts/verify-transcribe.ts     # speech-to-text endpoint
 ```
 
 ## Universal OpenAI-compatible proxy

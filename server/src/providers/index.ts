@@ -10,9 +10,8 @@
 
 import type { ChatProvider, ProviderInfo } from './types.js';
 import { ProviderNotAvailableError } from './types.js';
-import { createGroqProvider } from './groqProvider.js';
-import { createOpenAIProvider, createLocalProvider } from './openaiProvider.js';
-import { createAnthropicProvider } from './anthropicProvider.js';
+import { createGroqProvider, createOpenAIProvider, createLocalProvider } from './openaiDialect.js';
+import { createAnthropicProvider } from './anthropic.js';
 
 // Each entry maps a short id to a function that builds that provider on demand.
 // Building lazily means a provider that needs a missing API key does not break

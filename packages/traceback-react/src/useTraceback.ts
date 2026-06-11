@@ -1,16 +1,15 @@
 // useTraceback: the headless "engine" hook.
 //
 // Plain-English big picture:
-// This hook contains ALL the logic of a Traceback conversation -- loading
-// sessions, tracking where you are in the branching tree, sending messages to a
-// chosen model, branching, deleting, navigating -- but renders NOTHING. It hands
-// back plain data and action functions. The standard <TracebackChat> UI is built
-// on top of it, but a technical user can call this hook directly and build their
-// own interface around the same engine. You only have to tell it the address of
-// a Traceback server (apiUrl).
+// This hook owns the STATE of a Traceback conversation -- which session is
+// open, where you are in the tree, what is being sent -- and the ACTIONS that
+// change it. Everything derivable is computed by plain classes it leans on:
+// ConversationTree (the tree math), ModelRouter (which model answers), and
+// KeyStore (the user's own keys). The standard <TracebackChat> UI is built on
+// this hook, but a technical user can call it directly -- or skip React
+// entirely and use the classes -- and get the same engine.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { Edge, Node } from '@xyflow/react';
 import {
   createTracebackClient,
   type SessionResponse,
@@ -20,22 +19,10 @@ import {
   type ImportedConversation,
   type ImageAttachment
 } from '@traceback/shared';
-import { stripMarkdown } from './utils/text';
-import type { ChatMessage } from './types';
-import { getStoredKey, setStoredKey, clearStoredKey } from './keys';
-
-function isUntitledSessionName(name: string | null): boolean {
-  return !name || !name.trim() || name.trim().toLowerCase() === 'new conversation';
-}
-
-function summarizeTopic(text: string): string {
-  const clean = stripMarkdown(text).replace(/\s+/g, ' ').trim();
-  if (!clean) return 'Untitled';
-  const simplified = clean.replace(/^(what is|how to|can you|please|explain|help me)\s+/i, '');
-  const words = simplified.split(' ').slice(0, 6).join(' ');
-  const titled = words.charAt(0).toUpperCase() + words.slice(1);
-  return titled.replace(/[?.!,;:]+$/, '') || 'Untitled';
-}
+import { ConversationTree } from './lib/conversationTree';
+import { ModelRouter } from './lib/modelRouter';
+import { keyStore } from './lib/keyStore';
+import { isUntitledSessionName, summarizeTopic } from './lib/naming';
 
 export interface UseTracebackOptions {
   // Base URL of the Traceback server (e.g. "http://localhost:4000").
@@ -61,13 +48,11 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
   const [serverDefaultProvider, setServerDefaultProvider] = useState<string | null>(null);
-
-  // Which backends the user has saved their own key for (in the browser).
+  // Which backends the user has saved their own key for (in this browser tab).
   const [keyedProviders, setKeyedProviders] = useState<Set<string>>(new Set());
 
-  // Load providers once (per client) and default the picker to the server's
-  // default backend + that backend's default model. Also note which backends
-  // already have a user-supplied key saved in this browser tab.
+  // Load providers once and default the picker to the server's default
+  // backend + that backend's default model.
   useEffect(() => {
     client
       .fetchProviders()
@@ -79,76 +64,10 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
           setSelectedProvider(def.id);
           setSelectedModel(def.defaultModel);
         }
-        setKeyedProviders(new Set(res.providers.filter((p) => getStoredKey(p.id)).map((p) => p.id)));
+        setKeyedProviders(keyStore.keyedAmong(res.providers.map((p) => p.id)));
       })
       .catch((err) => console.error('Failed to load providers:', err));
   }, [client]);
-
-  // Picking an entry from the single model dropdown sets backend + model at once.
-  const handleSelectModel = useCallback((providerId: string, model: string) => {
-    setSelectedProvider(providerId);
-    setSelectedModel(model);
-  }, []);
-
-  // Resolve which backend/model a message should actually go to. Normally the
-  // user's explicit pick; in "Auto" mode we choose for them, deterministically:
-  // a message with a PDF goes to the first USABLE backend (server-configured
-  // or user-keyed) that reads documents (preferring one whose model also sees
-  // images when both are attached); a message with images goes to the first
-  // usable image-capable backend; plain text goes to the server's default.
-  // Auto never picks a backend that is not connected.
-  const resolveModelChoice = useCallback(
-    (hasImages: boolean, hasFiles = false): { provider?: string; model?: string } => {
-      if (selectedProvider !== 'auto') {
-        return { provider: selectedProvider ?? undefined, model: selectedModel ?? undefined };
-      }
-      const usable = (p: ProviderInfo) => p.configured || keyedProviders.has(p.id);
-      const order = ['groq', 'openai', 'anthropic', 'local'];
-      // Older servers may not advertise the capability fields yet; treat a
-      // missing list as empty rather than crashing (newer client, older server
-      // is a legitimate pairing for embedders).
-      const vision = (p: ProviderInfo) => p.visionModels ?? [];
-      const docs = (p: ProviderInfo) => p.documentModels ?? [];
-      if (hasFiles) {
-        for (const id of order) {
-          const p = availableProviders.find((x) => x.id === id);
-          if (!p || !usable(p) || docs(p).length === 0) continue;
-          const model = hasImages
-            ? docs(p).find((m) => vision(p).includes(m)) ?? docs(p)[0]
-            : docs(p)[0];
-          return { provider: p.id, model };
-        }
-      }
-      if (hasImages) {
-        for (const id of order) {
-          const p = availableProviders.find((x) => x.id === id);
-          if (p && usable(p) && vision(p).length > 0) {
-            return { provider: p.id, model: vision(p)[0] };
-          }
-        }
-      }
-      const def = availableProviders.find((p) => p.id === serverDefaultProvider);
-      if (def && usable(def)) return { provider: def.id, model: def.defaultModel };
-      const first = availableProviders.find(usable);
-      return first ? { provider: first.id, model: first.defaultModel } : {};
-    },
-    [selectedProvider, selectedModel, availableProviders, keyedProviders, serverDefaultProvider]
-  );
-
-  // Save / clear a user's own API key for a backend (browser-only storage).
-  const setProviderKey = useCallback((providerId: string, key: string) => {
-    setStoredKey(providerId, key);
-    setKeyedProviders((prev) => new Set(prev).add(providerId));
-  }, []);
-
-  const clearProviderKey = useCallback((providerId: string) => {
-    clearStoredKey(providerId);
-    setKeyedProviders((prev) => {
-      const next = new Set(prev);
-      next.delete(providerId);
-      return next;
-    });
-  }, []);
 
   // Load the session list, backfilling names for old unnamed sessions.
   useEffect(() => {
@@ -165,8 +84,7 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
             const msgs = await client.fetchSessionMessages(session.id);
             const firstUser = msgs.find((m) => m.role === 'user');
             if (!firstUser) return null;
-            const name = summarizeTopic(firstUser.content);
-            const updated = await client.updateSessionName(session.id, name);
+            const updated = await client.updateSessionName(session.id, summarizeTopic(firstUser.content));
             return { id: updated.id, name: updated.name };
           })
         );
@@ -197,107 +115,27 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
       .fetchSessionMessages(activeSessionId)
       .then((msgs) => {
         setAllMessages(msgs);
-        if (msgs.length > 0) {
-          const deepest = msgs.reduce((a, b) => (a.depth >= b.depth ? a : b));
-          setActiveNodeId(deepest.id);
-        } else {
-          setActiveNodeId(null);
-        }
+        const deepest = msgs.length
+          ? msgs.reduce((a, b) => (a.depth >= b.depth ? a : b))
+          : null;
+        setActiveNodeId(deepest ? deepest.id : null);
       })
       .catch((err) => console.error('Failed to load messages:', err));
   }, [client, activeSessionId]);
 
-  const messageById = useMemo(
-    () => new Map(allMessages.map((m) => [m.id, m])),
-    [allMessages]
+  // All tree math lives in one plain class.
+  const tree = useMemo(
+    () => new ConversationTree(allMessages, activeNodeId),
+    [allMessages, activeNodeId]
   );
 
-  // The linear path from the root down to the active node -- this is the thread
-  // the chat panel shows (and mirrors the pruned context the server uses).
-  const threadPath: ChatMessage[] = useMemo(() => {
-    if (!activeNodeId || allMessages.length === 0) return [];
-    const path: ChatMessage[] = [];
-    let current: MessageResponse | undefined = messageById.get(activeNodeId);
-    while (current) {
-      path.unshift({
-        id: current.id,
-        role: current.role,
-        content: current.content,
-        provider: current.provider,
-        model: current.model,
-        attachments: current.attachments
-      });
-      current = current.parentId ? messageById.get(current.parentId) : undefined;
-    }
-    return path;
-  }, [activeNodeId, allMessages, messageById]);
-
-  const activePathIds: Set<string> = useMemo(
-    () => new Set(threadPath.map((m) => m.id)),
-    [threadPath]
+  // Which backend/model a message actually goes to (Auto resolves here).
+  const router = useMemo(
+    () => new ModelRouter(availableProviders, keyedProviders, serverDefaultProvider),
+    [availableProviders, keyedProviders, serverDefaultProvider]
   );
 
-  const userMessages = useMemo(
-    () => allMessages.filter((m) => m.role === 'user'),
-    [allMessages]
-  );
-  const userMessageIds = useMemo(
-    () => new Set(userMessages.map((m) => m.id)),
-    [userMessages]
-  );
-
-  // For each question, find its nearest question ancestor so the tree connects
-  // questions to questions (skipping the assistant replies in between).
-  const userParentMap = useMemo(() => {
-    const map = new Map<string, string | null>();
-    for (const m of userMessages) {
-      let cur = m.parentId;
-      while (cur) {
-        if (userMessageIds.has(cur)) {
-          map.set(m.id, cur);
-          break;
-        }
-        const parent = messageById.get(cur);
-        cur = parent?.parentId ?? null;
-      }
-      if (!map.has(m.id)) map.set(m.id, null);
-    }
-    return map;
-  }, [userMessages, userMessageIds, messageById]);
-
-  const nodes: Node[] = useMemo(
-    () =>
-      userMessages.map((m) => {
-        const t = stripMarkdown(m.content);
-        const d = new Date(m.createdAt);
-        const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        return {
-          id: m.id,
-          type: 'custom',
-          data: {
-            label: t.length > 40 ? t.slice(0, 40) + '…' : t,
-            timestamp: time,
-            isActive: m.id === activeNodeId || activePathIds.has(m.id),
-            isOnActivePath: activePathIds.has(m.id)
-          },
-          position: { x: 0, y: 0 }
-        };
-      }),
-    [userMessages, activeNodeId, activePathIds, userParentMap]
-  );
-
-  const edges: Edge[] = useMemo(
-    () =>
-      userMessages
-        .filter((m) => userParentMap.get(m.id))
-        .map((m) => ({
-          id: `e-${userParentMap.get(m.id)}-${m.id}`,
-          source: userParentMap.get(m.id)!,
-          target: m.id
-        })),
-    [userMessages, userParentMap]
-  );
-
+  const messageById = useMemo(() => new Map(allMessages.map((m) => [m.id, m])), [allMessages]);
   const branchingFromPreview = useMemo(() => {
     if (!branchingFromMessageId) return null;
     if (branchingFromText) return branchingFromText;
@@ -306,16 +144,54 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
     return msg.content.length > 40 ? `${msg.content.slice(0, 40)}…` : msg.content;
   }, [branchingFromMessageId, branchingFromText, messageById]);
 
-  const siblingInfo = useMemo(() => {
-    if (!activeNodeId) return null;
-    const activeMsg = messageById.get(activeNodeId);
-    if (!activeMsg) return null;
-    const siblings = allMessages
-      .filter((m) => m.parentId === activeMsg.parentId)
-      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-    const currentIndex = siblings.findIndex((m) => m.id === activeNodeId);
-    return { parentId: activeMsg.parentId, siblings, currentIndex, total: siblings.length };
-  }, [activeNodeId, allMessages, messageById]);
+  const clearBranching = useCallback(() => {
+    setBranchingFromMessageId(null);
+    setBranchingFromText(null);
+  }, []);
+
+  // Picking an entry from the model dropdown sets backend + model at once.
+  const handleSelectModel = useCallback((providerId: string, model: string) => {
+    setSelectedProvider(providerId);
+    setSelectedModel(model);
+  }, []);
+
+  // Save / clear a user's own API key for a backend (browser-only storage).
+  const setProviderKey = useCallback((providerId: string, key: string) => {
+    keyStore.set(providerId, key);
+    setKeyedProviders((prev) => new Set(prev).add(providerId));
+  }, []);
+
+  const clearProviderKey = useCallback((providerId: string) => {
+    keyStore.clear(providerId);
+    setKeyedProviders((prev) => {
+      const next = new Set(prev);
+      next.delete(providerId);
+      return next;
+    });
+  }, []);
+
+  // Turn recorded audio (or an audio file) into text. The user's stored Groq
+  // or OpenAI key is sent when present.
+  const handleTranscribeAudio = useCallback(
+    async (audioDataUrl: string, mediaType: string): Promise<string> => {
+      const key = keyStore.get('groq') ?? keyStore.get('openai') ?? undefined;
+      const result = await client.transcribeAudio(audioDataUrl, mediaType, { apiKey: key });
+      return result.text;
+    },
+    [client]
+  );
+
+  // Write imported conversations to the server, refresh, and jump to the
+  // first imported one. Returns how many were imported.
+  const handleImportConversations = useCallback(
+    async (conversations: ImportedConversation[]): Promise<number> => {
+      const result = await client.importConversations(conversations);
+      setSessions(await client.fetchSessions());
+      if (result.imported.length > 0) setActiveSessionId(result.imported[0].sessionId);
+      return result.imported.length;
+    },
+    [client]
+  );
 
   const handleNewSession = useCallback(async () => {
     try {
@@ -329,37 +205,12 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
     }
   }, [client]);
 
-  const handleSelectSession = useCallback((sessionId: string) => {
-    setActiveSessionId(sessionId);
-    setBranchingFromMessageId(null);
-    setBranchingFromText(null);
-  }, []);
-
-  // Turn recorded audio (or an audio file) into text. The user's stored Groq
-  // or OpenAI key is sent when present; the server picks whichever Whisper
-  // backend it can reach. Returns the recognized text for the input box.
-  const handleTranscribeAudio = useCallback(
-    async (audioDataUrl: string, mediaType: string): Promise<string> => {
-      const key = getStoredKey('groq') ?? getStoredKey('openai') ?? undefined;
-      const result = await client.transcribeAudio(audioDataUrl, mediaType, { apiKey: key });
-      return result.text;
+  const handleSelectSession = useCallback(
+    (sessionId: string) => {
+      setActiveSessionId(sessionId);
+      clearBranching();
     },
-    [client]
-  );
-
-  // Write imported conversations to the server, refresh the session list, and
-  // jump to the first imported one. Returns how many were imported.
-  const handleImportConversations = useCallback(
-    async (conversations: ImportedConversation[]): Promise<number> => {
-      const result = await client.importConversations(conversations);
-      const fresh = await client.fetchSessions();
-      setSessions(fresh);
-      if (result.imported.length > 0) {
-        setActiveSessionId(result.imported[0].sessionId);
-      }
-      return result.imported.length;
-    },
-    [client]
+    [clearBranching]
   );
 
   const handleRenameSession = useCallback(
@@ -374,6 +225,27 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
     [client]
   );
 
+  // Shared core of "send a message": route it, send it, place the reply.
+  const send = useCallback(
+    async (sessionId: string, content: string, parentId: string | null, attachments?: ImageAttachment[]) => {
+      const choice = router.resolve(
+        { provider: selectedProvider, model: selectedModel },
+        (attachments ?? []).some((a) => a.type === 'image'),
+        (attachments ?? []).some((a) => a.type === 'file')
+      );
+      const result: SendMessageResult = await client.sendMessage(sessionId, content, parentId, {
+        provider: choice.provider,
+        model: choice.model,
+        attachments,
+        apiKey: (choice.provider && keyStore.get(choice.provider)) || undefined
+      });
+      setAllMessages((prev) => [...prev, result.userMessage, result.assistantMessage]);
+      setActiveNodeId(result.assistantMessage.id);
+      clearBranching();
+    },
+    [client, router, selectedProvider, selectedModel, clearBranching]
+  );
+
   const handleSendMessage = useCallback(
     async (content: string, attachments?: ImageAttachment[]) => {
       if (!activeSessionId || sending) return;
@@ -381,27 +253,12 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
       setSending(true);
       setError(null);
       try {
-        const sessionId = activeSessionId;
-        const choice = resolveModelChoice(
-          (attachments ?? []).some((a) => a.type === 'image'),
-          (attachments ?? []).some((a) => a.type === 'file')
-        );
-        const result: SendMessageResult = await client.sendMessage(sessionId, content, parentId, {
-          provider: choice.provider,
-          model: choice.model,
-          attachments,
-          apiKey: (choice.provider && getStoredKey(choice.provider)) || undefined
-        });
-        setAllMessages((prev) => [...prev, result.userMessage, result.assistantMessage]);
-        setActiveNodeId(result.assistantMessage.id);
-        setBranchingFromMessageId(null);
-        setBranchingFromText(null);
-
-        const current = sessions.find((s) => s.id === sessionId);
+        await send(activeSessionId, content, parentId, attachments);
+        // Auto-name the session from its first question.
+        const current = sessions.find((s) => s.id === activeSessionId);
         if (current && isUntitledSessionName(current.name)) {
-          const auto = summarizeTopic(content);
-          const updated = await client.updateSessionName(sessionId, auto);
-          setSessions((prev) => prev.map((s) => (s.id === sessionId ? updated : s)));
+          const updated = await client.updateSessionName(activeSessionId, summarizeTopic(content));
+          setSessions((prev) => prev.map((s) => (s.id === activeSessionId ? updated : s)));
         }
       } catch (err: any) {
         console.error('Send failed:', err);
@@ -410,51 +267,44 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
         setSending(false);
       }
     },
-    [client, activeSessionId, activeNodeId, branchingFromMessageId, sending, sessions, resolveModelChoice]
+    [activeSessionId, sending, branchingFromMessageId, activeNodeId, send, sessions, client]
   );
 
+  // Branching: "dig" sends a follow-up about the selected text immediately;
+  // "ask" pre-fills the input so the user writes their own question.
   const handleBranchFromMessage = useCallback(
     async (messageId: string, selectedText: string, action: 'dig' | 'ask') => {
       if (!activeSessionId || sending) return;
-      if (action === 'dig') {
-        const prompt = `Explain this in more detail: "${selectedText}"`;
-        setSending(true);
-        setError(null);
+      if (action === 'ask') {
         setBranchingFromMessageId(messageId);
         setBranchingFromText(selectedText);
-        try {
-          const choice = resolveModelChoice(false);
-          const result: SendMessageResult = await client.sendMessage(activeSessionId, prompt, messageId, {
-            provider: choice.provider,
-            model: choice.model,
-            apiKey: (choice.provider && getStoredKey(choice.provider)) || undefined
-          });
-          setAllMessages((prev) => [...prev, result.userMessage, result.assistantMessage]);
-          setActiveNodeId(result.assistantMessage.id);
-        } catch (err: any) {
-          console.error('Branch send failed:', err);
-          setError(err?.response?.data?.error ?? err?.message ?? 'Something went wrong');
-        } finally {
-          setSending(false);
-          setBranchingFromMessageId(null);
-          setBranchingFromText(null);
-        }
-      } else {
-        setBranchingFromMessageId(messageId);
-        setBranchingFromText(selectedText);
+        return;
+      }
+      setSending(true);
+      setError(null);
+      setBranchingFromMessageId(messageId);
+      setBranchingFromText(selectedText);
+      try {
+        await send(activeSessionId, `Explain this in more detail: "${selectedText}"`, messageId);
+      } catch (err: any) {
+        console.error('Branch send failed:', err);
+        setError(err?.response?.data?.error ?? err?.message ?? 'Something went wrong');
+      } finally {
+        setSending(false);
+        clearBranching();
       }
     },
-    [client, activeSessionId, sending, resolveModelChoice]
+    [activeSessionId, sending, send, clearBranching]
   );
 
   const handleSelectTreeNode = useCallback(
     (nodeId: string) => {
+      // The tree shows questions; jump to the answer so the full Q&A is read.
       const assistantChild = allMessages.find((m) => m.parentId === nodeId && m.role === 'assistant');
       setActiveNodeId(assistantChild?.id ?? nodeId);
-      setBranchingFromMessageId(null);
-      setBranchingFromText(null);
+      clearBranching();
     },
-    [allMessages]
+    [allMessages, clearBranching]
   );
 
   const handleDeleteSubtree = useCallback(
@@ -468,10 +318,8 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
           const parent = allMessages.find((m) => m.id === nodeId);
           if (parent?.parentId && msgs.find((m) => m.id === parent.parentId)) {
             setActiveNodeId(parent.parentId);
-          } else if (msgs.length > 0) {
-            setActiveNodeId(msgs[msgs.length - 1].id);
           } else {
-            setActiveNodeId(null);
+            setActiveNodeId(msgs.length > 0 ? msgs[msgs.length - 1].id : null);
           }
         }
       } catch (err: any) {
@@ -482,29 +330,30 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
   );
 
   const handleNavigateToParent = useCallback(() => {
-    if (!siblingInfo?.parentId) return;
-    setActiveNodeId(siblingInfo.parentId);
-    setBranchingFromMessageId(null);
-    setBranchingFromText(null);
-  }, [siblingInfo]);
+    if (!tree.siblingInfo?.parentId) return;
+    setActiveNodeId(tree.siblingInfo.parentId);
+    clearBranching();
+  }, [tree, clearBranching]);
 
   const handleNavigateToSibling = useCallback(
     (offset: number) => {
-      if (!siblingInfo) return;
-      const newIndex = siblingInfo.currentIndex + offset;
-      if (newIndex < 0 || newIndex >= siblingInfo.total) return;
-      setActiveNodeId(siblingInfo.siblings[newIndex].id);
-      setBranchingFromMessageId(null);
-      setBranchingFromText(null);
+      const info = tree.siblingInfo;
+      if (!info) return;
+      const newIndex = info.currentIndex + offset;
+      if (newIndex < 0 || newIndex >= info.total) return;
+      setActiveNodeId(info.siblings[newIndex].id);
+      clearBranching();
     },
-    [siblingInfo]
+    [tree, clearBranching]
   );
 
-  const handleNavigateToNode = useCallback((nodeId: string) => {
-    setActiveNodeId(nodeId);
-    setBranchingFromMessageId(null);
-    setBranchingFromText(null);
-  }, []);
+  const handleNavigateToNode = useCallback(
+    (nodeId: string) => {
+      setActiveNodeId(nodeId);
+      clearBranching();
+    },
+    [clearBranching]
+  );
 
   return {
     // data
@@ -512,16 +361,16 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
     activeSessionId,
     allMessages,
     activeNodeId,
-    threadPath,
-    activePathIds,
-    nodes,
-    edges,
+    threadPath: tree.threadPath,
+    activePathIds: tree.activePathIds,
+    nodes: tree.nodes,
+    edges: tree.edges,
+    siblingInfo: tree.siblingInfo,
     branchingFromMessageId,
     branchingFromPreview,
     branchingFromText,
     sending,
     error,
-    siblingInfo,
     availableProviders,
     selectedProvider,
     selectedModel,

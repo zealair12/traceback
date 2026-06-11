@@ -112,6 +112,12 @@ export interface TracebackClient {
   fetchProviders(): Promise<ProvidersResponse>;
   /** Write normalized conversations (from an importer) into the tree store. */
   importConversations(conversations: ImportedConversation[]): Promise<ImportResult>;
+  /** Turn recorded audio (base64 data URL) into text via the server. */
+  transcribeAudio(
+    audioDataUrl: string,
+    mediaType: string,
+    options?: { apiKey?: string }
+  ): Promise<{ text: string; provider: string; model: string }>;
   sendMessage(
     sessionId: string,
     content: string,
@@ -166,6 +172,16 @@ export function createTracebackClient(
 
     async importConversations(conversations: ImportedConversation[]) {
       const { data } = await api.post<ImportResult>('/import', { conversations });
+      return data;
+    },
+
+    async transcribeAudio(audioDataUrl: string, mediaType: string, options?: { apiKey?: string }) {
+      const { data } = await api.post<{ text: string; provider: string; model: string }>(
+        '/transcribe',
+        { audio: audioDataUrl, mediaType },
+        // The user's key (if any) travels in a header, same as chat requests.
+        options?.apiKey ? { headers: { 'x-provider-key': options.apiKey } } : undefined
+      );
       return data;
     },
 

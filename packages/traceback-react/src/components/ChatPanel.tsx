@@ -16,6 +16,8 @@ interface SiblingInfo {
 interface ChatPanelProps {
   threadPath: ChatMessage[];
   onSendMessage: (content: string, attachments?: ImageAttachment[]) => void;
+  // Turn recorded audio (base64 data URL) into text for the input box.
+  onTranscribeAudio: (audioDataUrl: string, mediaType: string) => Promise<string>;
   onBranchFromMessage: (messageId: string, selectedText: string, action: 'dig' | 'ask') => void;
   branchingFromMessageId: string | null;
   branchingFromPreview: string | null;
@@ -37,6 +39,7 @@ interface ChatPanelProps {
 export function ChatPanel({
   threadPath,
   onSendMessage,
+  onTranscribeAudio,
   onBranchFromMessage,
   branchingFromMessageId,
   branchingFromPreview,
@@ -60,9 +63,70 @@ export function ChatPanel({
   const fileRef = useRef<HTMLInputElement | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
-  // Read an image file into a base64 data URL attachment (max 4 per message).
+  // Speech input: idle -> recording (mic on) -> transcribing -> idle.
+  const [micState, setMicState] = useState<'idle' | 'recording' | 'transcribing'>('idle');
+  const [micError, setMicError] = useState<string | null>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+
+  // Send audio (a recording or a dropped file) for transcription and append
+  // the recognized text to the input, where the user can edit it.
+  const transcribeAndInsert = async (dataUrl: string, mediaType: string) => {
+    setMicState('transcribing');
+    setMicError(null);
+    try {
+      const text = await onTranscribeAudio(dataUrl, mediaType);
+      if (text.trim()) {
+        setInput((prev) => (prev.trim() ? prev + ' ' + text.trim() : text.trim()));
+        inputRef.current?.focus();
+      }
+    } catch (err: any) {
+      setMicError(err?.response?.data?.error ?? err?.message ?? 'Transcription failed.');
+    } finally {
+      setMicState('idle');
+    }
+  };
+
+  // Mic button: first click starts recording, second click stops and
+  // transcribes. Recording uses the browser's own recorder; nothing is stored.
+  const toggleRecording = async () => {
+    if (micState === 'transcribing') return;
+    if (micState === 'recording') {
+      recorderRef.current?.stop();
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      const chunks: Blob[] = [];
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunks.push(e.data);
+      };
+      recorder.onstop = () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
+        const reader = new FileReader();
+        reader.onload = () => transcribeAndInsert(String(reader.result ?? ''), blob.type);
+        reader.readAsDataURL(blob);
+      };
+      recorderRef.current = recorder;
+      recorder.start();
+      setMicState('recording');
+      setMicError(null);
+    } catch (err: any) {
+      setMicError(err?.message ?? 'Microphone unavailable.');
+    }
+  };
+
+  // Attach picked/pasted files: images become attachments (max 4 per
+  // message); audio files are transcribed into the input instead.
   const addImageFiles = (files: Iterable<File>) => {
     for (const file of files) {
+      if (file.type.startsWith('audio/')) {
+        const reader = new FileReader();
+        reader.onload = () => transcribeAndInsert(String(reader.result ?? ''), file.type);
+        reader.readAsDataURL(file);
+        continue;
+      }
       if (!file.type.startsWith('image/')) continue;
       const reader = new FileReader();
       reader.onload = () => {
@@ -198,6 +262,11 @@ export function ChatPanel({
             {error}
           </div>
         )}
+        {micError && (
+          <div className="max-w-2xl mx-auto mb-2 text-xs text-amber-400 bg-amber-400/10 rounded-md px-3 py-1.5">
+            {micError}
+          </div>
+        )}
         {branchingFromMessageId && branchingFromPreview && (
           <div className="max-w-2xl mx-auto mb-2 text-xs text-emerald-400 flex items-center gap-1.5">
             <span>⎇</span>
@@ -253,7 +322,7 @@ export function ChatPanel({
               <input
                 ref={fileRef}
                 type="file"
-                accept="image/*"
+                accept="image/*,audio/*"
                 multiple
                 className="hidden"
                 onChange={(e) => {
@@ -275,6 +344,35 @@ export function ChatPanel({
                     strokeWidth="1.7"
                     strokeLinecap="round"
                     strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
+              <button
+                type="button"
+                onClick={toggleRecording}
+                disabled={sending}
+                className={`h-7 w-7 rounded-full flex items-center justify-center transition-colors disabled:opacity-30 ${
+                  micState === 'recording'
+                    ? 'text-red-400 bg-red-400/10 animate-pulse'
+                    : micState === 'transcribing'
+                      ? 'text-emerald-400 animate-pulse'
+                      : 'text-gray-400 hover:text-gray-100 hover:bg-gray-800'
+                }`}
+                title={
+                  micState === 'recording'
+                    ? 'Stop recording'
+                    : micState === 'transcribing'
+                      ? 'Transcribing...'
+                      : 'Dictate a message'
+                }
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <rect x="9" y="3" width="6" height="11" rx="3" stroke="currentColor" strokeWidth="1.7" />
+                  <path
+                    d="M5.5 11.5a6.5 6.5 0 0 0 13 0 M12 18v3"
+                    stroke="currentColor"
+                    strokeWidth="1.7"
+                    strokeLinecap="round"
                   />
                 </svg>
               </button>

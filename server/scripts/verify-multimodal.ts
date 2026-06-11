@@ -74,7 +74,8 @@ async function main() {
       PORT: String(PORT),
       LLM_PROVIDER: 'local',
       LOCAL_BASE_URL: `http://127.0.0.1:${mock.port}/v1`,
-      LOCAL_VISION_MODELS: 'test-vision'
+      LOCAL_VISION_MODELS: 'test-vision',
+      LOCAL_DOCUMENT_MODELS: 'test-doc'
     },
     stdio: ['ignore', 'pipe', 'pipe']
   });
@@ -147,6 +148,36 @@ async function main() {
       lineagePlainTurns.length
     );
 
+    // 3b. A PDF document attachment reaches the model as a file part.
+    const TINY_PDF = 'data:application/pdf;base64,JVBERi0xLjQKJSVFT0YK';
+    const sendPdf = await fetch(`${base}/message/send`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        session_id: session.id,
+        content: 'Summarize this document.',
+        provider: 'local',
+        model: 'test-doc',
+        attachments: [{ type: 'file', mediaType: 'application/pdf', dataUrl: TINY_PDF, name: 'notes.pdf' }]
+      })
+    });
+    const seenPdf = mock.lastBody();
+    const pdfTurn = (seenPdf?.messages ?? [])
+      .filter((m: any) => Array.isArray(m.content))
+      .find((m: any) => m.content.some((p: any) => p.type === 'file'));
+    const filePart = pdfTurn?.content?.find((p: any) => p.type === 'file');
+    console.log(
+      'pdf send status:',
+      sendPdf.status,
+      '| file part filename:',
+      filePart?.file?.filename,
+      '| data matches:',
+      filePart?.file?.file_data === TINY_PDF
+    );
+
+    // 3c. Document capability metadata is advertised.
+    console.log('local documentModels:', JSON.stringify(local?.documentModels));
+
     // 4. Validation: too many attachments, and a non-image attachment.
     const tooMany = await fetch(`${base}/message/send`, {
       method: 'POST',
@@ -166,8 +197,18 @@ async function main() {
         attachments: [{ type: 'image', mediaType: 'application/pdf', dataUrl: 'data:application/pdf;base64,AAAA' }]
       })
     });
+    const badFile = await fetch(`${base}/message/send`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        session_id: session.id,
+        content: 'x',
+        attachments: [{ type: 'file', mediaType: 'text/plain', dataUrl: 'data:text/plain;base64,AAAA' }]
+      })
+    });
     console.log('5 attachments status (expect 400):', tooMany.status);
     console.log('non-image attachment status (expect 400):', badType.status);
+    console.log('non-pdf file status (expect 400):', badFile.status);
 
     // Tidy up the test conversation.
     await fetch(`${base}/messages/${send1Body.userMessage.id}`, { method: 'DELETE' });
@@ -183,7 +224,13 @@ async function main() {
       lineageImageTurns.length === 1 && // the original image turn, preserved in context
       lineagePlainTurns.length >= 3 && // system + assistant + new user turn
       tooMany.status === 400 &&
-      badType.status === 400;
+      badType.status === 400 &&
+      badFile.status === 400 &&
+      sendPdf.status === 201 &&
+      filePart?.file?.filename === 'notes.pdf' &&
+      filePart?.file?.file_data === TINY_PDF &&
+      Array.isArray(local?.documentModels) &&
+      local.documentModels.includes('test-doc');
 
     cleanup();
     if (!ok) {

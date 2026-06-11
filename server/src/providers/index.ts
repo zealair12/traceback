@@ -51,6 +51,7 @@ export function listProviders(): ProviderInfo[] {
       defaultModel: p.defaultModel,
       suggestedModels: p.suggestedModels,
       visionModels: p.visionModels,
+      documentModels: p.documentModels,
       configured: p.isConfigured(),
     };
   });

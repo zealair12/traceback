@@ -172,17 +172,23 @@ export function createApp() {
           return;
         }
         for (const a of attachmentsRaw) {
-          const okShape =
-            a &&
-            a.type === 'image' &&
+          const sizeOk = typeof a?.dataUrl === 'string' && a.dataUrl.length <= 8_000_000; // ~6MB each
+          const imageOk =
+            a?.type === 'image' &&
             typeof a.mediaType === 'string' &&
             a.mediaType.startsWith('image/') &&
-            typeof a.dataUrl === 'string' &&
-            a.dataUrl.startsWith('data:image/') &&
-            a.dataUrl.length <= 8_000_000; // ~6MB of image per attachment
-          if (!okShape) {
+            a.dataUrl?.startsWith('data:image/');
+          // Documents: PDFs travel whole; text-like files are inlined by the
+          // client before sending, so only PDF reaches this endpoint as a file.
+          const fileOk =
+            a?.type === 'file' &&
+            a.mediaType === 'application/pdf' &&
+            a.dataUrl?.startsWith('data:application/pdf') &&
+            (a.name === undefined || typeof a.name === 'string');
+          if (!sizeOk || (!imageOk && !fileOk)) {
             res.status(400).json({
-              error: 'each attachment needs type "image", an image/* mediaType, and a data:image/... URL under 6MB.'
+              error:
+                'each attachment must be an image (image/*) or a PDF (application/pdf), as a base64 data URL under 6MB.'
             });
             return;
           }

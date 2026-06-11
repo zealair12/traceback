@@ -32,6 +32,12 @@ export function createAnthropicProvider(): ChatProvider {
       'claude-3-5-haiku-latest',
       'claude-3-opus-latest',
     ],
+    // Claude reads PDFs natively (document blocks).
+    documentModels: [
+      'claude-3-5-sonnet-latest',
+      'claude-3-5-haiku-latest',
+      'claude-3-opus-latest',
+    ],
 
     isConfigured() {
       return Boolean(process.env.ANTHROPIC_API_KEY);
@@ -63,9 +69,17 @@ export function createAnthropicProvider(): ChatProvider {
         .map((m) => ({
           role: m.role as 'user' | 'assistant',
           content:
-            m.images && m.images.length > 0
+            (m.images && m.images.length > 0) || (m.files && m.files.length > 0)
               ? ([
-                  ...m.images.map((img) => ({
+                  ...(m.files ?? []).map((f) => ({
+                    type: 'document' as const,
+                    source: {
+                      type: 'base64' as const,
+                      media_type: 'application/pdf' as const,
+                      data: f.dataUrl.replace(/^data:[^;]+;base64,/, '')
+                    }
+                  })),
+                  ...(m.images ?? []).map((img) => ({
                     type: 'image' as const,
                     source: {
                       type: 'base64' as const,
@@ -74,7 +88,7 @@ export function createAnthropicProvider(): ChatProvider {
                     }
                   })),
                   { type: 'text' as const, text: m.content }
-                ] as Array<Anthropic.TextBlockParam | Anthropic.ImageBlockParam>)
+                ] as Anthropic.MessageParam['content'])
               : m.content
         }));
 

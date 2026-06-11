@@ -29,6 +29,8 @@ export function createGroqProvider(): ChatProvider {
       'meta-llama/llama-4-scout-17b-16e-instruct',
       'meta-llama/llama-4-maverick-17b-128e-instruct',
     ],
+    // Groq's chat API does not take document attachments.
+    documentModels: [],
 
     // Configured simply means: do we have the API key Groq requires.
     isConfigured() {
@@ -52,7 +54,7 @@ export function createGroqProvider(): ChatProvider {
         async () => {
           const completion = await groq.chat.completions.create({
             // Image turns become content-parts lists; text turns stay strings.
-            messages: toOpenAiDialectMessages(messages) as never,
+            messages: toOpenAiDialectMessages(messages, { supportsFiles: false }) as never,
             model,
             ...(options?.temperature !== undefined ? { temperature: options.temperature } : {}),
             ...(options?.maxTokens !== undefined ? { max_tokens: options.maxTokens } : {})

@@ -318,6 +318,18 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
     setBranchingFromText(null);
   }, []);
 
+  // Turn recorded audio (or an audio file) into text. The user's stored Groq
+  // or OpenAI key is sent when present; the server picks whichever Whisper
+  // backend it can reach. Returns the recognized text for the input box.
+  const handleTranscribeAudio = useCallback(
+    async (audioDataUrl: string, mediaType: string): Promise<string> => {
+      const key = getStoredKey('groq') ?? getStoredKey('openai') ?? undefined;
+      const result = await client.transcribeAudio(audioDataUrl, mediaType, { apiKey: key });
+      return result.text;
+    },
+    [client]
+  );
+
   // Write imported conversations to the server, refresh the session list, and
   // jump to the first imported one. Returns how many were imported.
   const handleImportConversations = useCallback(
@@ -498,6 +510,7 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
     setProviderKey,
     clearProviderKey,
     handleImportConversations,
+    handleTranscribeAudio,
     handleNewSession,
     handleSelectSession,
     handleRenameSession,

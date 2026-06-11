@@ -25,6 +25,7 @@ import {
 } from './providers/index.js';
 import { registerOpenAiProxy } from './routes/openaiProxy.js';
 import { registerImportRoutes } from './routes/importRoutes.js';
+import { registerTranscribeRoutes } from './routes/transcribeRoutes.js';
 import { resolveApiKey } from './auth/apiKey.js';
 
 export function createApp() {
@@ -237,6 +238,9 @@ export function createApp() {
   // Conversation import endpoint (POST /import): writes exported histories
   // (ChatGPT etc.) into the tree store.
   registerImportRoutes(app);
+
+  // Speech-to-text endpoint (POST /transcribe): audio in, recognized text out.
+  registerTranscribeRoutes(app);
 
   // --- Error handling -------------------------------------------------------
 

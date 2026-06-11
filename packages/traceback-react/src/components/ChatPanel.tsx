@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type ClipboardEvent } from 'react';
 import type { ChatMessage } from '../types';
 import type { ProviderInfo, ImageAttachment } from '@traceback/shared';
+import { ArrowUp, ChevronLeft, ChevronRight, CornerLeftUp, FileText, Mic, Paperclip, X } from 'lucide-react';
 import { MessageBubble } from './MessageBubble';
 import { ModelPicker } from './ModelPicker';
-import { NodeNavBar } from './NodeNavBar';
 import { BrandIcon } from './BrandIcon';
 import { stripMarkdown } from '../utils/text';
 
@@ -117,14 +117,44 @@ export function ChatPanel({
     }
   };
 
-  // Attach picked/pasted files: images become attachments (max 4 per
-  // message); audio files are transcribed into the input instead.
+  // Looks like text we can read in the browser (code, notes, data files).
+  const isTextLike = (file: File) =>
+    file.type.startsWith('text/') ||
+    ['application/json', 'application/xml'].includes(file.type) ||
+    /\.(md|txt|csv|json|xml|ya?ml|log|py|js|ts|tsx|java|c|cpp|rs|go|rb|sh|sql|html|css)$/i.test(file.name);
+
+  // Attach picked/pasted files, each kind the way models can actually use it:
+  // images and PDFs become attachments (max 4 per message); audio files are
+  // transcribed into the input; text-like files are inlined into the message
+  // as a quoted block (works with EVERY model).
   const addImageFiles = (files: Iterable<File>) => {
     for (const file of files) {
       if (file.type.startsWith('audio/')) {
         const reader = new FileReader();
         reader.onload = () => transcribeAndInsert(String(reader.result ?? ''), file.type);
         reader.readAsDataURL(file);
+        continue;
+      }
+      if (file.type === 'application/pdf') {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const dataUrl = String(reader.result ?? '');
+          if (!dataUrl.startsWith('data:application/pdf')) return;
+          setPendingImages((prev) =>
+            prev.length >= 4
+              ? prev
+              : [...prev, { type: 'file', mediaType: file.type, dataUrl, name: file.name }]
+          );
+        };
+        reader.readAsDataURL(file);
+        continue;
+      }
+      if (isTextLike(file)) {
+        file.text().then((text) => {
+          const block = '\n\n```' + file.name + '\n' + text.slice(0, 60_000) + '\n```\n';
+          setInput((prev) => prev + block);
+          inputRef.current?.focus();
+        });
         continue;
       }
       if (!file.type.startsWith('image/')) continue;
@@ -190,44 +220,77 @@ export function ChatPanel({
 
   return (
     <main className="flex-1 flex flex-col bg-chat text-gray-100 min-w-0">
-      {/* Clickable breadcrumb trail */}
-      <header className="px-6 py-2.5 border-b border-gray-800 flex-shrink-0 overflow-x-auto">
-        <div className="flex items-center gap-1 text-[11px] min-w-0">
-          {threadPath.length === 0 ? (
-            <span className="text-gray-600">No messages yet</span>
-          ) : (
-            threadPath.map((msg, i) => {
-              const isLast = i === threadPath.length - 1;
-              const clean = stripMarkdown(msg.content);
-              const label = clean.length > 20 ? clean.slice(0, 20) + '…' : clean;
+      {/* One navigation line: up to the parent, the path so far, and -- when
+          this point has sibling branches -- a small pager through them. */}
+      <header className="px-3 py-1.5 border-b border-gray-800 flex-shrink-0 flex items-center gap-2">
+        <button
+          type="button"
+          disabled={!siblingInfo?.parentId}
+          onClick={onNavigateToParent}
+          className="h-7 w-7 rounded-lg flex items-center justify-center text-gray-500 hover:text-gray-100 hover:bg-gray-800 transition-colors disabled:opacity-20 disabled:cursor-default flex-shrink-0"
+          title="Go to the parent message"
+          aria-label="Go to the parent message"
+        >
+          <CornerLeftUp size={14} />
+        </button>
+        <div className="flex-1 min-w-0 overflow-x-auto">
+          <div className="flex items-center gap-1 text-[11px] min-w-0">
+            {threadPath.length === 0 ? (
+              <span className="text-gray-600">No messages yet</span>
+            ) : (
+              threadPath.map((msg, i) => {
+                const isLast = i === threadPath.length - 1;
+                const clean = stripMarkdown(msg.content);
+                const label = clean.length > 20 ? clean.slice(0, 20) + '…' : clean;
 
-              return (
-                <span key={msg.id} className="flex items-center gap-1 min-w-0">
-                  {i > 0 && <span className="text-gray-700 flex-shrink-0">›</span>}
-                  <button
-                    type="button"
-                    onClick={() => onNavigateToNode(msg.id)}
-                    className={`truncate max-w-[140px] transition-colors ${
-                      isLast
-                        ? 'text-gray-200 font-medium'
-                        : 'text-gray-500 hover:text-gray-300'
-                    }`}
-                  >
-                    {label}
-                  </button>
-                </span>
-              );
-            })
-          )}
+                return (
+                  <span key={msg.id} className="flex items-center gap-1 min-w-0">
+                    {i > 0 && <span className="text-gray-700 flex-shrink-0">›</span>}
+                    <button
+                      type="button"
+                      onClick={() => onNavigateToNode(msg.id)}
+                      className={`truncate max-w-[140px] transition-colors ${
+                        isLast
+                          ? 'text-gray-200 font-medium'
+                          : 'text-gray-500 hover:text-gray-300'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  </span>
+                );
+              })
+            )}
+          </div>
         </div>
+        {siblingInfo && siblingInfo.total > 1 && (
+          <div className="flex items-center gap-0.5 flex-shrink-0">
+            <button
+              type="button"
+              disabled={siblingInfo.currentIndex <= 0}
+              onClick={() => onNavigateToSibling(-1)}
+              className="h-7 w-7 rounded-lg flex items-center justify-center text-gray-500 hover:text-gray-100 hover:bg-gray-800 transition-colors disabled:opacity-20 disabled:cursor-default"
+              title="Previous branch"
+              aria-label="Previous branch"
+            >
+              <ChevronLeft size={15} />
+            </button>
+            <span className="text-[11px] text-gray-500 tabular-nums px-0.5">
+              {siblingInfo.currentIndex + 1}/{siblingInfo.total}
+            </span>
+            <button
+              type="button"
+              disabled={siblingInfo.currentIndex >= siblingInfo.total - 1}
+              onClick={() => onNavigateToSibling(1)}
+              className="h-7 w-7 rounded-lg flex items-center justify-center text-gray-500 hover:text-gray-100 hover:bg-gray-800 transition-colors disabled:opacity-20 disabled:cursor-default"
+              title="Next branch"
+              aria-label="Next branch"
+            >
+              <ChevronRight size={15} />
+            </button>
+          </div>
+        )}
       </header>
-
-      {/* Parent/sibling navigation bar */}
-      <NodeNavBar
-        siblingInfo={siblingInfo}
-        onNavigateToParent={onNavigateToParent}
-        onNavigateToSibling={onNavigateToSibling}
-      />
 
       {/* Messages area */}
       <div ref={scrollRef} className="flex-1 h-0 overflow-y-auto">
@@ -241,7 +304,7 @@ export function ChatPanel({
           ))}
           {sending && (
             <div className="flex items-start gap-3">
-              <div className="w-7 h-7 rounded-full bg-gray-800 flex items-center justify-center text-emerald-500 mt-1 flex-shrink-0">
+              <div className="w-7 h-7 rounded-full bg-gray-800 flex items-center justify-center text-blue-400 mt-1 flex-shrink-0">
                 <BrandIcon size={15} />
               </div>
               <div className="text-sm text-gray-500 animate-pulse">Thinking…</div>
@@ -277,23 +340,30 @@ export function ChatPanel({
         {/* One rounded frame holding the textarea with a slim controls row
             inside its bottom edge: model pill on the left, send on the right
             (the layout used by modern editors). */}
-        <div className="max-w-2xl mx-auto rounded-2xl bg-inputBg border border-gray-800 focus-within:ring-1 focus-within:ring-gray-600">
+        <div className="max-w-2xl mx-auto rounded-2xl bg-inputBg/75 backdrop-blur-md border border-gray-800 focus-within:ring-1 focus-within:ring-gray-600">
           {pendingImages.length > 0 && (
             <div className="flex gap-2 px-3 pt-3 flex-wrap">
-              {pendingImages.map((img, i) => (
+              {pendingImages.map((att, i) => (
                 <div key={i} className="relative">
-                  <img
-                    src={img.dataUrl}
-                    alt={`attachment ${i + 1}`}
-                    className="h-14 w-14 object-cover rounded-lg border border-gray-700"
-                  />
+                  {att.type === 'image' ? (
+                    <img
+                      src={att.dataUrl}
+                      alt={`attachment ${i + 1}`}
+                      className="h-14 w-14 object-cover rounded-lg border border-gray-700"
+                    />
+                  ) : (
+                    <div className="h-14 px-3 rounded-lg border border-gray-700 bg-gray-900/70 flex items-center gap-2 max-w-[180px]">
+                      <FileText size={16} className="text-gray-400 flex-shrink-0" />
+                      <span className="text-[11px] text-gray-300 truncate">{att.name ?? 'document.pdf'}</span>
+                    </div>
+                  )}
                   <button
                     type="button"
                     onClick={() => setPendingImages((prev) => prev.filter((_, j) => j !== i))}
-                    className="absolute -top-1.5 -right-1.5 h-4 w-4 rounded-full bg-gray-700 text-gray-200 text-[9px] flex items-center justify-center hover:bg-gray-600"
-                    title="Remove image"
+                    className="absolute -top-1.5 -right-1.5 h-4 w-4 rounded-full bg-gray-700 text-gray-200 flex items-center justify-center hover:bg-gray-600"
+                    title="Remove attachment"
                   >
-                    x
+                    <X size={10} />
                   </button>
                 </div>
               ))}
@@ -322,7 +392,7 @@ export function ChatPanel({
               <input
                 ref={fileRef}
                 type="file"
-                accept="image/*,audio/*"
+                accept="image/*,audio/*,.pdf,.txt,.md,.csv,.json,.xml,.yaml,.yml,.log,text/*,application/pdf,application/json"
                 multiple
                 className="hidden"
                 onChange={(e) => {
@@ -335,17 +405,9 @@ export function ChatPanel({
                 onClick={() => fileRef.current?.click()}
                 disabled={sending || pendingImages.length >= 4}
                 className="h-7 w-7 rounded-full text-gray-400 hover:text-gray-100 hover:bg-gray-800 flex items-center justify-center transition-colors disabled:opacity-30"
-                title="Attach images (or paste them)"
+                title="Attach images, PDFs, documents, or audio (or paste)"
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path
-                    d="M20 11.5 L11.5 20 a5.3 5.3 0 0 1 -7.5 -7.5 L13 3.5 a3.6 3.6 0 0 1 5 5 L9.5 17 a1.8 1.8 0 0 1 -2.5 -2.5 L15 6.5"
-                    stroke="currentColor"
-                    strokeWidth="1.7"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
+                <Paperclip size={15} />
               </button>
               <button
                 type="button"
@@ -366,23 +428,17 @@ export function ChatPanel({
                       : 'Dictate a message'
                 }
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <rect x="9" y="3" width="6" height="11" rx="3" stroke="currentColor" strokeWidth="1.7" />
-                  <path
-                    d="M5.5 11.5a6.5 6.5 0 0 0 13 0 M12 18v3"
-                    stroke="currentColor"
-                    strokeWidth="1.7"
-                    strokeLinecap="round"
-                  />
-                </svg>
+                <Mic size={15} />
               </button>
               <button
                 type="button"
                 disabled={sending || (!input.trim() && pendingImages.length === 0)}
                 onClick={submit}
-                className="h-7 w-7 rounded-full bg-white text-black flex items-center justify-center text-xs hover:bg-gray-200 transition-colors disabled:opacity-30"
+                className="h-7 w-7 rounded-full bg-white text-black flex items-center justify-center hover:bg-gray-200 transition-colors disabled:opacity-30"
+                title="Send"
+                aria-label="Send"
               >
-                ↑
+                <ArrowUp size={14} strokeWidth={2.4} />
               </button>
             </div>
           </div>

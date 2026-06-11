@@ -1,5 +1,6 @@
 import type { SessionResponse } from '@traceback/shared';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { Settings, FolderDown, KeyRound } from 'lucide-react';
 import { BrandIcon } from './BrandIcon';
 
 interface SidebarProps {
@@ -23,15 +24,29 @@ export function Sidebar({
 }: SidebarProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  // Close the gear menu when clicking anywhere outside it.
+  useEffect(() => {
+    if (!menuOpen) return;
+    const close = (e: MouseEvent) => {
+      if (!menuRef.current?.contains(e.target as Node)) setMenuOpen(false);
+    };
+    const timer = setTimeout(() => document.addEventListener('click', close), 0);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('click', close);
+    };
+  }, [menuOpen]);
 
   return (
     <aside className="w-64 h-full bg-sidebar text-gray-100 flex flex-col flex-shrink-0">
       <div className="px-4 py-4">
         <h1 className="text-lg font-semibold tracking-tight flex items-center gap-2">
-          <BrandIcon size={20} className="text-emerald-500" />
+          <BrandIcon size={22} className="text-blue-400" />
           <span>TraceBack</span>
         </h1>
-        <p className="text-[11px] text-gray-500 mt-0.5">Non-linear LLM conversations.</p>
         <button
           type="button"
           onClick={onNewSession}
@@ -45,7 +60,7 @@ export function Sidebar({
 
       <div className="flex-1 h-0 overflow-y-auto px-2 py-3">
         <p className="text-[10px] text-gray-500 uppercase tracking-widest px-2 mb-2">
-          Sessions
+          Chat history
         </p>
         <div className="space-y-0.5">
           {sessions.map((session) => {
@@ -112,23 +127,46 @@ export function Sidebar({
       </div>
 
       <div className="h-px bg-gray-800" />
-      <div className="px-3 py-3 space-y-2">
+      {/* Utility actions live behind one gear: less chrome, same reach. */}
+      <div className="px-3 py-2.5 relative">
         <button
           type="button"
-          onClick={onOpenImport}
-          className="block w-full text-left text-[12px] text-gray-400 hover:text-white transition-colors"
-          title="Import chats exported from ChatGPT or other tools"
+          onClick={() => setMenuOpen((v) => !v)}
+          className="h-8 w-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-100 hover:bg-gray-800 transition-colors"
+          title="Settings"
+          aria-label="Settings"
         >
-          Import chats
+          <Settings size={16} />
         </button>
-        <button
-          type="button"
-          onClick={onOpenKeys}
-          className="block w-full text-left text-[12px] text-gray-400 hover:text-white transition-colors"
-          title="Manage your API keys (stored only in this browser)"
-        >
-          API keys
-        </button>
+        {menuOpen && (
+          <div
+            ref={menuRef}
+            className="absolute bottom-12 left-3 z-50 min-w-[170px] rounded-xl border border-gray-700/70 bg-gray-900/90 backdrop-blur-xl shadow-2xl py-1.5"
+          >
+            <button
+              type="button"
+              onClick={() => {
+                setMenuOpen(false);
+                onOpenImport();
+              }}
+              className="w-full text-left px-3 py-1.5 text-[13px] text-gray-300 hover:bg-gray-800/80 hover:text-white flex items-center gap-2.5"
+            >
+              <FolderDown size={15} className="text-gray-500" />
+              <span>Import chats</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMenuOpen(false);
+                onOpenKeys();
+              }}
+              className="w-full text-left px-3 py-1.5 text-[13px] text-gray-300 hover:bg-gray-800/80 hover:text-white flex items-center gap-2.5"
+            >
+              <KeyRound size={15} className="text-gray-500" />
+              <span>API keys</span>
+            </button>
+          </div>
+        )}
       </div>
     </aside>
   );

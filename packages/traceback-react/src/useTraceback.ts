@@ -92,18 +92,30 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
 
   // Resolve which backend/model a message should actually go to. Normally the
   // user's explicit pick; in "Auto" mode we choose for them, deterministically:
-  // a message with images goes to the first USABLE backend (server-configured
-  // or user-keyed) that has an image-capable model; plain text goes to the
-  // server's default backend (or the first usable one). Auto never picks a
-  // backend that is not connected.
+  // a message with a PDF goes to the first USABLE backend (server-configured
+  // or user-keyed) that reads documents (preferring one whose model also sees
+  // images when both are attached); a message with images goes to the first
+  // usable image-capable backend; plain text goes to the server's default.
+  // Auto never picks a backend that is not connected.
   const resolveModelChoice = useCallback(
-    (hasImages: boolean): { provider?: string; model?: string } => {
+    (hasImages: boolean, hasFiles = false): { provider?: string; model?: string } => {
       if (selectedProvider !== 'auto') {
         return { provider: selectedProvider ?? undefined, model: selectedModel ?? undefined };
       }
       const usable = (p: ProviderInfo) => p.configured || keyedProviders.has(p.id);
+      const order = ['groq', 'openai', 'anthropic', 'local'];
+      if (hasFiles) {
+        for (const id of order) {
+          const p = availableProviders.find((x) => x.id === id);
+          if (!p || !usable(p) || p.documentModels.length === 0) continue;
+          const model = hasImages
+            ? p.documentModels.find((m) => p.visionModels.includes(m)) ?? p.documentModels[0]
+            : p.documentModels[0];
+          return { provider: p.id, model };
+        }
+      }
       if (hasImages) {
-        for (const id of ['groq', 'openai', 'anthropic', 'local']) {
+        for (const id of order) {
           const p = availableProviders.find((x) => x.id === id);
           if (p && usable(p) && p.visionModels.length > 0) {
             return { provider: p.id, model: p.visionModels[0] };
@@ -365,7 +377,10 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
       setError(null);
       try {
         const sessionId = activeSessionId;
-        const choice = resolveModelChoice((attachments?.length ?? 0) > 0);
+        const choice = resolveModelChoice(
+          (attachments ?? []).some((a) => a.type === 'image'),
+          (attachments ?? []).some((a) => a.type === 'file')
+        );
         const result: SendMessageResult = await client.sendMessage(sessionId, content, parentId, {
           provider: choice.provider,
           model: choice.model,

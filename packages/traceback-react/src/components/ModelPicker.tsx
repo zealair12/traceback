@@ -41,10 +41,10 @@ export function ModelPicker({
     selectedModel &&
     !providers
       .find((p) => p.id === selectedProvider)
-      ?.suggestedModels.includes(selectedModel);
+      ?.suggestedModels?.includes(selectedModel);
 
-  // A compact pill that sits inside the input frame's controls row (the
-  // editor-style placement). Shows just the model; the menu stays grouped by
+  // A small quiet control at the left of the input frame's bottom row, sized
+  // to match the message text. No chrome of its own; the menu stays grouped by
   // backend.
   return (
     <select
@@ -53,14 +53,14 @@ export function ModelPicker({
         const [providerId, model] = e.target.value.split(SEP);
         onSelect(providerId, model);
       }}
-      className="bg-gray-900/70 border border-gray-800 rounded-full px-2.5 py-1 text-[11px] text-gray-300 focus:outline-none focus:ring-1 focus:ring-emerald-600/50 hover:border-gray-600 hover:text-gray-100 cursor-pointer max-w-[220px] truncate transition-colors"
+      className="bg-transparent text-sm text-gray-400 hover:text-gray-100 focus:outline-none cursor-pointer max-w-[150px] truncate px-1.5 py-0.5 rounded-md hover:bg-gray-800/60 transition-colors"
       title="Choose which model answers the next message"
     >
         {/* Auto picks the model for each message: image messages go to a
             connected image-capable model, text to the default backend. */}
         <option value={encode('auto', 'auto')}>Auto</option>
         {providers.map((p) => {
-          const models = [...p.suggestedModels];
+          const models = [...(p.suggestedModels ?? [])];
           if (extraForCurrent && p.id === selectedProvider && !models.includes(selectedModel!)) {
             models.unshift(selectedModel!);
           }

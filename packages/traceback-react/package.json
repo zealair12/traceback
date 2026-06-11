@@ -20,10 +20,11 @@
     "react-dom": ">=18"
   },
   "dependencies": {
-    "@traceback/shared": "file:../traceback-shared",
     "@dagrejs/dagre": "^2.0.4",
+    "@traceback/shared": "file:../traceback-shared",
     "@xyflow/react": "^12.10.1",
     "katex": "^0.16.33",
+    "lucide-react": "^1.17.0",
     "react-markdown": "^10.1.0",
     "rehype-katex": "^7.0.1",
     "remark-gfm": "^4.0.1",

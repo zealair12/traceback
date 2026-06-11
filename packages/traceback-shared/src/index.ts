@@ -29,12 +29,18 @@ export interface SessionResponse {
   updatedAt: string;
 }
 
-/** One image attached to a message: its type and base64 data URL. */
+/**
+ * One thing attached to a message: an image or a document (PDF), carried as a
+ * base64 data URL. The name is shown for documents. (The type is named for
+ * its original image-only days; it now covers files too.)
+ */
 export interface ImageAttachment {
-  type: 'image';
+  type: 'image' | 'file';
   mediaType: string;
   dataUrl: string;
+  name?: string;
 }
+export type Attachment = ImageAttachment;
 
 export interface MessageResponse {
   id: string;
@@ -60,6 +66,8 @@ export interface ProviderInfo {
   suggestedModels: string[];
   // Which of this backend's models accept images (used by Auto routing).
   visionModels: string[];
+  // Which of this backend's models accept document (PDF) attachments.
+  documentModels: string[];
   configured: boolean;
 }
 

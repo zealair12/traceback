@@ -6,6 +6,7 @@ import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
 import type { ChatMessage } from '../types';
 import { normalizeLatex } from '../utils/text';
+import { FileText } from 'lucide-react';
 import { BrandIcon } from './BrandIcon';
 
 interface MessageBubbleProps {
@@ -73,14 +74,24 @@ export function MessageBubble({ message, onBranchFromMessage }: MessageBubblePro
         <div className="max-w-xl rounded-3xl bg-bubbleUser px-4 py-3 text-sm text-white whitespace-pre-wrap">
           {message.attachments && message.attachments.length > 0 && (
             <div className="flex gap-2 flex-wrap mb-2">
-              {message.attachments.map((img, i) => (
-                <img
-                  key={i}
-                  src={img.dataUrl}
-                  alt={`attached image ${i + 1}`}
-                  className="max-h-44 max-w-[240px] rounded-xl object-contain"
-                />
-              ))}
+              {message.attachments.map((att, i) =>
+                att.type === 'image' ? (
+                  <img
+                    key={i}
+                    src={att.dataUrl}
+                    alt={`attached image ${i + 1}`}
+                    className="max-h-44 max-w-[240px] rounded-xl object-contain"
+                  />
+                ) : (
+                  <span
+                    key={i}
+                    className="px-2.5 py-1.5 rounded-lg bg-black/20 text-[11px] text-gray-200 flex items-center gap-1.5"
+                  >
+                    <FileText size={13} className="flex-shrink-0" />
+                    <span className="truncate max-w-[160px]">{att.name ?? 'document.pdf'}</span>
+                  </span>
+                )
+              )}
             </div>
           )}
           {message.content}
@@ -98,7 +109,7 @@ export function MessageBubble({ message, onBranchFromMessage }: MessageBubblePro
 
   return (
     <div className="group flex items-start gap-3">
-      <div className="w-7 h-7 rounded-full bg-gray-800 flex items-center justify-center text-emerald-500 mt-1 flex-shrink-0">
+      <div className="w-7 h-7 rounded-full bg-gray-800 flex items-center justify-center text-blue-400 mt-1 flex-shrink-0">
         <BrandIcon size={15} />
       </div>
       <div

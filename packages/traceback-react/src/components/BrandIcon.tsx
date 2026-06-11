@@ -1,10 +1,13 @@
-// The Traceback mark: a branching conversation inside a round chat bubble.
+// The Traceback mark: a git-style branch inside a round chat bubble.
 //
-// A filled root node forking into two open child nodes -- the same shape the
-// conversation tree draws -- wrapped in a circular speech bubble with a small
-// tail. Color comes from the surrounding text color (currentColor), so the
-// same component works as the reply avatar, the sidebar mark, or anywhere
-// else. The browser favicon is a standalone copy of this drawing
+// Three open nodes -- a line connecting the left pair, and a curve from the
+// right node merging into that line -- the universal "branch" glyph, sitting
+// centered inside a circular speech bubble with a small tail. Lines stop at
+// the circle edges rather than entering them. The glyph is OPTICALLY
+// centered: its mass balance point (not its bounding box) sits at the
+// bubble's center, because the branch shape is heavier on its left side. Color comes from the
+// surrounding text color (currentColor); the app uses Traceback blue. The
+// browser favicon is a standalone copy of this drawing
 // (client/public/favicon.svg); keep the two in sync if it changes.
 
 interface BrandIconProps {
@@ -23,17 +26,13 @@ export function BrandIcon({ size = 20, className }: BrandIconProps) {
       className={className}
       aria-hidden="true"
     >
-      <circle cx="12" cy="11" r="8.3" stroke="currentColor" strokeWidth="1.6" />
-      <path d="M5.9 17.6 L4.1 21.4 L8.7 19.6 Z" fill="currentColor" />
-      <circle cx="12" cy="7.4" r="1.7" fill="currentColor" />
-      <path
-        d="M12 9.4v1.8 M12 11.2 L8.6 14 M12 11.2 L15.4 14"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-      <circle cx="8.1" cy="14.8" r="1.7" stroke="currentColor" strokeWidth="1.5" />
-      <circle cx="15.9" cy="14.8" r="1.7" stroke="currentColor" strokeWidth="1.5" />
+      <circle cx="12" cy="11.2" r="9.2" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M6.4 18.9 L4.8 22.5 L9.4 20.7 Z" fill="currentColor" />
+      <circle cx="10" cy="8.6" r="1.6" stroke="currentColor" strokeWidth="1.4" />
+      <circle cx="10" cy="15.4" r="1.6" stroke="currentColor" strokeWidth="1.4" />
+      <circle cx="15.2" cy="8.6" r="1.6" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M10 10.4 v3.2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      <path d="M15.2 10.4 v0.2 a2.6 2.6 0 0 1 -2.6 2.6 h-2.6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
     </svg>
   );
 }

@@ -26,6 +26,8 @@ interface OpenAICompatibleConfig {
   suggestedModels: string[];
   // Which of those models accept images.
   visionModels: string[];
+  // Which of those models accept document (PDF) attachments.
+  documentModels: string[];
   // Name of the environment variable that holds the API key.
   apiKeyEnv: string;
   // Optional fixed base web address (used for local servers like Ollama).
@@ -44,6 +46,7 @@ function buildOpenAICompatibleProvider(config: OpenAICompatibleConfig): ChatProv
     defaultModel: config.defaultModel,
     suggestedModels: config.suggestedModels,
     visionModels: config.visionModels,
+    documentModels: config.documentModels,
 
     isConfigured() {
       if (config.keyOptional) return true; // local servers usually need no key
@@ -95,6 +98,7 @@ export function createOpenAIProvider(): ChatProvider {
     defaultModel: process.env.OPENAI_MODEL ?? 'gpt-4o-mini',
     suggestedModels: ['gpt-4o-mini', 'gpt-4o', 'o4-mini'],
     visionModels: ['gpt-4o-mini', 'gpt-4o'],
+    documentModels: ['gpt-4o-mini', 'gpt-4o'],
     apiKeyEnv: 'OPENAI_API_KEY',
     baseURLEnv: 'OPENAI_BASE_URL',
   });
@@ -108,6 +112,11 @@ export function createLocalProvider(): ChatProvider {
     suggestedModels: ['llama3.1', 'llama3.2', 'qwen2.5', 'mistral'],
     // Local servers vary; name your image-capable models (e.g. llava) here.
     visionModels: (process.env.LOCAL_VISION_MODELS ?? '')
+      .split(',')
+      .map((m) => m.trim())
+      .filter(Boolean),
+    // Local servers vary; name your document-capable models here if any.
+    documentModels: (process.env.LOCAL_DOCUMENT_MODELS ?? '')
       .split(',')
       .map((m) => m.trim())
       .filter(Boolean),

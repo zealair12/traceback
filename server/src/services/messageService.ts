@@ -171,13 +171,18 @@ export async function createMessageWithAutoReply(options: {
           'Be concise and direct. Keep answers under 4 sentences unless the user asks for detail. ' +
           'Use markdown for formatting. For math, use LaTeX with $...$ for inline and $$...$$ for display equations.'
       },
-      ...lineage.map((m) => ({
-        role: m.role,
-        content: m.content,
-        // Any images attached along the path travel with their turn, so
-        // image-capable models see them in context.
-        ...(m.attachments && m.attachments.length > 0 ? { images: m.attachments } : {})
-      }))
+      ...lineage.map((m) => {
+        // Anything attached along the path travels with its turn: images for
+        // models that can see, documents for models that can read PDFs.
+        const images = (m.attachments ?? []).filter((a) => a.type === 'image');
+        const files = (m.attachments ?? []).filter((a) => a.type === 'file');
+        return {
+          role: m.role,
+          content: m.content,
+          ...(images.length > 0 ? { images } : {}),
+          ...(files.length > 0 ? { files } : {})
+        };
+      })
     ];
 
     // 4. Ask the chosen LLM provider for a reply, using only the pruned

@@ -48,3 +48,8 @@ standing instructions -- rich explanatory comments and minimal line count --
 pull against each other; resolving that is a user decision, not an engineering
 one. Reversal trigger: if transferability never gets used by an embedder and
 the structure feels like ceremony, fold lib/ classes back into the hook.
+
+RESOLVED by user (2026-06-11): functionality and UI appearance are never to be
+compromised for fewer lines. "Less code" means no duplication and no dead
+code, not raw-line minimization; the plain-language comments stay. The +2%
+total is accepted.

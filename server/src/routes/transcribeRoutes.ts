@@ -10,7 +10,6 @@
 // this one request and never stored.
 
 import type { Express, Request, Response, NextFunction } from 'express';
-import Groq from 'groq-sdk';
 import OpenAI from 'openai';
 import { resolveApiKey } from '../auth/apiKey.js';
 
@@ -52,8 +51,13 @@ export function registerTranscribeRoutes(app: Express) {
       if (groqKey) {
         provider = 'groq';
         model = 'whisper-large-v3';
-        // GROQ_BASE_URL exists for tests and self-hosted gateways.
-        const groq = new Groq({ apiKey: groqKey, baseURL: process.env.GROQ_BASE_URL, timeout: 60_000 });
+        // Groq's API is OpenAI-compatible, so the same SDK reaches its
+        // Whisper endpoint. GROQ_BASE_URL exists for tests and gateways.
+        const groq = new OpenAI({
+          apiKey: groqKey,
+          baseURL: process.env.GROQ_BASE_URL ?? 'https://api.groq.com/openai/v1',
+          timeout: 60_000
+        });
         const result = await groq.audio.transcriptions.create({ file, model });
         text = result.text ?? '';
       } else if (openaiKey) {

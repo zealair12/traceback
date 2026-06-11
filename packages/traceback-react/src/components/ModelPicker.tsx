@@ -41,7 +41,7 @@ export function ModelPicker({
     selectedModel &&
     !providers
       .find((p) => p.id === selectedProvider)
-      ?.suggestedModels.includes(selectedModel);
+      ?.suggestedModels?.includes(selectedModel);
 
   // A small quiet control at the left of the input frame's bottom row, sized
   // to match the message text. No chrome of its own; the menu stays grouped by
@@ -60,7 +60,7 @@ export function ModelPicker({
             connected image-capable model, text to the default backend. */}
         <option value={encode('auto', 'auto')}>Auto</option>
         {providers.map((p) => {
-          const models = [...p.suggestedModels];
+          const models = [...(p.suggestedModels ?? [])];
           if (extraForCurrent && p.id === selectedProvider && !models.includes(selectedModel!)) {
             models.unshift(selectedModel!);
           }

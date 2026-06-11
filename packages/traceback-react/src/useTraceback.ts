@@ -104,21 +104,26 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
       }
       const usable = (p: ProviderInfo) => p.configured || keyedProviders.has(p.id);
       const order = ['groq', 'openai', 'anthropic', 'local'];
+      // Older servers may not advertise the capability fields yet; treat a
+      // missing list as empty rather than crashing (newer client, older server
+      // is a legitimate pairing for embedders).
+      const vision = (p: ProviderInfo) => p.visionModels ?? [];
+      const docs = (p: ProviderInfo) => p.documentModels ?? [];
       if (hasFiles) {
         for (const id of order) {
           const p = availableProviders.find((x) => x.id === id);
-          if (!p || !usable(p) || p.documentModels.length === 0) continue;
+          if (!p || !usable(p) || docs(p).length === 0) continue;
           const model = hasImages
-            ? p.documentModels.find((m) => p.visionModels.includes(m)) ?? p.documentModels[0]
-            : p.documentModels[0];
+            ? docs(p).find((m) => vision(p).includes(m)) ?? docs(p)[0]
+            : docs(p)[0];
           return { provider: p.id, model };
         }
       }
       if (hasImages) {
         for (const id of order) {
           const p = availableProviders.find((x) => x.id === id);
-          if (p && usable(p) && p.visionModels.length > 0) {
-            return { provider: p.id, model: p.visionModels[0] };
+          if (p && usable(p) && vision(p).length > 0) {
+            return { provider: p.id, model: vision(p)[0] };
           }
         }
       }

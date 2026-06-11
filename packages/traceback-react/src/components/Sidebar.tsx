@@ -1,5 +1,6 @@
 import type { SessionResponse } from '@traceback/shared';
 import { useState } from 'react';
+import { BrandIcon } from './BrandIcon';
 
 interface SidebarProps {
   sessions: SessionResponse[];
@@ -26,7 +27,10 @@ export function Sidebar({
   return (
     <aside className="w-64 h-full bg-sidebar text-gray-100 flex flex-col flex-shrink-0">
       <div className="px-4 py-4">
-        <h1 className="text-lg font-semibold tracking-tight">TraceBack</h1>
+        <h1 className="text-lg font-semibold tracking-tight flex items-center gap-2">
+          <BrandIcon size={20} className="text-emerald-500" />
+          <span>TraceBack</span>
+        </h1>
         <p className="text-[11px] text-gray-500 mt-0.5">Non-linear LLM conversations.</p>
         <button
           type="button"

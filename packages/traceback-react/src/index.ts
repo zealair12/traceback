@@ -16,6 +16,8 @@ export { KeyManager } from './components/KeyManager.js';
 export { getStoredKey, setStoredKey, clearStoredKey } from './keys.js';
 // The chat-history import panel, reusable by headless integrations.
 export { ImportPanel } from './components/ImportPanel.js';
+// The Traceback mark (branching-tree glyph), for embedders to reuse.
+export { BrandIcon } from './components/BrandIcon.js';
 
 // Re-export the HTTP client + types so headless users have everything from one
 // import.

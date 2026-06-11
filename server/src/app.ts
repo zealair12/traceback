@@ -150,7 +150,8 @@ export function createApp() {
         parent_id: parentIdRaw,
         content,
         provider: providerRaw,
-        model: modelRaw
+        model: modelRaw,
+        attachments: attachmentsRaw
       } = req.body ?? {};
 
       if (!sessionId || typeof sessionId !== 'string') {
@@ -161,6 +162,32 @@ export function createApp() {
         res.status(400).json({ error: 'content is required and must be a string.' });
         return;
       }
+      // Optional image attachments: a short list of base64 data URLs. Bounded
+      // so a single message cannot balloon the database or the model request.
+      let attachments;
+      if (attachmentsRaw !== undefined) {
+        if (!Array.isArray(attachmentsRaw) || attachmentsRaw.length > 4) {
+          res.status(400).json({ error: 'attachments must be an array of at most 4 images.' });
+          return;
+        }
+        for (const a of attachmentsRaw) {
+          const okShape =
+            a &&
+            a.type === 'image' &&
+            typeof a.mediaType === 'string' &&
+            a.mediaType.startsWith('image/') &&
+            typeof a.dataUrl === 'string' &&
+            a.dataUrl.startsWith('data:image/') &&
+            a.dataUrl.length <= 8_000_000; // ~6MB of image per attachment
+          if (!okShape) {
+            res.status(400).json({
+              error: 'each attachment needs type "image", an image/* mediaType, and a data:image/... URL under 6MB.'
+            });
+            return;
+          }
+        }
+        attachments = attachmentsRaw;
+      }
 
       const parentId = parentIdRaw ? String(parentIdRaw) : null;
       // Optional per-message model choice. Left undefined when not supplied so
@@ -170,7 +197,7 @@ export function createApp() {
       // Optional per-request "bring your own key" from the request headers.
       const apiKey = resolveApiKey(req);
 
-      const result = await createMessageWithAutoReply({ sessionId, parentId, content, provider, model, apiKey });
+      const result = await createMessageWithAutoReply({ sessionId, parentId, content, provider, model, apiKey, attachments });
 
       res.status(201).json({
         userMessage: result.userMessage,

@@ -12,6 +12,7 @@
 import OpenAI from 'openai';
 import type { ChatProvider, CompletionOptions, LlmMessage } from './types.js';
 import { callWithRetry } from './retry.js';
+import { toOpenAiDialectMessages } from './imageContent.js';
 
 const DEFAULT_TIMEOUT_MS = 60_000;
 
@@ -23,6 +24,8 @@ interface OpenAICompatibleConfig {
   defaultModel: string;
   // Curated model names a picker UI can offer.
   suggestedModels: string[];
+  // Which of those models accept images.
+  visionModels: string[];
   // Name of the environment variable that holds the API key.
   apiKeyEnv: string;
   // Optional fixed base web address (used for local servers like Ollama).
@@ -40,6 +43,7 @@ function buildOpenAICompatibleProvider(config: OpenAICompatibleConfig): ChatProv
     id: config.id,
     defaultModel: config.defaultModel,
     suggestedModels: config.suggestedModels,
+    visionModels: config.visionModels,
 
     isConfigured() {
       if (config.keyOptional) return true; // local servers usually need no key
@@ -68,7 +72,8 @@ function buildOpenAICompatibleProvider(config: OpenAICompatibleConfig): ChatProv
         async () => {
           const completion = await client.chat.completions.create({
             model,
-            messages,
+            // Image turns become content-parts lists; text turns stay strings.
+            messages: toOpenAiDialectMessages(messages) as never,
             ...(options?.temperature !== undefined ? { temperature: options.temperature } : {}),
             ...(options?.maxTokens !== undefined ? { max_tokens: options.maxTokens } : {})
           });
@@ -89,6 +94,7 @@ export function createOpenAIProvider(): ChatProvider {
     id: 'openai',
     defaultModel: process.env.OPENAI_MODEL ?? 'gpt-4o-mini',
     suggestedModels: ['gpt-4o-mini', 'gpt-4o', 'o4-mini'],
+    visionModels: ['gpt-4o-mini', 'gpt-4o'],
     apiKeyEnv: 'OPENAI_API_KEY',
     baseURLEnv: 'OPENAI_BASE_URL',
   });
@@ -100,6 +106,11 @@ export function createLocalProvider(): ChatProvider {
     id: 'local',
     defaultModel: process.env.LOCAL_MODEL ?? 'llama3.1',
     suggestedModels: ['llama3.1', 'llama3.2', 'qwen2.5', 'mistral'],
+    // Local servers vary; name your image-capable models (e.g. llava) here.
+    visionModels: (process.env.LOCAL_VISION_MODELS ?? '')
+      .split(',')
+      .map((m) => m.trim())
+      .filter(Boolean),
     apiKeyEnv: 'LOCAL_API_KEY',
     baseURLEnv: 'LOCAL_BASE_URL',
     defaultBaseURL: 'http://localhost:11434/v1', // Ollama's default address

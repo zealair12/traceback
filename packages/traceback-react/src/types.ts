@@ -1,5 +1,7 @@
 // UI-facing types for the Traceback chat components.
 
+import type { ImageAttachment } from '@traceback/shared';
+
 // One message as shown in the chat thread. This is a trimmed view of the
 // server's message: just what the bubbles need to render, plus which model
 // produced an assistant reply (so we can show the "answered by" badge).
@@ -9,4 +11,6 @@ export interface ChatMessage {
   content: string;
   provider?: string | null;
   model?: string | null;
+  // Images attached to this message, when any.
+  attachments?: ImageAttachment[] | null;
 }

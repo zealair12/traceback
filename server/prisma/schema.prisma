@@ -99,6 +99,12 @@ model Message {
   /// Lets the UI show which model answered each branch of the tree.
   model       String?
 
+  /// Optional attached media for this message (user messages only today).
+  /// Stored as a JSON list of { type: "image", mediaType, dataUrl } objects,
+  /// with the image bytes inline as a base64 data URL -- simple and
+  /// self-contained for a local-first app.
+  attachments Json?
+
   /// Creation timestamp for ordering messages within a session.
   createdAt  DateTime  @default(now()) @map("created_at")
 

@@ -9,10 +9,20 @@
 // plugins. The rest of the app talks to "a provider" through this contract and
 // never needs to know which company is actually answering.
 
+// One image attached to a turn: its type and the bytes as a base64 data URL.
+export interface ImageAttachment {
+  type: 'image';
+  mediaType: string;
+  dataUrl: string;
+}
+
 // A single turn in a conversation, in the shape every major LLM API expects.
+// Text is always present; images ride alongside when the turn has any, and
+// each provider translates them into its own wire format.
 export interface LlmMessage {
   role: 'user' | 'assistant' | 'system';
   content: string;
+  images?: ImageAttachment[];
 }
 
 // Knobs the caller can pass for a single completion request.
@@ -43,6 +53,9 @@ export interface ChatProvider {
   // This is a convenience for the interface; callers may still request any
   // model name the backend accepts.
   readonly suggestedModels: string[];
+  // Which of this backend's models accept images. Used by the picker and by
+  // automatic routing to send image messages only to models that can see.
+  readonly visionModels: string[];
   // Whether the necessary configuration (usually an API key) is present.
   // Lets the app fail early with a clear message instead of mid-request.
   isConfigured(): boolean;
@@ -56,6 +69,7 @@ export interface ProviderInfo {
   id: string;
   defaultModel: string;
   suggestedModels: string[];
+  visionModels: string[];
   configured: boolean;
 }
 

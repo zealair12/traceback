@@ -71,6 +71,18 @@ export function MessageBubble({ message, onBranchFromMessage }: MessageBubblePro
     return (
       <div className="flex justify-end">
         <div className="max-w-xl rounded-3xl bg-bubbleUser px-4 py-3 text-sm text-white whitespace-pre-wrap">
+          {message.attachments && message.attachments.length > 0 && (
+            <div className="flex gap-2 flex-wrap mb-2">
+              {message.attachments.map((img, i) => (
+                <img
+                  key={i}
+                  src={img.dataUrl}
+                  alt={`attached image ${i + 1}`}
+                  className="max-h-44 max-w-[240px] rounded-xl object-contain"
+                />
+              ))}
+            </div>
+          )}
           {message.content}
         </div>
       </div>

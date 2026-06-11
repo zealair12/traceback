@@ -29,6 +29,13 @@ export interface SessionResponse {
   updatedAt: string;
 }
 
+/** One image attached to a message: its type and base64 data URL. */
+export interface ImageAttachment {
+  type: 'image';
+  mediaType: string;
+  dataUrl: string;
+}
+
 export interface MessageResponse {
   id: string;
   sessionId: string;
@@ -37,6 +44,8 @@ export interface MessageResponse {
   content: string;
   depth: number;
   branchLabel: string | null;
+  // Images attached to this message, when any.
+  attachments?: ImageAttachment[] | null;
   // Which backend/model produced this message (assistant messages only).
   // Null/absent for user messages and pre-existing rows.
   provider?: string | null;
@@ -49,6 +58,8 @@ export interface ProviderInfo {
   id: string;
   defaultModel: string;
   suggestedModels: string[];
+  // Which of this backend's models accept images (used by Auto routing).
+  visionModels: string[];
   configured: boolean;
 }
 
@@ -62,6 +73,8 @@ export interface ProvidersResponse {
 export interface SendMessageOptions {
   provider?: string;
   model?: string;
+  // Images to attach to this message (base64 data URLs, max 4).
+  attachments?: ImageAttachment[];
   // Optional "bring your own key": the user's API key for this request. Sent in
   // a header (never the URL or body), used by the server for this request only,
   // and never stored or logged.
@@ -170,7 +183,8 @@ export function createTracebackClient(
           content,
           // Only included when the caller chose a specific backend/model.
           provider: options?.provider,
-          model: options?.model
+          model: options?.model,
+          attachments: options?.attachments
         },
         // The user's key (if any) goes in a header, not the body, so it never
         // lands in request logs that record bodies/URLs.

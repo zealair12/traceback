@@ -16,7 +16,8 @@ import {
   type SessionResponse,
   type MessageResponse,
   type SendMessageResult,
-  type ProviderInfo
+  type ProviderInfo,
+  type ImportedConversation
 } from '@traceback/shared';
 import { stripMarkdown } from './utils/text';
 import type { ChatMessage } from './types';
@@ -285,6 +286,21 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
     setBranchingFromText(null);
   }, []);
 
+  // Write imported conversations to the server, refresh the session list, and
+  // jump to the first imported one. Returns how many were imported.
+  const handleImportConversations = useCallback(
+    async (conversations: ImportedConversation[]): Promise<number> => {
+      const result = await client.importConversations(conversations);
+      const fresh = await client.fetchSessions();
+      setSessions(fresh);
+      if (result.imported.length > 0) {
+        setActiveSessionId(result.imported[0].sessionId);
+      }
+      return result.imported.length;
+    },
+    [client]
+  );
+
   const handleRenameSession = useCallback(
     async (sessionId: string, name: string) => {
       try {
@@ -446,6 +462,7 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
     // actions
     setProviderKey,
     clearProviderKey,
+    handleImportConversations,
     handleNewSession,
     handleSelectSession,
     handleRenameSession,

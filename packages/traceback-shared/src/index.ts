@@ -1,6 +1,24 @@
 import axios, { type AxiosInstance } from 'axios';
+import type { ImportedConversation } from './importers/index.js';
 
 /** Traceback HTTP API — same routes as `traceback/server` (sessions + branching messages). */
+
+// Conversation importers (ChatGPT export, generic message lists) and the
+// neutral conversation shape they produce.
+export {
+  parseImportFile,
+  parseImportText,
+  detectImporter,
+  conversationStats,
+  chatgptImporter,
+  claudeCodeImporter,
+  genericImporter
+} from './importers/index.js';
+export type {
+  ConversationImporter,
+  ImportedConversation,
+  ImportedMessage
+} from './importers/index.js';
 
 export interface SessionResponse {
   id: string;
@@ -63,6 +81,11 @@ export interface SendMessageResult {
   }>;
 }
 
+/** Result of importing conversations: one entry per created session. */
+export interface ImportResult {
+  imported: Array<{ sessionId: string; name: string | null; messageCount: number }>;
+}
+
 export interface TracebackClient {
   readonly api: AxiosInstance;
   fetchSessions(): Promise<SessionResponse[]>;
@@ -72,6 +95,8 @@ export interface TracebackClient {
   deleteSubtree(messageId: string): Promise<void>;
   /** Ask the server which LLM providers/models are available. */
   fetchProviders(): Promise<ProvidersResponse>;
+  /** Write normalized conversations (from an importer) into the tree store. */
+  importConversations(conversations: ImportedConversation[]): Promise<ImportResult>;
   sendMessage(
     sessionId: string,
     content: string,
@@ -121,6 +146,11 @@ export function createTracebackClient(
 
     async fetchProviders() {
       const { data } = await api.get<ProvidersResponse>('/providers');
+      return data;
+    },
+
+    async importConversations(conversations: ImportedConversation[]) {
+      const { data } = await api.post<ImportResult>('/import', { conversations });
       return data;
     },
 

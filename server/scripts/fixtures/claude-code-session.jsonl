@@ -1,0 +1,14 @@
+{"type":"ai-title","aiTitle":"Fixture: refactor the parser","sessionId":"fixture-session"}
+{"type":"queue-operation","operation":"enqueue"}
+{"type":"user","uuid":"u1","parentUuid":null,"timestamp":"2026-06-01T10:00:00.000Z","message":{"role":"user","content":"Please refactor the parser module."}}
+{"type":"assistant","uuid":"t1","parentUuid":"u1","timestamp":"2026-06-01T10:00:01.000Z","message":{"role":"assistant","model":"claude-test-1","content":[{"type":"thinking","thinking":"internal reasoning"}]}}
+{"type":"assistant","uuid":"a1","parentUuid":"t1","timestamp":"2026-06-01T10:00:02.000Z","message":{"role":"assistant","model":"claude-test-1","content":[{"type":"text","text":"I will start by reading the parser."}]}}
+{"type":"assistant","uuid":"tu1","parentUuid":"a1","timestamp":"2026-06-01T10:00:03.000Z","message":{"role":"assistant","model":"claude-test-1","content":[{"type":"tool_use","id":"call1","name":"Read","input":{}}]}}
+{"type":"user","uuid":"tr1","parentUuid":"tu1","timestamp":"2026-06-01T10:00:04.000Z","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"call1","content":"file contents"}]}}
+{"type":"assistant","uuid":"a2","parentUuid":"tr1","timestamp":"2026-06-01T10:00:05.000Z","message":{"role":"assistant","model":"claude-test-1","content":[{"type":"text","text":"Done. The parser is now split into two functions."}]}}
+{"type":"user","uuid":"u2a","parentUuid":"a2","timestamp":"2026-06-01T10:01:00.000Z","message":{"role":"user","content":"Now add tests for it."}}
+{"type":"assistant","uuid":"a3a","parentUuid":"u2a","timestamp":"2026-06-01T10:01:05.000Z","message":{"role":"assistant","model":"claude-test-1","content":[{"type":"text","text":"Added three unit tests."}]}}
+{"type":"user","uuid":"u2b","parentUuid":"a2","timestamp":"2026-06-01T10:02:00.000Z","message":{"role":"user","content":"Actually, document it instead."}}
+{"type":"assistant","uuid":"a3b","parentUuid":"u2b","timestamp":"2026-06-01T10:02:05.000Z","message":{"role":"assistant","model":"claude-test-2","content":[{"type":"text","text":"Wrote the documentation."}]}}
+{"type":"user","uuid":"s1","parentUuid":null,"isSidechain":true,"timestamp":"2026-06-01T10:03:00.000Z","message":{"role":"user","content":"subagent internal prompt, must not import"}}
+{"type":"user","uuid":"c1","parentUuid":"a3b","timestamp":"2026-06-01T10:04:00.000Z","message":{"role":"user","content":"<command-name>/model</command-name>"}}

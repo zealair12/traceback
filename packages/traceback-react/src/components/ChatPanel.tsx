@@ -185,7 +185,7 @@ export function ChatPanel({
               rows={input.includes('\n') ? 3 : 1}
               placeholder="Message TraceBack..."
               disabled={sending}
-              className="w-full resize-none rounded-2xl bg-inputBg text-sm text-gray-100 px-4 py-2.5 pr-10 border border-gray-800 focus:outline-none focus:ring-1 focus:ring-gray-600 disabled:opacity-50"
+              className="block w-full resize-none rounded-2xl bg-inputBg text-sm text-gray-100 px-4 py-2.5 pr-10 border border-gray-800 focus:outline-none focus:ring-1 focus:ring-gray-600 disabled:opacity-50"
             />
             <button
               type="button"

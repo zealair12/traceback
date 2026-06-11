@@ -9,6 +9,7 @@
 import Groq from 'groq-sdk';
 import type { ChatProvider, CompletionOptions, LlmMessage } from './types.js';
 import { callWithRetry } from './retry.js';
+import { toOpenAiDialectMessages } from './imageContent.js';
 
 const DEFAULT_MODEL = process.env.GROQ_MODEL ?? 'llama-3.3-70b-versatile';
 const DEFAULT_TIMEOUT_MS = 30_000;
@@ -20,7 +21,13 @@ export function createGroqProvider(): ChatProvider {
     suggestedModels: [
       'llama-3.3-70b-versatile',
       'llama-3.1-8b-instant',
+      'meta-llama/llama-4-scout-17b-16e-instruct',
       'mixtral-8x7b-32768',
+    ],
+    // Groq's multimodal (image-capable) models.
+    visionModels: [
+      'meta-llama/llama-4-scout-17b-16e-instruct',
+      'meta-llama/llama-4-maverick-17b-128e-instruct',
     ],
 
     // Configured simply means: do we have the API key Groq requires.
@@ -44,7 +51,8 @@ export function createGroqProvider(): ChatProvider {
       return callWithRetry<string>(
         async () => {
           const completion = await groq.chat.completions.create({
-            messages,
+            // Image turns become content-parts lists; text turns stay strings.
+            messages: toOpenAiDialectMessages(messages) as never,
             model,
             ...(options?.temperature !== undefined ? { temperature: options.temperature } : {}),
             ...(options?.maxTokens !== undefined ? { max_tokens: options.maxTokens } : {})

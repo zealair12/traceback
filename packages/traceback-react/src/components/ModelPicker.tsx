@@ -56,6 +56,9 @@ export function ModelPicker({
       className="bg-gray-900/70 border border-gray-800 rounded-full px-2.5 py-1 text-[11px] text-gray-300 focus:outline-none focus:ring-1 focus:ring-emerald-600/50 hover:border-gray-600 hover:text-gray-100 cursor-pointer max-w-[220px] truncate transition-colors"
       title="Choose which model answers the next message"
     >
+        {/* Auto picks the model for each message: image messages go to a
+            connected image-capable model, text to the default backend. */}
+        <option value={encode('auto', 'auto')}>Auto</option>
         {providers.map((p) => {
           const models = [...p.suggestedModels];
           if (extraForCurrent && p.id === selectedProvider && !models.includes(selectedModel!)) {

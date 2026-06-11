@@ -50,6 +50,7 @@ export function listProviders(): ProviderInfo[] {
       id: p.id,
       defaultModel: p.defaultModel,
       suggestedModels: p.suggestedModels,
+      visionModels: p.visionModels,
       configured: p.isConfigured(),
     };
   });
@@ -75,4 +76,4 @@ export function getProvider(id?: string): ChatProvider {
 
 export type { ChatProvider, ProviderInfo } from './types.js';
 export { ApiRateLimitError, LlmTimeoutError, ProviderNotAvailableError, InsecureKeyTransportError } from './types.js';
-export type { LlmMessage, CompletionOptions } from './types.js';
+export type { LlmMessage, CompletionOptions, ImageAttachment } from './types.js';

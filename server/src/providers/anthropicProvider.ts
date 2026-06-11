@@ -26,6 +26,12 @@ export function createAnthropicProvider(): ChatProvider {
       'claude-3-5-haiku-latest',
       'claude-3-opus-latest',
     ],
+    // Every current Claude chat model accepts images.
+    visionModels: [
+      'claude-3-5-sonnet-latest',
+      'claude-3-5-haiku-latest',
+      'claude-3-opus-latest',
+    ],
 
     isConfigured() {
       return Boolean(process.env.ANTHROPIC_API_KEY);
@@ -50,9 +56,27 @@ export function createAnthropicProvider(): ChatProvider {
         .filter((m) => m.role === 'system')
         .map((m) => m.content)
         .join('\n\n');
+      // Turns with images become Anthropic content blocks (image blocks carry
+      // raw base64, so the data URL prefix is stripped); text turns stay strings.
       const conversation = messages
         .filter((m) => m.role !== 'system')
-        .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
+        .map((m) => ({
+          role: m.role as 'user' | 'assistant',
+          content:
+            m.images && m.images.length > 0
+              ? ([
+                  ...m.images.map((img) => ({
+                    type: 'image' as const,
+                    source: {
+                      type: 'base64' as const,
+                      media_type: img.mediaType as 'image/png',
+                      data: img.dataUrl.replace(/^data:[^;]+;base64,/, '')
+                    }
+                  })),
+                  { type: 'text' as const, text: m.content }
+                ] as Array<Anthropic.TextBlockParam | Anthropic.ImageBlockParam>)
+              : m.content
+        }));
 
       const client = new Anthropic({ apiKey, timeout: timeoutMs });
 

@@ -17,7 +17,8 @@ import {
   type MessageResponse,
   type SendMessageResult,
   type ProviderInfo,
-  type ImportedConversation
+  type ImportedConversation,
+  type ImageAttachment
 } from '@traceback/shared';
 import { stripMarkdown } from './utils/text';
 import type { ChatMessage } from './types';
@@ -59,6 +60,7 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
   const [availableProviders, setAvailableProviders] = useState<ProviderInfo[]>([]);
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
+  const [serverDefaultProvider, setServerDefaultProvider] = useState<string | null>(null);
 
   // Which backends the user has saved their own key for (in the browser).
   const [keyedProviders, setKeyedProviders] = useState<Set<string>>(new Set());
@@ -71,6 +73,7 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
       .fetchProviders()
       .then((res) => {
         setAvailableProviders(res.providers);
+        setServerDefaultProvider(res.default);
         const def = res.providers.find((p) => p.id === res.default) ?? res.providers[0];
         if (def) {
           setSelectedProvider(def.id);
@@ -86,6 +89,34 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
     setSelectedProvider(providerId);
     setSelectedModel(model);
   }, []);
+
+  // Resolve which backend/model a message should actually go to. Normally the
+  // user's explicit pick; in "Auto" mode we choose for them, deterministically:
+  // a message with images goes to the first USABLE backend (server-configured
+  // or user-keyed) that has an image-capable model; plain text goes to the
+  // server's default backend (or the first usable one). Auto never picks a
+  // backend that is not connected.
+  const resolveModelChoice = useCallback(
+    (hasImages: boolean): { provider?: string; model?: string } => {
+      if (selectedProvider !== 'auto') {
+        return { provider: selectedProvider ?? undefined, model: selectedModel ?? undefined };
+      }
+      const usable = (p: ProviderInfo) => p.configured || keyedProviders.has(p.id);
+      if (hasImages) {
+        for (const id of ['groq', 'openai', 'anthropic', 'local']) {
+          const p = availableProviders.find((x) => x.id === id);
+          if (p && usable(p) && p.visionModels.length > 0) {
+            return { provider: p.id, model: p.visionModels[0] };
+          }
+        }
+      }
+      const def = availableProviders.find((p) => p.id === serverDefaultProvider);
+      if (def && usable(def)) return { provider: def.id, model: def.defaultModel };
+      const first = availableProviders.find(usable);
+      return first ? { provider: first.id, model: first.defaultModel } : {};
+    },
+    [selectedProvider, selectedModel, availableProviders, keyedProviders, serverDefaultProvider]
+  );
 
   // Save / clear a user's own API key for a backend (browser-only storage).
   const setProviderKey = useCallback((providerId: string, key: string) => {
@@ -176,7 +207,8 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
         role: current.role,
         content: current.content,
         provider: current.provider,
-        model: current.model
+        model: current.model,
+        attachments: current.attachments
       });
       current = current.parentId ? messageById.get(current.parentId) : undefined;
     }
@@ -314,17 +346,19 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
   );
 
   const handleSendMessage = useCallback(
-    async (content: string) => {
+    async (content: string, attachments?: ImageAttachment[]) => {
       if (!activeSessionId || sending) return;
       const parentId = branchingFromMessageId ?? activeNodeId;
       setSending(true);
       setError(null);
       try {
         const sessionId = activeSessionId;
+        const choice = resolveModelChoice((attachments?.length ?? 0) > 0);
         const result: SendMessageResult = await client.sendMessage(sessionId, content, parentId, {
-          provider: selectedProvider ?? undefined,
-          model: selectedModel ?? undefined,
-          apiKey: (selectedProvider && getStoredKey(selectedProvider)) || undefined
+          provider: choice.provider,
+          model: choice.model,
+          attachments,
+          apiKey: (choice.provider && getStoredKey(choice.provider)) || undefined
         });
         setAllMessages((prev) => [...prev, result.userMessage, result.assistantMessage]);
         setActiveNodeId(result.assistantMessage.id);
@@ -344,7 +378,7 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
         setSending(false);
       }
     },
-    [client, activeSessionId, activeNodeId, branchingFromMessageId, sending, sessions, selectedProvider, selectedModel]
+    [client, activeSessionId, activeNodeId, branchingFromMessageId, sending, sessions, resolveModelChoice]
   );
 
   const handleBranchFromMessage = useCallback(
@@ -357,10 +391,11 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
         setBranchingFromMessageId(messageId);
         setBranchingFromText(selectedText);
         try {
+          const choice = resolveModelChoice(false);
           const result: SendMessageResult = await client.sendMessage(activeSessionId, prompt, messageId, {
-            provider: selectedProvider ?? undefined,
-            model: selectedModel ?? undefined,
-            apiKey: (selectedProvider && getStoredKey(selectedProvider)) || undefined
+            provider: choice.provider,
+            model: choice.model,
+            apiKey: (choice.provider && getStoredKey(choice.provider)) || undefined
           });
           setAllMessages((prev) => [...prev, result.userMessage, result.assistantMessage]);
           setActiveNodeId(result.assistantMessage.id);
@@ -377,7 +412,7 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
         setBranchingFromText(selectedText);
       }
     },
-    [client, activeSessionId, sending, selectedProvider, selectedModel]
+    [client, activeSessionId, sending, resolveModelChoice]
   );
 
   const handleSelectTreeNode = useCallback(

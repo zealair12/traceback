@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent, type ClipboardEvent } from 'react';
 import type { ChatMessage } from '../types';
-import type { ProviderInfo } from '@traceback/shared';
+import type { ProviderInfo, ImageAttachment } from '@traceback/shared';
 import { MessageBubble } from './MessageBubble';
 import { ModelPicker } from './ModelPicker';
 import { NodeNavBar } from './NodeNavBar';
@@ -15,7 +15,7 @@ interface SiblingInfo {
 
 interface ChatPanelProps {
   threadPath: ChatMessage[];
-  onSendMessage: (content: string) => void;
+  onSendMessage: (content: string, attachments?: ImageAttachment[]) => void;
   onBranchFromMessage: (messageId: string, selectedText: string, action: 'dig' | 'ask') => void;
   branchingFromMessageId: string | null;
   branchingFromPreview: string | null;
@@ -54,8 +54,46 @@ export function ChatPanel({
   onSelectModel
 }: ChatPanelProps) {
   const [input, setInput] = useState('');
+  // Images waiting to be sent with the next message (shown as chips).
+  const [pendingImages, setPendingImages] = useState<ImageAttachment[]>([]);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
+  const fileRef = useRef<HTMLInputElement | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+
+  // Read an image file into a base64 data URL attachment (max 4 per message).
+  const addImageFiles = (files: Iterable<File>) => {
+    for (const file of files) {
+      if (!file.type.startsWith('image/')) continue;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = String(reader.result ?? '');
+        if (!dataUrl.startsWith('data:image/')) return;
+        setPendingImages((prev) =>
+          prev.length >= 4 ? prev : [...prev, { type: 'image', mediaType: file.type, dataUrl }]
+        );
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Pasting an image (e.g. a screenshot) attaches it.
+  const handlePaste = (e: ClipboardEvent<HTMLTextAreaElement>) => {
+    const images = Array.from(e.clipboardData?.items ?? [])
+      .filter((i) => i.kind === 'file' && i.type.startsWith('image/'))
+      .map((i) => i.getAsFile())
+      .filter((f): f is File => !!f);
+    if (images.length > 0) {
+      e.preventDefault();
+      addImageFiles(images);
+    }
+  };
+
+  const submit = () => {
+    if ((!input.trim() && pendingImages.length === 0) || sending) return;
+    onSendMessage(input.trim(), pendingImages.length > 0 ? pendingImages : undefined);
+    setInput('');
+    setPendingImages([]);
+  };
 
   // Auto-scroll to bottom when new messages arrive.
   useEffect(() => {
@@ -75,9 +113,7 @@ export function ChatPanel({
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
-      if (!input.trim() || sending) return;
-      onSendMessage(input.trim());
-      setInput('');
+      submit();
     }
   };
 
@@ -173,11 +209,33 @@ export function ChatPanel({
             inside its bottom edge: model pill on the left, send on the right
             (the layout used by modern editors). */}
         <div className="max-w-2xl mx-auto rounded-2xl bg-inputBg border border-gray-800 focus-within:ring-1 focus-within:ring-gray-600">
+          {pendingImages.length > 0 && (
+            <div className="flex gap-2 px-3 pt-3 flex-wrap">
+              {pendingImages.map((img, i) => (
+                <div key={i} className="relative">
+                  <img
+                    src={img.dataUrl}
+                    alt={`attachment ${i + 1}`}
+                    className="h-14 w-14 object-cover rounded-lg border border-gray-700"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setPendingImages((prev) => prev.filter((_, j) => j !== i))}
+                    className="absolute -top-1.5 -right-1.5 h-4 w-4 rounded-full bg-gray-700 text-gray-200 text-[9px] flex items-center justify-center hover:bg-gray-600"
+                    title="Remove image"
+                  >
+                    x
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
           <textarea
             ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
             rows={input.includes('\n') ? 3 : 1}
             placeholder="Message TraceBack..."
             disabled={sending}
@@ -191,18 +249,44 @@ export function ChatPanel({
               keyedProviders={keyedProviders}
               onSelect={onSelectModel}
             />
-            <button
-              type="button"
-              disabled={sending || !input.trim()}
-              onClick={() => {
-                if (!input.trim() || sending) return;
-                onSendMessage(input.trim());
-                setInput('');
-              }}
-              className="h-7 w-7 rounded-full bg-white text-black flex items-center justify-center text-xs hover:bg-gray-200 transition-colors disabled:opacity-30"
-            >
-              ↑
-            </button>
+            <div className="flex items-center gap-1.5">
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files) addImageFiles(e.target.files);
+                  e.target.value = '';
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                disabled={sending || pendingImages.length >= 4}
+                className="h-7 w-7 rounded-full text-gray-400 hover:text-gray-100 hover:bg-gray-800 flex items-center justify-center transition-colors disabled:opacity-30"
+                title="Attach images (or paste them)"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path
+                    d="M20 11.5 L11.5 20 a5.3 5.3 0 0 1 -7.5 -7.5 L13 3.5 a3.6 3.6 0 0 1 5 5 L9.5 17 a1.8 1.8 0 0 1 -2.5 -2.5 L15 6.5"
+                    stroke="currentColor"
+                    strokeWidth="1.7"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
+              <button
+                type="button"
+                disabled={sending || (!input.trim() && pendingImages.length === 0)}
+                onClick={submit}
+                className="h-7 w-7 rounded-full bg-white text-black flex items-center justify-center text-xs hover:bg-gray-200 transition-colors disabled:opacity-30"
+              >
+                ↑
+              </button>
+            </div>
           </div>
         </div>
       </footer>

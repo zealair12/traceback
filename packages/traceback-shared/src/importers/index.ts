@@ -9,10 +9,18 @@
 import type { ConversationImporter, ImportedConversation } from './types.js';
 import { chatgptImporter } from './chatgpt.js';
 import { claudeCodeImporter } from './claudeCode.js';
+import { claudeAiImporter } from './claudeAi.js';
+import { geminiImporter } from './gemini.js';
 import { genericImporter } from './generic.js';
 
 // Order matters: more specific formats first, the catch-all last.
-const importers: ConversationImporter[] = [chatgptImporter, claudeCodeImporter, genericImporter];
+const importers: ConversationImporter[] = [
+  chatgptImporter,
+  claudeCodeImporter,
+  claudeAiImporter,
+  geminiImporter,
+  genericImporter
+];
 
 // Which importer (if any) understands this parsed JSON?
 export function detectImporter(data: unknown): ConversationImporter | null {
@@ -31,7 +39,7 @@ export function parseImportFile(data: unknown): {
   const imp = detectImporter(data);
   if (!imp) {
     throw new Error(
-      'Unrecognized file format. Supported: a ChatGPT export (conversations.json), a Claude Code session (.jsonl), or a plain JSON list of {role, content} messages.'
+      'Unrecognized file format. Supported: ChatGPT export (conversations.json), claude.ai export, Gemini Takeout JSON, Claude Code session (.jsonl), or a plain JSON list of {role, content} messages.'
     );
   }
   return { importerId: imp.id, conversations: imp.parse(data) };
@@ -68,6 +76,6 @@ export function parseImportText(text: string): {
   return parseImportFile(data);
 }
 
-export { chatgptImporter, claudeCodeImporter, genericImporter };
+export { chatgptImporter, claudeCodeImporter, claudeAiImporter, geminiImporter, genericImporter };
 export type { ConversationImporter, ImportedConversation, ImportedMessage } from './types.js';
 export { conversationStats } from './types.js';

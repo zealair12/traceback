@@ -72,8 +72,9 @@ export function ImportPanel({ onImport, onClose }: ImportPanelProps) {
         </div>
         <p className="text-[11px] text-gray-500 mb-4 leading-relaxed">
           Bring your history from ChatGPT: Settings &gt;&gt; Data controls &gt;&gt; Export data
-          &gt;&gt; drop the conversations.json from the zip. Claude Code sessions (.jsonl) and
-          plain JSON message lists work too.
+          &gt;&gt; drop the conversations.json from the zip. Claude (Settings &gt;&gt; Privacy
+          &gt;&gt; Export data), Gemini (Takeout &gt;&gt; My Activity &gt;&gt; Gemini Apps),
+          Claude Code .jsonl, and plain JSON lists work too.
         </p>
 
         {phase.step === 'pick' && (

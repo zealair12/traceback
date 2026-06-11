@@ -12,6 +12,8 @@ export {
   conversationStats,
   chatgptImporter,
   claudeCodeImporter,
+  claudeAiImporter,
+  geminiImporter,
   genericImporter
 } from './importers/index.js';
 export type {

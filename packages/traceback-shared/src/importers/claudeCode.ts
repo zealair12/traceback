@@ -10,7 +10,8 @@
 // skips the machinery (thinking, tool calls and results, queue bookkeeping),
 // and stitches consecutive assistant text segments into single replies.
 
-import type { ConversationImporter, ImportedConversation, ImportedMessage } from './types.js';
+import type { ImportedConversation, ImportedMessage } from './types.js';
+import { BaseImporter } from './base.js';
 
 interface ClaudeCodeRecord {
   type?: string;
@@ -56,8 +57,8 @@ function assistantText(content: unknown): string | null {
   return joined || null;
 }
 
-export const claudeCodeImporter: ConversationImporter = {
-  id: 'claude-code',
+export class ClaudeCodeImporter extends BaseImporter {
+  readonly id = 'claude-code';
 
   // A parsed Claude Code session is an array of line-records where the
   // conversational ones carry uuid/parentUuid and a type of user/assistant.
@@ -67,7 +68,7 @@ export const claudeCodeImporter: ConversationImporter = {
       (r) => r && (r.type === 'user' || r.type === 'assistant')
     );
     return convo.length > 0 && convo.every((r) => typeof r.uuid === 'string' && 'parentUuid' in r);
-  },
+  }
 
   parse(data: unknown): ImportedConversation[] {
     if (!this.detect(data)) return [];
@@ -154,4 +155,6 @@ export const claudeCodeImporter: ConversationImporter = {
     if (out.length === 0) return [];
     return [{ name, messages: out }];
   }
-};
+}
+
+export const claudeCodeImporter = new ClaudeCodeImporter();

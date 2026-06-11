@@ -109,112 +109,102 @@ export interface ImportResult {
   imported: Array<{ sessionId: string; name: string | null; messageCount: number }>;
 }
 
-export interface TracebackClient {
+/**
+ * The Traceback HTTP client: one object holding every call the server
+ * understands. A class so embedders can extend or wrap it; the
+ * createTracebackClient factory below is the conventional way to make one.
+ */
+export class TracebackClient {
   readonly api: AxiosInstance;
-  fetchSessions(): Promise<SessionResponse[]>;
-  createSession(name?: string): Promise<SessionResponse>;
-  updateSessionName(sessionId: string, name: string | null): Promise<SessionResponse>;
-  fetchSessionMessages(sessionId: string): Promise<MessageResponse[]>;
-  deleteSubtree(messageId: string): Promise<void>;
+
+  constructor(baseURL: string, options?: { axiosInstance?: AxiosInstance }) {
+    this.api =
+      options?.axiosInstance ??
+      axios.create({ baseURL: baseURL.replace(/\/$/, ''), withCredentials: false });
+  }
+
+  // The user's key (if any) travels in a header -- never the URL or body --
+  // so it cannot land in request logs.
+  private auth(apiKey?: string) {
+    return apiKey ? { headers: { 'x-provider-key': apiKey } } : undefined;
+  }
+
+  async fetchSessions(): Promise<SessionResponse[]> {
+    const { data } = await this.api.get<SessionResponse[]>('/sessions');
+    return data;
+  }
+
+  async createSession(name?: string): Promise<SessionResponse> {
+    const { data } = await this.api.post<SessionResponse>('/sessions', { name });
+    return data;
+  }
+
+  async updateSessionName(sessionId: string, name: string | null): Promise<SessionResponse> {
+    const { data } = await this.api.patch<SessionResponse>(`/sessions/${sessionId}`, { name });
+    return data;
+  }
+
+  async fetchSessionMessages(sessionId: string): Promise<MessageResponse[]> {
+    const { data } = await this.api.get<MessageResponse[]>(`/sessions/${sessionId}/messages`);
+    return data;
+  }
+
+  async deleteSubtree(messageId: string): Promise<void> {
+    await this.api.delete(`/messages/${messageId}`);
+  }
+
   /** Ask the server which LLM providers/models are available. */
-  fetchProviders(): Promise<ProvidersResponse>;
+  async fetchProviders(): Promise<ProvidersResponse> {
+    const { data } = await this.api.get<ProvidersResponse>('/providers');
+    return data;
+  }
+
   /** Write normalized conversations (from an importer) into the tree store. */
-  importConversations(conversations: ImportedConversation[]): Promise<ImportResult>;
+  async importConversations(conversations: ImportedConversation[]): Promise<ImportResult> {
+    const { data } = await this.api.post<ImportResult>('/import', { conversations });
+    return data;
+  }
+
   /** Turn recorded audio (base64 data URL) into text via the server. */
-  transcribeAudio(
+  async transcribeAudio(
     audioDataUrl: string,
     mediaType: string,
     options?: { apiKey?: string }
-  ): Promise<{ text: string; provider: string; model: string }>;
-  sendMessage(
+  ): Promise<{ text: string; provider: string; model: string }> {
+    const { data } = await this.api.post<{ text: string; provider: string; model: string }>(
+      '/transcribe',
+      { audio: audioDataUrl, mediaType },
+      this.auth(options?.apiKey)
+    );
+    return data;
+  }
+
+  async sendMessage(
     sessionId: string,
     content: string,
     parentId: string | null,
     // Optional: pick which backend/model answers this specific message.
     options?: SendMessageOptions
-  ): Promise<SendMessageResult>;
+  ): Promise<SendMessageResult> {
+    const { data } = await this.api.post<SendMessageResult>(
+      '/message/send',
+      {
+        session_id: sessionId,
+        parent_id: parentId,
+        content,
+        provider: options?.provider,
+        model: options?.model,
+        attachments: options?.attachments
+      },
+      this.auth(options?.apiKey)
+    );
+    return data;
+  }
 }
 
 export function createTracebackClient(
   baseURL: string,
   options?: { axiosInstance?: AxiosInstance }
 ): TracebackClient {
-  const api =
-    options?.axiosInstance ??
-    axios.create({
-      baseURL: baseURL.replace(/\/$/, ''),
-      withCredentials: false
-    });
-
-  return {
-    api,
-
-    async fetchSessions() {
-      const { data } = await api.get<SessionResponse[]>('/sessions');
-      return data;
-    },
-
-    async createSession(name?: string) {
-      const { data } = await api.post<SessionResponse>('/sessions', { name });
-      return data;
-    },
-
-    async updateSessionName(sessionId: string, name: string | null) {
-      const { data } = await api.patch<SessionResponse>(`/sessions/${sessionId}`, { name });
-      return data;
-    },
-
-    async fetchSessionMessages(sessionId: string) {
-      const { data } = await api.get<MessageResponse[]>(`/sessions/${sessionId}/messages`);
-      return data;
-    },
-
-    async deleteSubtree(messageId: string) {
-      await api.delete(`/messages/${messageId}`);
-    },
-
-    async fetchProviders() {
-      const { data } = await api.get<ProvidersResponse>('/providers');
-      return data;
-    },
-
-    async importConversations(conversations: ImportedConversation[]) {
-      const { data } = await api.post<ImportResult>('/import', { conversations });
-      return data;
-    },
-
-    async transcribeAudio(audioDataUrl: string, mediaType: string, options?: { apiKey?: string }) {
-      const { data } = await api.post<{ text: string; provider: string; model: string }>(
-        '/transcribe',
-        { audio: audioDataUrl, mediaType },
-        // The user's key (if any) travels in a header, same as chat requests.
-        options?.apiKey ? { headers: { 'x-provider-key': options.apiKey } } : undefined
-      );
-      return data;
-    },
-
-    async sendMessage(
-      sessionId: string,
-      content: string,
-      parentId: string | null,
-      options?: SendMessageOptions
-    ) {
-      const { data } = await api.post<SendMessageResult>(
-        '/message/send',
-        {
-          session_id: sessionId,
-          parent_id: parentId,
-          content,
-          // Only included when the caller chose a specific backend/model.
-          provider: options?.provider,
-          model: options?.model,
-          attachments: options?.attachments
-        },
-        // The user's key (if any) goes in a header, not the body, so it never
-        // lands in request logs that record bodies/URLs.
-        options?.apiKey ? { headers: { 'x-provider-key': options.apiKey } } : undefined
-      );
-      return data;
-    }
-  };
+  return new TracebackClient(baseURL, options);
 }

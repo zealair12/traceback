@@ -83,3 +83,6 @@ server/prisma/migrations/**/*.db
 
 # Standalone widget build output
 dist-widget/
+
+# Local Claude Code workspace (plugins, skills, launch config) - never commit
+.claude/

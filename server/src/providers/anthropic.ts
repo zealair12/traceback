@@ -74,7 +74,18 @@ export class AnthropicProvider extends BaseChatProvider {
       model,
       // Anthropic always requires a reply-length cap.
       max_tokens: options?.maxTokens ?? DEFAULT_MAX_TOKENS,
-      system: systemPrompt || undefined,
+      // The system prompt is identical on every request, so mark it with
+      // cache_control: Anthropic then re-reads it from its short-lived cache
+      // at ~10% of the normal input price instead of reprocessing it each turn.
+      system: systemPrompt
+        ? [
+            {
+              type: 'text' as const,
+              text: systemPrompt,
+              cache_control: { type: 'ephemeral' as const }
+            }
+          ]
+        : undefined,
       messages: conversation,
       ...(options?.temperature !== undefined ? { temperature: options.temperature } : {})
     });

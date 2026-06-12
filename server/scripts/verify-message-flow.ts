@@ -129,9 +129,12 @@ async function main() {
     // anti-trope writing guide that humanizes replies.
     const sentMessages = mock.lastBody()?.messages ?? [];
     const systemSent = sentMessages.find((m: any) => m.role === 'system')?.content ?? '';
-    const humanizeIncluded = systemSent.includes('AI Writing Tropes to Avoid');
+    const humanizeIncluded =
+      systemSent.includes('AI Writing Tropes to Avoid') &&
+      systemSent.includes('ZERO EM DASHES, NO EXCEPTIONS') &&
+      systemSent.includes('FINAL REMINDER OF THE ABSOLUTE RULE');
     console.log('system prompt reached the model:', systemSent.length > 0);
-    console.log('humanize writing guide included:', humanizeIncluded);
+    console.log('humanize writing guide + em dash ban included:', humanizeIncluded);
 
     // 3. A bad provider name must be rejected with 400.
     const bad = await fetch(`${base}/message/send`, {

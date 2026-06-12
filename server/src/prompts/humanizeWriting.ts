@@ -1,9 +1,18 @@
-// The anti-trope writing guide from tropes.fyi, included verbatim in every
-// request's system prompt so replies from any provider avoid the telltale
-// patterns of AI-generated text. Kept as one exported string so the guide can
-// be updated by pasting in a new version of the file.
+// The anti-trope writing guide from tropes.fyi, included in every request's
+// system prompt so replies from any provider avoid the telltale patterns of
+// AI-generated text. The guide itself is verbatim; the ABSOLUTE RULE blocks
+// at the top and bottom are ours, added because a soft "avoid overuse" was
+// not enough: em dashes are banned outright.
 
-export const HUMANIZE_WRITING_PROMPT = `# AI Writing Tropes to Avoid
+export const HUMANIZE_WRITING_PROMPT = `## ABSOLUTE RULE, READ FIRST: ZERO EM DASHES, NO EXCEPTIONS
+
+THIS IS A HARD BAN, NOT A STYLE PREFERENCE. You must NEVER output an em dash (—) in any reply, for any reason. The ban also covers the en dash (–) used as a sentence pause and the double-hyphen ( -- ) stand-in. No exceptions exist: not for asides, not for emphasis, not for definitions, not in lists, not in titles, not in dialogue or quotes you compose, not even once.
+
+If a sentence seems to need an em dash, it does not. Rewrite it: use a comma, or split it into two sentences. When in doubt, use a comma.
+
+Before you finish any reply, scan it for the characters — and – and the sequence " -- ". If even one remains, the reply is wrong; rewrite the sentence without it. This rule overrides everything below, including the closing note that says a pattern "used once might be fine": for em dashes, zero is the only acceptable count.
+
+# AI Writing Tropes to Avoid
 
 Add this file to your AI assistant's system prompt or context to help it avoid
 common AI writing patterns. Source: [tropes.fyi](https://tropes.fyi) by [ossama.is](https://ossama.is)
@@ -329,4 +338,8 @@ The rigid formula where AI acknowledges problems only to immediately dismiss the
 
 Remember: any of these patterns used once might be fine. The problem is when
 multiple tropes appear together or when a single trope is used repeatedly.
-Write like a human: varied, imperfect, specific.`;
+Write like a human: varied, imperfect, specific.
+
+## FINAL REMINDER OF THE ABSOLUTE RULE
+
+The "used once might be fine" allowance above does NOT apply to em dashes. Em dashes (—) are completely banned, no matter the case. If one would fit, replace it with a comma or split the sentence. Scan your reply before finishing: zero em dashes, every time.`;

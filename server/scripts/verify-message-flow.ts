@@ -17,12 +17,24 @@ import { dirname, join } from 'node:path';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const serverEntry = join(__dirname, '..', 'src', 'index.ts');
 
-function startMockModelServer(): Promise<{ port: number; close: () => void }> {
+function startMockModelServer(): Promise<{
+  port: number;
+  close: () => void;
+  lastBody: () => any;
+}> {
+  // Keep the most recent request body so the test can check what the app
+  // actually sent to the model (e.g. that the system prompt travels).
+  let captured: any = null;
   return new Promise((resolve) => {
     const server = http.createServer((req, res) => {
       let raw = '';
       req.on('data', (c) => (raw += c));
       req.on('end', () => {
+        try {
+          captured = JSON.parse(raw);
+        } catch {
+          captured = null;
+        }
         res.setHeader('content-type', 'application/json');
         res.end(
           JSON.stringify({
@@ -32,7 +44,11 @@ function startMockModelServer(): Promise<{ port: number; close: () => void }> {
       });
     });
     server.listen(0, '127.0.0.1', () => {
-      resolve({ port: (server.address() as any).port, close: () => server.close() });
+      resolve({
+        port: (server.address() as any).port,
+        close: () => server.close(),
+        lastBody: () => captured,
+      });
     });
   });
 }
@@ -109,6 +125,14 @@ async function main() {
     );
     console.log('lineage length (root user + this user):', sendBody.lineage?.length);
 
+    // The model must receive the app's system prompt, including the
+    // anti-trope writing guide that humanizes replies.
+    const sentMessages = mock.lastBody()?.messages ?? [];
+    const systemSent = sentMessages.find((m: any) => m.role === 'system')?.content ?? '';
+    const humanizeIncluded = systemSent.includes('AI Writing Tropes to Avoid');
+    console.log('system prompt reached the model:', systemSent.length > 0);
+    console.log('humanize writing guide included:', humanizeIncluded);
+
     // 3. A bad provider name must be rejected with 400.
     const bad = await fetch(`${base}/message/send`, {
       method: 'POST',
@@ -129,6 +153,7 @@ async function main() {
       sendBody.assistantMessage?.content === 'reply from fake local model' &&
       sendBody.assistantMessage?.provider === 'local' &&
       sendBody.assistantMessage?.model === 'test-model' &&
+      humanizeIncluded &&
       bad.status === 400;
 
     cleanup();

@@ -10,9 +10,8 @@
 
 import type { ChatProvider, ProviderInfo } from './types.js';
 import { ProviderNotAvailableError } from './types.js';
-import { createGroqProvider } from './groqProvider.js';
-import { createOpenAIProvider, createLocalProvider } from './openaiProvider.js';
-import { createAnthropicProvider } from './anthropicProvider.js';
+import { createGroqProvider, createOpenAIProvider, createLocalProvider } from './openaiDialect.js';
+import { createAnthropicProvider } from './anthropic.js';
 
 // Each entry maps a short id to a function that builds that provider on demand.
 // Building lazily means a provider that needs a missing API key does not break
@@ -50,6 +49,8 @@ export function listProviders(): ProviderInfo[] {
       id: p.id,
       defaultModel: p.defaultModel,
       suggestedModels: p.suggestedModels,
+      visionModels: p.visionModels,
+      documentModels: p.documentModels,
       configured: p.isConfigured(),
     };
   });
@@ -75,4 +76,4 @@ export function getProvider(id?: string): ChatProvider {
 
 export type { ChatProvider, ProviderInfo } from './types.js';
 export { ApiRateLimitError, LlmTimeoutError, ProviderNotAvailableError, InsecureKeyTransportError } from './types.js';
-export type { LlmMessage, CompletionOptions } from './types.js';
+export type { LlmMessage, CompletionOptions, ImageAttachment } from './types.js';

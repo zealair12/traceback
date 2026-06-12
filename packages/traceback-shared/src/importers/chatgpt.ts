@@ -15,7 +15,8 @@
 // children to the nearest KEPT ancestor, so the visible conversation keeps its
 // shape even though invisible steps sat in between.
 
-import type { ConversationImporter, ImportedConversation, ImportedMessage } from './types.js';
+import type { ImportedConversation, ImportedMessage } from './types.js';
+import { BaseImporter } from './base.js';
 
 // Minimal view of the parts of ChatGPT's format we read.
 interface ChatGptNode {
@@ -100,8 +101,8 @@ function parseConversation(conv: ChatGptConversation): ImportedConversation | nu
   return { name: conv.title?.trim() || null, messages };
 }
 
-export const chatgptImporter: ConversationImporter = {
-  id: 'chatgpt',
+export class ChatGptImporter extends BaseImporter {
+  readonly id = 'chatgpt';
 
   // A ChatGPT export is an array of conversations, each carrying a `mapping`
   // object of message nodes.
@@ -111,7 +112,7 @@ export const chatgptImporter: ConversationImporter = {
       data.length > 0 &&
       data.every((c) => c && typeof c === 'object' && 'mapping' in (c as object))
     );
-  },
+  }
 
   parse(data: unknown): ImportedConversation[] {
     if (!this.detect(data)) return [];
@@ -122,4 +123,6 @@ export const chatgptImporter: ConversationImporter = {
     }
     return out;
   }
-};
+}
+
+export const chatgptImporter = new ChatGptImporter();

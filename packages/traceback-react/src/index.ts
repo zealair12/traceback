@@ -13,9 +13,16 @@ export type { UseTracebackOptions, UseTracebackReturn } from './useTraceback.js'
 export type { ChatMessage } from './types.js';
 // The "bring your own key" panel, reusable by headless integrations.
 export { KeyManager } from './components/KeyManager.js';
-export { getStoredKey, setStoredKey, clearStoredKey } from './keys.js';
+// The framework-free engine pieces, for embedders who skip React entirely:
+// the tree math, the Auto-routing rules, and the browser key store.
+export { ConversationTree } from './lib/conversationTree.js';
+export type { SiblingInfo } from './lib/conversationTree.js';
+export { ModelRouter } from './lib/modelRouter.js';
+export { KeyStore, keyStore } from './lib/keyStore.js';
 // The chat-history import panel, reusable by headless integrations.
 export { ImportPanel } from './components/ImportPanel.js';
+// The Traceback mark (branching-tree glyph), for embedders to reuse.
+export { BrandIcon } from './components/BrandIcon.js';
 
 // Re-export the HTTP client + types so headless users have everything from one
 // import.

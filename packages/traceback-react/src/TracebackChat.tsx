@@ -69,6 +69,7 @@ export function TracebackChat({ apiUrl }: TracebackChatProps) {
         <ChatPanel
           threadPath={tb.threadPath}
           onSendMessage={tb.handleSendMessage}
+          onTranscribeAudio={tb.handleTranscribeAudio}
           onBranchFromMessage={tb.handleBranchFromMessage}
           branchingFromMessageId={tb.branchingFromMessageId}
           branchingFromPreview={tb.branchingFromPreview}

@@ -1,20 +1,20 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import type { ChatMessage } from '../types';
-import type { ProviderInfo } from '@traceback/shared';
-import { MessageBubble } from './MessageBubble';
-import { ModelPicker } from './ModelPicker';
-import { NodeNavBar } from './NodeNavBar';
-import { stripMarkdown } from '../utils/text';
+// The middle column: navigation line on top, the conversation thread, and the
+// composer at the bottom. Each piece is its own component; this file only
+// arranges them.
 
-interface SiblingInfo {
-  parentId: string | null;
-  currentIndex: number;
-  total: number;
-}
+import { useEffect, useRef } from 'react';
+import type { ChatMessage } from '../types';
+import type { ProviderInfo, ImageAttachment } from '@traceback/shared';
+import type { SiblingInfo } from '../lib/conversationTree';
+import { MessageBubble } from './MessageBubble';
+import { NavHeader } from './NavHeader';
+import { Composer } from './Composer';
+import { BrandIcon } from './BrandIcon';
 
 interface ChatPanelProps {
   threadPath: ChatMessage[];
-  onSendMessage: (content: string) => void;
+  onSendMessage: (content: string, attachments?: ImageAttachment[]) => void;
+  onTranscribeAudio: (audioDataUrl: string, mediaType: string) => Promise<string>;
   onBranchFromMessage: (messageId: string, selectedText: string, action: 'dig' | 'ask') => void;
   branchingFromMessageId: string | null;
   branchingFromPreview: string | null;
@@ -36,6 +36,7 @@ interface ChatPanelProps {
 export function ChatPanel({
   threadPath,
   onSendMessage,
+  onTranscribeAudio,
   onBranchFromMessage,
   branchingFromMessageId,
   branchingFromPreview,
@@ -52,8 +53,6 @@ export function ChatPanel({
   keyedProviders,
   onSelectModel
 }: ChatPanelProps) {
-  const [input, setInput] = useState('');
-  const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   // Auto-scroll to bottom when new messages arrive.
@@ -63,85 +62,26 @@ export function ChatPanel({
     }
   }, [threadPath.length]);
 
-  // When branching text is set, pre-fill the input with a quoted snippet.
-  useEffect(() => {
-    if (branchingFromText) {
-      setInput(`> "${branchingFromText}"\n\n`);
-      inputRef.current?.focus();
-    }
-  }, [branchingFromText]);
-
-  const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === 'Enter' && !event.shiftKey) {
-      event.preventDefault();
-      if (!input.trim() || sending) return;
-      onSendMessage(input.trim());
-      setInput('');
-    }
-  };
-
-  const handleBranchFromMessage = (messageId: string, selectedText: string, action: 'dig' | 'ask') => {
-    onBranchFromMessage(messageId, selectedText, action);
-    if (action === 'ask') {
-      inputRef.current?.focus();
-    }
-  };
-
   return (
     <main className="flex-1 flex flex-col bg-chat text-gray-100 min-w-0">
-      {/* Clickable breadcrumb trail */}
-      <header className="px-6 py-2.5 border-b border-gray-800 flex-shrink-0 overflow-x-auto">
-        <div className="flex items-center gap-1 text-[11px] min-w-0">
-          {threadPath.length === 0 ? (
-            <span className="text-gray-600">No messages yet</span>
-          ) : (
-            threadPath.map((msg, i) => {
-              const isLast = i === threadPath.length - 1;
-              const clean = stripMarkdown(msg.content);
-              const label = clean.length > 20 ? clean.slice(0, 20) + '…' : clean;
-
-              return (
-                <span key={msg.id} className="flex items-center gap-1 min-w-0">
-                  {i > 0 && <span className="text-gray-700 flex-shrink-0">›</span>}
-                  <button
-                    type="button"
-                    onClick={() => onNavigateToNode(msg.id)}
-                    className={`truncate max-w-[140px] transition-colors ${
-                      isLast
-                        ? 'text-gray-200 font-medium'
-                        : 'text-gray-500 hover:text-gray-300'
-                    }`}
-                  >
-                    {label}
-                  </button>
-                </span>
-              );
-            })
-          )}
-        </div>
-      </header>
-
-      {/* Parent/sibling navigation bar */}
-      <NodeNavBar
+      <NavHeader
+        threadPath={threadPath}
         siblingInfo={siblingInfo}
         onNavigateToParent={onNavigateToParent}
         onNavigateToSibling={onNavigateToSibling}
+        onNavigateToNode={onNavigateToNode}
       />
 
       {/* Messages area */}
       <div ref={scrollRef} className="flex-1 h-0 overflow-y-auto">
         <div className="max-w-2xl mx-auto px-4 pt-4 pb-2 space-y-5">
           {threadPath.map((message) => (
-            <MessageBubble
-              key={message.id}
-              message={message}
-              onBranchFromMessage={handleBranchFromMessage}
-            />
+            <MessageBubble key={message.id} message={message} onBranchFromMessage={onBranchFromMessage} />
           ))}
           {sending && (
             <div className="flex items-start gap-3">
-              <div className="w-7 h-7 rounded-full bg-gray-800 flex items-center justify-center text-[10px] text-gray-400 mt-1 flex-shrink-0">
-                TB
+              <div className="w-7 h-7 rounded-full bg-gray-800 flex items-center justify-center text-blue-400 mt-1 flex-shrink-0">
+                <BrandIcon size={15} />
               </div>
               <div className="text-sm text-gray-500 animate-pulse">Thinking…</div>
             </div>
@@ -168,39 +108,18 @@ export function ChatPanel({
             <span className="text-gray-300 truncate max-w-[300px]">"{branchingFromPreview}"</span>
           </div>
         )}
-        <ModelPicker
+        <Composer
+          sending={sending}
+          branchingFromMessageId={branchingFromMessageId}
+          branchingFromText={branchingFromText}
+          onSendMessage={onSendMessage}
+          onTranscribeAudio={onTranscribeAudio}
           providers={providers}
           selectedProvider={selectedProvider}
           selectedModel={selectedModel}
           keyedProviders={keyedProviders}
-          onSelect={onSelectModel}
+          onSelectModel={onSelectModel}
         />
-        <div className="max-w-2xl mx-auto flex items-end gap-2">
-          <div className="relative flex-1">
-            <textarea
-              ref={inputRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              rows={input.includes('\n') ? 3 : 1}
-              placeholder="Message TraceBack..."
-              disabled={sending}
-              className="block w-full resize-none rounded-2xl bg-inputBg text-sm text-gray-100 px-4 py-2.5 pr-10 border border-gray-800 focus:outline-none focus:ring-1 focus:ring-gray-600 disabled:opacity-50"
-            />
-            <button
-              type="button"
-              disabled={sending || !input.trim()}
-              onClick={() => {
-                if (!input.trim() || sending) return;
-                onSendMessage(input.trim());
-                setInput('');
-              }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full bg-white text-black flex items-center justify-center text-xs hover:bg-gray-200 transition-colors disabled:opacity-30"
-            >
-              ↑
-            </button>
-          </div>
-        </div>
       </footer>
     </main>
   );

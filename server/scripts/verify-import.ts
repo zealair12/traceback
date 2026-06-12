@@ -109,6 +109,73 @@ async function main() {
   console.log('claude-code parser checks:', claudeOk ? 'ok' : 'FAILED');
   if (!claudeOk) process.exit(1);
 
+  // --- Step 1c: parse the claude.ai (web app) export fixture -----------------
+  const caiPath = join(__dirname, 'fixtures', 'claude-ai-export.json');
+  const cai = parseImportFile(JSON.parse(readFileSync(caiPath, 'utf8')));
+  const cai1 = cai.conversations[0];
+  const cai2 = cai.conversations[1];
+  console.log(
+    'claude.ai fixture:',
+    cai.importerId,
+    '| conversations:',
+    cai.conversations.length,
+    '| conv1:',
+    JSON.stringify(cai1?.name),
+    conversationStats(cai1).messageCount,
+    'msgs'
+  );
+  const caiOk =
+    cai.importerId === 'claude-ai' &&
+    cai.conversations.length === 2 &&
+    cai1.name === 'Planning a garden' &&
+    conversationStats(cai1).messageCount === 4 &&
+    conversationStats(cai1).branchCount === 0 && // web exports are linear chains
+    // chain order: each message's parent is the previous one
+    cai1.messages[1].parentId === cai1.messages[0].id &&
+    cai1.messages[0].role === 'user' &&
+    cai1.messages[1].role === 'assistant' &&
+    // conversation-level model recorded on assistant replies
+    cai1.messages[1].provider === 'anthropic' &&
+    cai1.messages[1].model === 'claude-sonnet-4-5' &&
+    // second conversation uses the bare .text fallback (no content blocks)
+    cai2.messages[1].content.includes('Entropy measures');
+  console.log('claude.ai parser checks:', caiOk ? 'ok' : 'FAILED');
+  if (!caiOk) process.exit(1);
+
+  // --- Step 1d: parse the Gemini Takeout fixture (both shape variants) -------
+  const gemPath = join(__dirname, 'fixtures', 'gemini-takeout.json');
+  const gem = parseImportFile(JSON.parse(readFileSync(gemPath, 'utf8')));
+  const gem1 = gem.conversations[0];
+  console.log(
+    'gemini fixture:',
+    gem.importerId,
+    '| conversations:',
+    gem.conversations.length,
+    '| conv1:',
+    JSON.stringify(gem1?.name),
+    conversationStats(gem1).messageCount,
+    'msgs'
+  );
+  // Variant: a bare flat array of role/text records is a single conversation.
+  const gemFlat = parseImportFile([
+    { role: 'user', text: 'hello', create_time: '2026-04-12T09:00:00.000Z' },
+    { role: 'model', text: 'hi there', create_time: '2026-04-12T09:00:02.000Z' }
+  ]);
+  const gemOk =
+    gem.importerId === 'gemini' &&
+    gem.conversations.length === 2 &&
+    gem1.name === 'Trip to Kyoto' &&
+    conversationStats(gem1).messageCount === 4 &&
+    gem1.messages[1].parentId === gem1.messages[0].id &&
+    gem1.messages[0].role === 'user' &&
+    gem1.messages[1].role === 'assistant' && // Takeout "model" maps to assistant
+    gem1.messages[1].provider === 'google' &&
+    gemFlat.importerId === 'gemini' &&
+    gemFlat.conversations.length === 1 &&
+    gemFlat.conversations[0].messages.length === 2;
+  console.log('gemini parser checks:', gemOk ? 'ok' : 'FAILED');
+  if (!gemOk) process.exit(1);
+
   // --- Step 2: import over HTTP and check the stored tree --------------------
   const mock = await startMockModelServer();
   const PORT = 4558;

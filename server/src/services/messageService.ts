@@ -13,7 +13,7 @@ import { prisma } from '../prismaClient.js';
 import type { Role, Message } from '@prisma/client';
 import { Prisma } from '@prisma/client';
 import { getProvider } from '../providers/index.js';
-import type { LlmMessage } from '../providers/index.js';
+import type { LlmMessage, ImageAttachment } from '../providers/index.js';
 // Re-exported from their new home (server/src/providers) so existing importers
 // of these error types keep working unchanged after the provider refactor.
 export { ApiRateLimitError, LlmTimeoutError } from '../providers/index.js';
@@ -37,6 +37,7 @@ export interface LineageMessage {
   content: string;
   depth: number;
   branch_label: string | null;
+  attachments: ImageAttachment[] | null;
   created_at: Date;
 }
 
@@ -74,8 +75,11 @@ export async function createMessageWithAutoReply(options: {
   // Optional caller-supplied API key (bring-your-own-key). Used for this request
   // only and never stored or logged.
   apiKey?: string;
+  // Optional images attached to the user's message. Stored with the message
+  // and shown to image-capable models alongside the text.
+  attachments?: ImageAttachment[];
 }): Promise<CreatedMessagePair> {
-  const { sessionId, parentId, content, provider, model, temperature, maxTokens, apiKey } = options;
+  const { sessionId, parentId, content, provider, model, temperature, maxTokens, apiKey, attachments } = options;
 
   // Fetch parent (if any) to derive the new depth and to validate
   // that we are not creating an orphaned node.
@@ -109,7 +113,10 @@ export async function createMessageWithAutoReply(options: {
         parentId,
         role: 'user',
         content,
-        depth
+        depth,
+        ...(attachments && attachments.length > 0
+          ? { attachments: attachments as unknown as Prisma.InputJsonValue }
+          : {})
       }
     });
 
@@ -127,6 +134,7 @@ export async function createMessageWithAutoReply(options: {
           m.content,
           m.depth,
           m.branch_label,
+          m.attachments,
           m.created_at
         FROM messages m
         WHERE m.id = ${userMessage.id}
@@ -142,6 +150,7 @@ export async function createMessageWithAutoReply(options: {
           parent.content,
           parent.depth,
           parent.branch_label,
+          parent.attachments,
           parent.created_at
         FROM messages parent
         INNER JOIN message_tree mt ON parent.id = mt.parent_id
@@ -162,7 +171,18 @@ export async function createMessageWithAutoReply(options: {
           'Be concise and direct. Keep answers under 4 sentences unless the user asks for detail. ' +
           'Use markdown for formatting. For math, use LaTeX with $...$ for inline and $$...$$ for display equations.'
       },
-      ...lineage.map((m) => ({ role: m.role, content: m.content }))
+      ...lineage.map((m) => {
+        // Anything attached along the path travels with its turn: images for
+        // models that can see, documents for models that can read PDFs.
+        const images = (m.attachments ?? []).filter((a) => a.type === 'image');
+        const files = (m.attachments ?? []).filter((a) => a.type === 'file');
+        return {
+          role: m.role,
+          content: m.content,
+          ...(images.length > 0 ? { images } : {}),
+          ...(files.length > 0 ? { files } : {})
+        };
+      })
     ];
 
     // 4. Ask the chosen LLM provider for a reply, using only the pruned

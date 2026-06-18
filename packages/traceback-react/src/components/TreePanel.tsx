@@ -20,10 +20,27 @@ type Theme = 'dark' | 'blue' | 'light';
 const themeTokens: Record<Theme, {
   canvasBg: string; dots: string; edgeDefault: string; edgeActive: string;
   controlBg: string; controlBorder: string; ctxBg: string;
+  nodeBg: string; nodeBorder: string; nodeText: string;
+  nodePathBg: string; nodePathBorder: string; nodePathText: string;
 }> = {
-  dark:  { canvasBg: '#0d0d0d', dots: '#1a1a1a', edgeDefault: '#2a2a2a', edgeActive: '#10b981', controlBg: '#111111', controlBorder: '#2a2a2a', ctxBg: 'rgba(17,17,17,0.96)' },
-  blue:  { canvasBg: '#040a18', dots: '#0a1228', edgeDefault: '#1a2a4a', edgeActive: '#3b82f6', controlBg: '#060c1a', controlBorder: '#1a2a4a', ctxBg: 'rgba(6,12,26,0.96)' },
-  light: { canvasBg: '#f0f2f5', dots: '#dde0e8', edgeDefault: '#cbd5e1', edgeActive: '#3b82f6', controlBg: '#e8ecf0', controlBorder: '#d1d5db', ctxBg: 'rgba(240,242,245,0.96)' },
+  dark: {
+    canvasBg: '#0d0d0d', dots: '#1a1a1a', edgeDefault: '#2a2a2a', edgeActive: '#10b981',
+    controlBg: '#111111', controlBorder: '#2a2a2a', ctxBg: 'rgba(17,17,17,0.96)',
+    nodeBg: '#1a1a1a', nodeBorder: '#2a2a2a', nodeText: '#525252',
+    nodePathBg: '#262626', nodePathBorder: '#3a3a3a', nodePathText: '#a3a3a3',
+  },
+  blue: {
+    canvasBg: '#040a18', dots: '#0a1228', edgeDefault: '#1a2a4a', edgeActive: '#3b82f6',
+    controlBg: '#060c1a', controlBorder: '#1a2a4a', ctxBg: 'rgba(6,12,26,0.96)',
+    nodeBg: '#0d1a30', nodeBorder: '#1a2a4a', nodeText: '#3d6499',
+    nodePathBg: '#152440', nodePathBorder: '#2a4870', nodePathText: '#5b87c5',
+  },
+  light: {
+    canvasBg: '#f0f2f5', dots: '#dde0e8', edgeDefault: '#d4d4d4', edgeActive: '#3b82f6',
+    controlBg: '#e8ecf0', controlBorder: '#d1d5db', ctxBg: 'rgba(240,242,245,0.96)',
+    nodeBg: '#e5e5e5', nodeBorder: '#d4d4d4', nodeText: '#a3a3a3',
+    nodePathBg: '#d4d4d4', nodePathBorder: '#a3a3a3', nodePathText: '#525252',
+  },
 };
 
 interface TreePanelProps {
@@ -193,7 +210,13 @@ export function TreePanel({
         data: {
           ...n.data,
           isActive: n.id === activeNodeId,
-          isOnActivePath: activePathIds.has(n.id)
+          isOnActivePath: activePathIds.has(n.id),
+          nodeBg: tokens.nodeBg,
+          nodeBorder: tokens.nodeBorder,
+          nodeText: tokens.nodeText,
+          nodePathBg: tokens.nodePathBg,
+          nodePathBorder: tokens.nodePathBorder,
+          nodePathText: tokens.nodePathText,
         }
       })),
     [layoutNodes, activeNodeId, activePathIds]

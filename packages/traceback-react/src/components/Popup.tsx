@@ -108,7 +108,7 @@ export function Float({
   return createPortal(
     <div
       style={style}
-      className={`overflow-y-auto rounded-xl border border-gray-700/60 bg-gray-950/95 backdrop-blur-xl shadow-2xl ${className}`}
+      className={`overflow-y-auto rounded-xl border border-gray-700/50 bg-gray-900/95 text-gray-100 backdrop-blur-xl shadow-2xl ${className}`}
     >
       {children}
     </div>,
@@ -144,7 +144,7 @@ export function Modal({ onClose, children, width = 440, className = '' }: ModalP
       <div
         ref={inner}
         style={{ width: Math.min(width, window.innerWidth - 32) }}
-        className={`max-h-[90vh] overflow-y-auto rounded-xl border border-gray-800 bg-gray-900 text-gray-100 ${className}`}
+        className={`max-h-[90vh] overflow-y-auto rounded-xl border border-gray-700/60 bg-gray-900 text-gray-100 ${className}`}
       >
         {children}
       </div>

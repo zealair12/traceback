@@ -55,7 +55,7 @@ export function KeyManager({ providers, keyedProviders, onSave, onClear, onClose
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); }}
-            className="flex-1 bg-gray-950 border border-gray-800 rounded-md px-3 py-1.5 text-[12px] text-gray-100 focus:outline-none focus:ring-1 focus:ring-emerald-600/50"
+            className="flex-1 bg-gray-950 border border-gray-800 rounded-md px-3 py-1.5 text-[12px] text-gray-100 focus:outline-none focus:ring-1 focus:ring-gray-600/60"
           />
           <button
             type="button"
@@ -70,7 +70,7 @@ export function KeyManager({ providers, keyedProviders, onSave, onClear, onClose
         {draft.trim() && (
           <p className="text-[10px] mt-1.5 px-0.5">
             {detectedId
-              ? <span className="text-emerald-400">Detected: {detectedId}</span>
+              ? <span className="text-gray-300">Detected: {detectedId}</span>
               : <span className="text-gray-500">Unrecognized key format</span>}
           </p>
         )}
@@ -84,7 +84,7 @@ export function KeyManager({ providers, keyedProviders, onSave, onClear, onClose
                   <div>
                     <span className="text-[12px] text-gray-200">{p.id}</span>
                     {stored && (
-                      <span className="text-[10px] text-emerald-400 ml-2">{keyStore.hint(stored)}</span>
+                      <span className="text-[10px] text-gray-500 ml-2">{keyStore.hint(stored)}</span>
                     )}
                   </div>
                   <button

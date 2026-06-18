@@ -6,10 +6,38 @@ export interface TreeNodeData {
   timestamp?: string;
   isActive: boolean;
   isOnActivePath: boolean;
+  // Theme-derived colors passed in from TreePanel via node data.
+  nodeBg?: string;
+  nodeBorder?: string;
+  nodeText?: string;
+  nodePathBg?: string;
+  nodePathBorder?: string;
+  nodePathText?: string;
 }
 
 function TreeNodeComponent({ data }: NodeProps) {
-  const { label, timestamp, isActive, isOnActivePath } = data as unknown as TreeNodeData;
+  const {
+    label, timestamp, isActive, isOnActivePath,
+    nodeBg = '#1a1a1a', nodeBorder = '#2a2a2a', nodeText = '#525252',
+    nodePathBg = '#262626', nodePathBorder = '#3a3a3a', nodePathText = '#a3a3a3',
+  } = data as unknown as TreeNodeData;
+
+  // Active node keeps the green glow — it marks the current position in the flow.
+  const activeStyle = {
+    background: '#064e3b',
+    border: '1.5px solid #10b981',
+    color: '#ecfdf5',
+  };
+  const pathStyle = {
+    background: nodePathBg,
+    border: `1px solid ${nodePathBorder}`,
+    color: nodePathText,
+  };
+  const defaultStyle = {
+    background: nodeBg,
+    border: `1px solid ${nodeBorder}`,
+    color: nodeText,
+  };
 
   return (
     <>
@@ -20,16 +48,10 @@ function TreeNodeComponent({ data }: NodeProps) {
           max-w-[200px] cursor-pointer transition-all duration-200 select-none
           ${isActive
             ? 'ring-2 ring-emerald-400 shadow-[0_0_14px_rgba(16,185,129,0.25)] scale-[1.04]'
-            : isOnActivePath
-              ? 'ring-1 ring-emerald-900/60'
-              : 'hover:ring-1 hover:ring-gray-600'
+            : 'hover:opacity-90'
           }
         `}
-        style={{
-          background: isActive ? '#064e3b' : isOnActivePath ? '#0c1a2e' : '#111827',
-          border: isActive ? '1.5px solid #10b981' : isOnActivePath ? '1px solid #1e3a5f' : '1px solid #1e293b',
-          color: isActive ? '#ecfdf5' : isOnActivePath ? '#94a3b8' : '#64748b'
-        }}
+        style={isActive ? activeStyle : isOnActivePath ? pathStyle : defaultStyle}
       >
         <div className="line-clamp-2">{label}</div>
         {timestamp && (

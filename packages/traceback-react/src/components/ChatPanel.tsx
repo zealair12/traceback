@@ -142,7 +142,7 @@ export function ChatPanel({
               </div>
             )}
             {branchingFromMessageId && branchingFromPreview && (
-              <div className="max-w-2xl mx-auto mb-2 text-xs text-emerald-400 flex items-center gap-1.5">
+              <div className="max-w-2xl mx-auto mb-2 text-xs text-gray-400 flex items-center gap-1.5">
                 <span>⎇</span>
                 <span>Branching from:</span>
                 <span className="text-gray-300 truncate max-w-[300px]">"{branchingFromPreview}"</span>

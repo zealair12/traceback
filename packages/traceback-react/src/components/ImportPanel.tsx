@@ -85,7 +85,7 @@ export function ImportPanel({ onImport, onClose }: ImportPanelProps) {
             }}
             onClick={() => fileRef.current?.click()}
             className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
-              dragOver ? 'border-emerald-500 bg-emerald-500/5' : 'border-gray-700 hover:border-gray-500'
+              dragOver ? 'border-gray-400 bg-gray-700/10' : 'border-gray-700 hover:border-gray-500'
             }`}
           >
             <p className="text-[13px] text-gray-300">Drop your export file here</p>
@@ -166,7 +166,7 @@ export function ImportPanel({ onImport, onClose }: ImportPanelProps) {
 
         {phase.step === 'done' && (
           <div className="py-4 text-center">
-            <p className="text-[13px] text-emerald-400">
+            <p className="text-[13px] text-gray-200">
               Imported {phase.count} conversation{phase.count === 1 ? '' : 's'}.
             </p>
             <p className="text-[11px] text-gray-500 mt-1">

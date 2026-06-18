@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Check, ChevronDown } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import type { ProviderInfo } from '@traceback/shared';
 import { Float } from './Popup';
 
@@ -74,7 +74,7 @@ export function ModelPicker({
           className="w-full px-4 py-2.5 text-left text-sm flex items-center justify-between hover:bg-gray-800/50 transition-colors"
         >
           <span className={isAuto ? 'text-white font-medium' : 'text-gray-300'}>Auto</span>
-          {isAuto && <Check size={14} className="text-emerald-400 flex-shrink-0" />}
+          {isAuto && <span className="h-1.5 w-1.5 rounded-full bg-gray-300 flex-shrink-0" />}
         </button>
 
         <div className="h-px bg-gray-800/60" />
@@ -103,7 +103,7 @@ export function ModelPicker({
                     <span className={isSelected ? 'text-white font-medium' : 'text-gray-300'}>
                       {model}
                     </span>
-                    {isSelected && <Check size={13} className="text-emerald-400 flex-shrink-0" />}
+                    {isSelected && <span className="h-1.5 w-1.5 rounded-full bg-gray-300 flex-shrink-0" />}
                   </button>
                 );
               })}

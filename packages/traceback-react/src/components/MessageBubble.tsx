@@ -202,7 +202,7 @@ export function MessageBubble({ message, onBranchFromMessage, onResendMessage, o
           className="h-6 w-6 rounded flex items-center justify-center text-gray-500 hover:text-gray-200 hover:bg-gray-800 transition-colors"
           title="Copy"
         >
-          {copied ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
+          {copied ? <Check size={12} className="text-gray-300" /> : <Copy size={12} />}
         </button>
         <button
           type="button"

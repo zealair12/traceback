@@ -33,11 +33,14 @@ export function TracebackChat({ apiUrl }: TracebackChatProps) {
     localStorage.setItem('tb-theme', t);
     const bgMap = { dark: '#0d0d0d', blue: '#060c1a', light: '#f7f8fa' };
     document.body.style.backgroundColor = bgMap[t];
+    // Keep data-theme on body so portals (Float/Modal) inherit theme variables.
+    document.body.setAttribute('data-theme', t);
   }, []);
 
   useEffect(() => {
     const bgMap = { dark: '#0d0d0d', blue: '#060c1a', light: '#f7f8fa' };
     document.body.style.backgroundColor = bgMap[theme];
+    document.body.setAttribute('data-theme', theme);
   }, [theme]);
 
   const isTreeDragging = useRef(false);

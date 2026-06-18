@@ -1,8 +1,7 @@
 import type { SessionResponse } from '@traceback/shared';
-import { useRef, useState } from 'react';
-import { Settings, FolderDown, KeyRound, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { FolderDown, KeyRound, Trash2 } from 'lucide-react';
 import { BrandIcon } from './BrandIcon';
-import { Float } from './Popup';
 
 type Theme = 'dark' | 'blue' | 'light';
 
@@ -33,8 +32,6 @@ export function Sidebar({
 }: SidebarProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
-  const [menuOpen, setMenuOpen] = useState(false);
-  const settingsRef = useRef<HTMLButtonElement>(null);
 
   return (
     <aside className="w-full h-full bg-sidebar text-gray-100 flex flex-col flex-shrink-0">
@@ -127,63 +124,41 @@ export function Sidebar({
         </div>
       </div>
 
-      <div className="px-3 py-2.5">
-        <button
-          ref={settingsRef}
-          type="button"
-          onClick={() => setMenuOpen((v) => !v)}
-          className="h-8 w-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-100 hover:bg-gray-800 transition-colors"
-          title="Settings"
-          aria-label="Settings"
-        >
-          <Settings size={16} />
-        </button>
-
-        <Float
-          open={menuOpen}
-          onClose={() => setMenuOpen(false)}
-          triggerRef={settingsRef}
-          width={190}
-          align="left"
-        >
-          <div className="py-1.5">
-            {/* Theme switcher */}
-            <div className="px-3 pt-1.5 pb-2 border-b border-gray-800/60">
-              <div className="flex gap-1">
-                {(['dark', 'blue', 'light'] as const).map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => onSetTheme(t)}
-                    className={`flex-1 py-1 rounded text-[11px] capitalize transition-colors ${
-                      theme === t
-                        ? 'bg-gray-700/80 text-white'
-                        : 'text-gray-500 hover:text-gray-300'
-                    }`}
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
-            </div>
+      <div className="px-3 py-3 border-t border-gray-800/50 space-y-2">
+        {/* Theme switcher */}
+        <div className="flex gap-1">
+          {(['dark', 'blue', 'light'] as const).map((t) => (
             <button
+              key={t}
               type="button"
-              onClick={() => { setMenuOpen(false); onOpenImport(); }}
-              className="w-full text-left px-3 py-1.5 text-[13px] text-gray-300 hover:bg-gray-800/80 hover:text-white flex items-center gap-2.5"
+              onClick={() => onSetTheme(t)}
+              className={`flex-1 py-1 rounded text-[11px] capitalize transition-colors ${
+                theme === t ? 'bg-gray-700/80 text-white' : 'text-gray-500 hover:text-gray-300'
+              }`}
             >
-              <FolderDown size={15} className="text-gray-500" />
-              <span>Import chats</span>
+              {t}
             </button>
-            <button
-              type="button"
-              onClick={() => { setMenuOpen(false); onOpenKeys(); }}
-              className="w-full text-left px-3 py-1.5 text-[13px] text-gray-300 hover:bg-gray-800/80 hover:text-white flex items-center gap-2.5"
-            >
-              <KeyRound size={15} className="text-gray-500" />
-              <span>API keys</span>
-            </button>
-          </div>
-        </Float>
+          ))}
+        </div>
+        {/* Import and API keys */}
+        <div className="flex gap-1">
+          <button
+            type="button"
+            onClick={onOpenImport}
+            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[12px] text-gray-400 hover:text-gray-100 hover:bg-gray-800 transition-colors"
+          >
+            <FolderDown size={13} />
+            <span>Import</span>
+          </button>
+          <button
+            type="button"
+            onClick={onOpenKeys}
+            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[12px] text-gray-400 hover:text-gray-100 hover:bg-gray-800 transition-colors"
+          >
+            <KeyRound size={13} />
+            <span>API keys</span>
+          </button>
+        </div>
       </div>
     </aside>
   );

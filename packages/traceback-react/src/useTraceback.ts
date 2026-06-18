@@ -49,6 +49,9 @@ function friendlyError(err: any): string {
   if (raw.toLowerCase().includes('content') && raw.toLowerCase().includes('must be a string')) {
     return 'A message in this conversation could not be sent. Try starting a new chat.';
   }
+  if (raw.toLowerCase().includes('session no longer exists') || raw.toLowerCase().includes('session not found')) {
+    return 'This chat was deleted or expired. Please start a new chat.';
+  }
   return raw;
 }
 

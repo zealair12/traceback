@@ -278,19 +278,22 @@ export function Composer({
           onKeyDown={handleKeyDown}
           onPaste={handlePaste}
           rows={input.includes('\n') ? 3 : 1}
-          placeholder="Message TraceBack..."
+          placeholder="Highlight anything unclear in a response to explore it…"
           disabled={sending}
           className="block w-full resize-none bg-transparent text-sm text-gray-100 px-4 pt-3 pb-1 focus:outline-none disabled:opacity-50"
         />
-        <div className="flex items-center justify-between px-2 pb-2">
-          <ModelPicker
-            providers={providers}
-            selectedProvider={selectedProvider}
-            selectedModel={selectedModel}
-            keyedProviders={keyedProviders}
-            onSelect={onSelectModel}
-          />
-          <div className="flex items-center gap-1.5">
+        <div className="flex items-center px-2 pb-2 gap-2">
+          {/* min-w-0 so picker shrinks before buttons are pushed off-screen */}
+          <div className="flex-1 min-w-0 overflow-hidden">
+            <ModelPicker
+              providers={providers}
+              selectedProvider={selectedProvider}
+              selectedModel={selectedModel}
+              keyedProviders={keyedProviders}
+              onSelect={onSelectModel}
+            />
+          </div>
+          <div className="flex items-center gap-1.5 flex-shrink-0">
             <input
               ref={fileRef}
               type="file"

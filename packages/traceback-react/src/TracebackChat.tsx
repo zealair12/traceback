@@ -104,6 +104,27 @@ export function TracebackChat({ apiUrl }: TracebackChatProps) {
     window.addEventListener('mouseup', onMouseUp);
   }, []);
 
+  // Touch-drag equivalent for the tree divider (mobile resize).
+  const handleTreeDividerTouchStart = useCallback((e: React.TouchEvent) => {
+    isTreeDragging.current = true;
+    document.body.style.userSelect = 'none';
+    const onTouchMove = (ev: TouchEvent) => {
+      if (!isTreeDragging.current) return;
+      ev.preventDefault();
+      const newWidth = window.innerWidth - ev.touches[0].clientX;
+      setTreePanelWidth(Math.max(160, Math.min(newWidth, window.innerWidth * 0.85)));
+    };
+    const onTouchEnd = () => {
+      isTreeDragging.current = false;
+      document.body.style.userSelect = '';
+      document.removeEventListener('touchmove', onTouchMove);
+      document.removeEventListener('touchend', onTouchEnd);
+    };
+    // passive: false so preventDefault() can stop scroll during drag
+    document.addEventListener('touchmove', onTouchMove, { passive: false });
+    document.addEventListener('touchend', onTouchEnd);
+  }, []);
+
   return (
     <div className="h-full w-full overflow-hidden bg-background text-gray-100 flex" data-theme={theme}>
       {/* Sidebar — overlays on mobile, in-flow flex child on desktop */}
@@ -142,11 +163,13 @@ export function TracebackChat({ apiUrl }: TracebackChatProps) {
             </div>
           </div>
 
-          {/* Resize divider — desktop only */}
+          {/* Resize divider — desktop only; wider hit area, thin visual line */}
           <div
             onMouseDown={handleSidebarDividerMouseDown}
-            className="hidden md:block w-1 cursor-col-resize bg-gray-800 hover:bg-emerald-900/50 transition-colors flex-shrink-0"
-          />
+            className="hidden md:flex w-5 flex-shrink-0 cursor-col-resize items-center justify-center group"
+          >
+            <div className="w-px h-full bg-gray-800 group-hover:bg-emerald-900/50 transition-colors" />
+          </div>
         </>
       )}
 
@@ -182,10 +205,14 @@ export function TracebackChat({ apiUrl }: TracebackChatProps) {
       )}
 
       {!treeFullscreen && treePanelVisible && (
+        /* Wider hit area (touch-friendly); thin visual line inside */
         <div
           onMouseDown={handleTreeDividerMouseDown}
-          className="w-1 cursor-col-resize bg-gray-800 hover:bg-emerald-900/50 transition-colors flex-shrink-0"
-        />
+          onTouchStart={handleTreeDividerTouchStart}
+          className="flex w-5 flex-shrink-0 cursor-col-resize items-center justify-center group"
+        >
+          <div className="w-px h-full bg-gray-800 group-hover:bg-emerald-900/50 transition-colors" />
+        </div>
       )}
 
       {(treePanelVisible || treeFullscreen) && (

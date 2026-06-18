@@ -11,6 +11,7 @@ import session from 'express-session';
 import passport from 'passport';
 import './auth/google.js';
 
+import { Prisma } from '@prisma/client';
 import { prisma } from './prismaClient.js';
 import { ApiRateLimitError, LlmTimeoutError } from './services/messageService.js';
 import { createMessageWithAutoReply } from './services/messageService.js';
@@ -186,6 +187,18 @@ export function createApp() {
       const model = typeof modelRaw === 'string' && modelRaw ? modelRaw : undefined;
       const apiKey = resolveApiKey(req);
 
+      // Guard: verify the session still exists before starting a transaction.
+      // If another tab or user deleted it, give a clear message rather than
+      // a raw Prisma foreign-key constraint error.
+      const sessionExists = await prisma.session.findUnique({
+        where: { id: sessionId },
+        select: { id: true }
+      });
+      if (!sessionExists) {
+        res.status(404).json({ error: 'This chat session no longer exists. Please start a new chat.' });
+        return;
+      }
+
       const result = await createMessageWithAutoReply({
         sessionId, parentId, content, provider, model, apiKey,
         attachments: Array.isArray(attachmentsRaw) ? attachmentsRaw : undefined
@@ -251,6 +264,13 @@ export function createApp() {
   app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
     let status = 500;
     let label = 'Unknown Error';
+
+    // Prisma FK violation — almost always means the session was deleted mid-chat.
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2003') {
+      console.error('[FK Constraint]', err.message);
+      res.status(400).json({ error: 'This chat session no longer exists. Please start a new chat.' });
+      return;
+    }
 
     if (err instanceof ApiRateLimitError) {
       label = 'API Rate Limit';

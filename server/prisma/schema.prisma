@@ -113,3 +113,14 @@ model Message {
   @@map("messages")
 }
 
+model User {
+  id        String   @id @default(cuid())
+  googleId  String   @unique
+  email     String   @unique
+  name      String?
+  avatar    String?
+  createdAt DateTime @default(now())
+
+  @@map("users")
+}
+

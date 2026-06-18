@@ -5,6 +5,7 @@ import {
   conversationStats,
   type ImportedConversation
 } from '@traceback/shared';
+import { Modal } from './Popup';
 
 interface ImportPanelProps {
   // Writes the chosen conversations to the server and returns how many landed.
@@ -60,11 +61,8 @@ export function ImportPanel({ onImport, onClose }: ImportPanelProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
-      <div
-        className="w-[480px] max-w-[92vw] max-h-[80vh] overflow-y-auto rounded-xl border border-gray-800 bg-gray-900 p-5 text-gray-100"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <Modal onClose={onClose} width={480}>
+      <div className="p-5">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm font-semibold">Import chats</h2>
           <button type="button" onClick={onClose} className="text-gray-500 hover:text-gray-200">
@@ -197,6 +195,6 @@ export function ImportPanel({ onImport, onClose }: ImportPanelProps) {
           </div>
         )}
       </div>
-    </div>
+    </Modal>
   );
 }

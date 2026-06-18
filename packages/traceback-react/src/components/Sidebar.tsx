@@ -1,7 +1,8 @@
 import type { SessionResponse } from '@traceback/shared';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Settings, FolderDown, KeyRound, Trash2 } from 'lucide-react';
 import { BrandIcon } from './BrandIcon';
+import { Float } from './Popup';
 
 type Theme = 'dark' | 'blue' | 'light';
 
@@ -33,19 +34,7 @@ export function Sidebar({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (!menuOpen) return;
-    const close = (e: MouseEvent) => {
-      if (!menuRef.current?.contains(e.target as Node)) setMenuOpen(false);
-    };
-    const timer = setTimeout(() => document.addEventListener('click', close), 0);
-    return () => {
-      clearTimeout(timer);
-      document.removeEventListener('click', close);
-    };
-  }, [menuOpen]);
+  const settingsRef = useRef<HTMLButtonElement>(null);
 
   return (
     <aside className="w-full h-full bg-sidebar text-gray-100 flex flex-col flex-shrink-0">
@@ -138,8 +127,9 @@ export function Sidebar({
         </div>
       </div>
 
-      <div className="px-3 py-2.5 relative">
+      <div className="px-3 py-2.5">
         <button
+          ref={settingsRef}
           type="button"
           onClick={() => setMenuOpen((v) => !v)}
           className="h-8 w-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-100 hover:bg-gray-800 transition-colors"
@@ -148,11 +138,15 @@ export function Sidebar({
         >
           <Settings size={16} />
         </button>
-        {menuOpen && (
-          <div
-            ref={menuRef}
-            className="absolute bottom-12 left-3 z-50 min-w-[180px] rounded-xl border border-gray-700/70 bg-gray-900/90 backdrop-blur-xl shadow-2xl py-1.5"
-          >
+
+        <Float
+          open={menuOpen}
+          onClose={() => setMenuOpen(false)}
+          triggerRef={settingsRef}
+          width={190}
+          align="left"
+        >
+          <div className="py-1.5">
             {/* Theme switcher */}
             <div className="px-3 pt-1.5 pb-2 border-b border-gray-800/60">
               <div className="flex gap-1">
@@ -174,10 +168,7 @@ export function Sidebar({
             </div>
             <button
               type="button"
-              onClick={() => {
-                setMenuOpen(false);
-                onOpenImport();
-              }}
+              onClick={() => { setMenuOpen(false); onOpenImport(); }}
               className="w-full text-left px-3 py-1.5 text-[13px] text-gray-300 hover:bg-gray-800/80 hover:text-white flex items-center gap-2.5"
             >
               <FolderDown size={15} className="text-gray-500" />
@@ -185,17 +176,14 @@ export function Sidebar({
             </button>
             <button
               type="button"
-              onClick={() => {
-                setMenuOpen(false);
-                onOpenKeys();
-              }}
+              onClick={() => { setMenuOpen(false); onOpenKeys(); }}
               className="w-full text-left px-3 py-1.5 text-[13px] text-gray-300 hover:bg-gray-800/80 hover:text-white flex items-center gap-2.5"
             >
               <KeyRound size={15} className="text-gray-500" />
               <span>API keys</span>
             </button>
           </div>
-        )}
+        </Float>
       </div>
     </aside>
   );

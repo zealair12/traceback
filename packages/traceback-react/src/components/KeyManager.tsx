@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { ProviderInfo } from '@traceback/shared';
 import { keyStore } from '../lib/keyStore';
 import { X } from 'lucide-react';
+import { Modal } from './Popup';
 
 interface KeyManagerProps {
   providers: ProviderInfo[];
@@ -37,11 +38,8 @@ export function KeyManager({ providers, keyedProviders, onSave, onClear, onClose
   const savedKeys = providers.filter((p) => keyedProviders.has(p.id));
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
-      <div
-        className="w-[420px] max-w-[92vw] rounded-xl border border-gray-800 bg-gray-900 p-5 text-gray-100"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <Modal onClose={onClose} width={420}>
+      <div className="p-5">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm font-semibold">API keys</h2>
           <button type="button" onClick={onClose} className="text-gray-500 hover:text-gray-200">
@@ -103,6 +101,6 @@ export function KeyManager({ providers, keyedProviders, onSave, onClear, onClose
           </div>
         )}
       </div>
-    </div>
+    </Modal>
   );
 }

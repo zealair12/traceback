@@ -245,7 +245,12 @@ export function TracebackChat({ apiUrl }: TracebackChatProps) {
               edges={tb.edges}
               activeNodeId={tb.activeNodeId}
               activePathIds={tb.activePathIds}
-              onSelectNode={tb.handleSelectTreeNode}
+              onSelectNode={(nodeId) => {
+                tb.handleSelectTreeNode(nodeId);
+                // On mobile the tree is a full-screen overlay — close it so
+                // the user lands back in the chat after picking a node.
+                if (window.innerWidth < 768) setTreePanelVisible(false);
+              }}
               onDeleteSubtree={tb.handleDeleteSubtree}
               width={treeFullscreen ? window.innerWidth : window.innerWidth < 768 ? window.innerWidth : treePanelWidth}
               isFullscreen={treeFullscreen}

@@ -49,9 +49,6 @@ export function Float({
   className = ''
 }: FloatProps) {
   const [style, setStyle] = useState<FloatStyle | null>(null);
-  // Track the popup div itself so mousedown inside doesn't close the popup
-  // before button onClick handlers have a chance to fire.
-  const popupRef = useRef<HTMLDivElement>(null);
 
   // Re-measure whenever open/size/alignment changes, and on resize/scroll.
   useEffect(() => {
@@ -69,9 +66,8 @@ export function Float({
       const above    = spaceAbove > spaceBelow;
       const maxHeight = Math.max(120, Math.min(
         above ? spaceAbove : spaceBelow,
-        vh * 0.75              // never taller than 75 % of the viewport
+        vh * 0.75
       ) - MARGIN);
-      // Horizontal: default to trigger-left/right, then clamp to viewport.
       let left = align === 'right' ? r.right - width : r.left;
       left = Math.max(MARGIN, Math.min(left, vw - width - MARGIN));
       setStyle({
@@ -92,33 +88,35 @@ export function Float({
     };
   }, [open, triggerRef, width, align]);
 
-  // Close on mousedown outside both the trigger and the popup itself.
-  // We must exclude clicks inside the popup — otherwise the popup unmounts
-  // before the button's onClick fires and the handler is lost.
+  // Escape key closes the popup.
   useEffect(() => {
     if (!open) return;
-    const close = (e: MouseEvent) => {
-      if (triggerRef.current?.contains(e.target as Node)) return;
-      if (popupRef.current?.contains(e.target as Node)) return;
-      onClose();
-    };
-    const id = setTimeout(() => document.addEventListener('mousedown', close), 0);
-    return () => {
-      clearTimeout(id);
-      document.removeEventListener('mousedown', close);
-    };
-  }, [open, onClose, triggerRef]);
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [open, onClose]);
 
   if (!open || !style) return null;
 
+  // Backdrop pattern: an invisible full-screen div sits behind the popup at
+  // z-9998. Clicking anywhere outside the popup hits the backdrop → onClose.
+  // Clicking inside the popup hits the popup (z-9999) first — the backdrop
+  // never receives those events, so button onClick handlers fire normally.
+  // This is more reliable than document mousedown listeners + ref containment
+  // checks, and works correctly with React portals on both desktop and mobile.
   return createPortal(
-    <div
-      ref={popupRef}
-      style={style}
-      className={`overflow-y-auto rounded-xl border border-gray-700/50 bg-gray-900/95 text-gray-100 backdrop-blur-xl shadow-2xl ${className}`}
-    >
-      {children}
-    </div>,
+    <>
+      <div
+        style={{ position: 'fixed', inset: 0, zIndex: 9998 }}
+        onMouseDown={onClose}
+      />
+      <div
+        style={style}
+        className={`overflow-y-auto rounded-xl border border-gray-700/50 bg-gray-900/95 text-gray-100 backdrop-blur-xl shadow-2xl ${className}`}
+      >
+        {children}
+      </div>
+    </>,
     document.body
   );
 }

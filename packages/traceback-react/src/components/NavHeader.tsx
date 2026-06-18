@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, PanelLeft, Ghost } from 'lucide-react';
+import { ChevronLeft, ChevronRight, PanelLeft, Ghost, GitBranch } from 'lucide-react';
 import type { ChatMessage } from '../types';
 import type { SiblingInfo } from '../lib/conversationTree';
 import { stripMarkdown } from '../utils/text';
@@ -11,6 +11,8 @@ interface NavHeaderProps {
   onNavigateToNode: (nodeId: string) => void;
   sidebarOpen: boolean;
   onToggleSidebar: () => void;
+  treePanelVisible: boolean;
+  onToggleTreePanel: () => void;
   incognito: boolean;
   onToggleIncognito: () => void;
 }
@@ -25,6 +27,8 @@ export function NavHeader({
   onNavigateToNode,
   sidebarOpen,
   onToggleSidebar,
+  treePanelVisible,
+  onToggleTreePanel,
   incognito,
   onToggleIncognito
 }: NavHeaderProps) {
@@ -115,15 +119,26 @@ export function NavHeader({
         </div>
       )}
 
-      <button
-        type="button"
-        onClick={onToggleIncognito}
-        className={`${iconButton} ml-auto ${incognito ? 'text-blue-400 bg-blue-400/10' : ''}`}
-        title={incognito ? 'Incognito on — session deleted on exit' : 'Incognito mode'}
-        aria-label="Toggle incognito mode"
-      >
-        <Ghost size={15} />
-      </button>
+      <div className="flex items-center gap-1 ml-auto flex-shrink-0">
+        <button
+          type="button"
+          onClick={onToggleTreePanel}
+          className={`${iconButton} ${treePanelVisible ? 'text-gray-200 bg-gray-800' : ''}`}
+          title={treePanelVisible ? 'Hide tree' : 'Show tree'}
+          aria-label="Toggle tree panel"
+        >
+          <GitBranch size={15} />
+        </button>
+        <button
+          type="button"
+          onClick={onToggleIncognito}
+          className={`${iconButton} ${incognito ? 'text-blue-400 bg-blue-400/10' : ''}`}
+          title={incognito ? 'Incognito on — session deleted on exit' : 'Incognito mode'}
+          aria-label="Toggle incognito mode"
+        >
+          <Ghost size={15} />
+        </button>
+      </div>
     </header>
   );
 }

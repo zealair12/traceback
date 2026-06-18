@@ -49,6 +49,9 @@ export function Float({
   className = ''
 }: FloatProps) {
   const [style, setStyle] = useState<FloatStyle | null>(null);
+  // Track the popup div itself so mousedown inside doesn't close the popup
+  // before button onClick handlers have a chance to fire.
+  const popupRef = useRef<HTMLDivElement>(null);
 
   // Re-measure whenever open/size/alignment changes, and on resize/scroll.
   useEffect(() => {
@@ -89,11 +92,14 @@ export function Float({
     };
   }, [open, triggerRef, width, align]);
 
-  // Close on click outside (delayed so the trigger's own click doesn't fire it).
+  // Close on mousedown outside both the trigger and the popup itself.
+  // We must exclude clicks inside the popup — otherwise the popup unmounts
+  // before the button's onClick fires and the handler is lost.
   useEffect(() => {
     if (!open) return;
     const close = (e: MouseEvent) => {
       if (triggerRef.current?.contains(e.target as Node)) return;
+      if (popupRef.current?.contains(e.target as Node)) return;
       onClose();
     };
     const id = setTimeout(() => document.addEventListener('mousedown', close), 0);
@@ -107,6 +113,7 @@ export function Float({
 
   return createPortal(
     <div
+      ref={popupRef}
       style={style}
       className={`overflow-y-auto rounded-xl border border-gray-700/50 bg-gray-900/95 text-gray-100 backdrop-blur-xl shadow-2xl ${className}`}
     >

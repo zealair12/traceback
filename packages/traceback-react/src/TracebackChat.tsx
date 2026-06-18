@@ -18,10 +18,15 @@ export function TracebackChat({ apiUrl }: TracebackChatProps) {
   const [showKeys, setShowKeys] = useState(false);
   const [showImport, setShowImport] = useState(false);
 
-  // Sidebar open/width state — width is remembered across collapses.
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const isMobile = () => window.innerWidth < 768;
+
+  // Sidebar open/width state — hidden by default on mobile.
+  const [sidebarOpen, setSidebarOpen] = useState(() => !isMobile());
   const [sidebarWidth, setSidebarWidth] = useState(256);
   const [sidebarResizing, setSidebarResizing] = useState(false);
+
+  // Tree panel visible — hidden by default on mobile; toggled via NavHeader button.
+  const [treePanelVisible, setTreePanelVisible] = useState(() => !isMobile());
 
   type Theme = 'dark' | 'blue' | 'light';
   const [theme, setTheme] = useState<Theme>(
@@ -101,12 +106,25 @@ export function TracebackChat({ apiUrl }: TracebackChatProps) {
 
   return (
     <div className="h-full w-full overflow-hidden bg-background text-gray-100 flex" data-theme={theme}>
-      {/* Sidebar — width controlled by parent, collapses to 0 when closed */}
+      {/* Sidebar — overlays on mobile, in-flow flex child on desktop */}
       {!treeFullscreen && (
         <>
+          {/* Mobile backdrop: tap outside to close sidebar */}
+          {sidebarOpen && (
+            <div
+              className="fixed inset-0 z-40 bg-black/50 md:hidden"
+              onClick={() => setSidebarOpen(false)}
+            />
+          )}
+
+          {/* On mobile (< md): fixed overlay; on desktop: in-flow flex child */}
           <div
             style={{ width: sidebarOpen ? sidebarWidth : 0 }}
-            className={`overflow-hidden flex-shrink-0 ${!sidebarResizing ? 'transition-[width] duration-200' : ''}`}
+            className={`
+              overflow-hidden flex-shrink-0
+              max-md:fixed max-md:left-0 max-md:top-0 max-md:h-full max-md:z-50
+              ${!sidebarResizing ? 'transition-[width] duration-200' : ''}
+            `}
           >
             <div style={{ width: sidebarWidth }} className="h-full">
               <Sidebar
@@ -124,9 +142,10 @@ export function TracebackChat({ apiUrl }: TracebackChatProps) {
             </div>
           </div>
 
+          {/* Resize divider — desktop only */}
           <div
             onMouseDown={handleSidebarDividerMouseDown}
-            className="w-1 cursor-col-resize bg-gray-800 hover:bg-emerald-900/50 transition-colors flex-shrink-0"
+            className="hidden md:block w-1 cursor-col-resize bg-gray-800 hover:bg-emerald-900/50 transition-colors flex-shrink-0"
           />
         </>
       )}
@@ -150,6 +169,8 @@ export function TracebackChat({ apiUrl }: TracebackChatProps) {
           onNavigateToNode={tb.handleNavigateToNode}
           sidebarOpen={sidebarOpen}
           onToggleSidebar={() => setSidebarOpen((v) => !v)}
+          treePanelVisible={treePanelVisible}
+          onToggleTreePanel={() => setTreePanelVisible((v) => !v)}
           incognito={tb.incognito}
           onToggleIncognito={tb.handleToggleIncognito}
           providers={tb.availableProviders}
@@ -160,25 +181,27 @@ export function TracebackChat({ apiUrl }: TracebackChatProps) {
         />
       )}
 
-      {!treeFullscreen && (
+      {!treeFullscreen && treePanelVisible && (
         <div
           onMouseDown={handleTreeDividerMouseDown}
           className="w-1 cursor-col-resize bg-gray-800 hover:bg-emerald-900/50 transition-colors flex-shrink-0"
         />
       )}
 
-      <TreePanel
-        nodes={tb.nodes}
-        edges={tb.edges}
-        activeNodeId={tb.activeNodeId}
-        activePathIds={tb.activePathIds}
-        onSelectNode={tb.handleSelectTreeNode}
-        onDeleteSubtree={tb.handleDeleteSubtree}
-        width={treeFullscreen ? window.innerWidth : treePanelWidth}
-        isFullscreen={treeFullscreen}
-        onToggleFullscreen={() => setTreeFullscreen((f) => !f)}
-        theme={theme}
-      />
+      {(treePanelVisible || treeFullscreen) && (
+        <TreePanel
+          nodes={tb.nodes}
+          edges={tb.edges}
+          activeNodeId={tb.activeNodeId}
+          activePathIds={tb.activePathIds}
+          onSelectNode={tb.handleSelectTreeNode}
+          onDeleteSubtree={tb.handleDeleteSubtree}
+          width={treeFullscreen ? window.innerWidth : treePanelWidth}
+          isFullscreen={treeFullscreen}
+          onToggleFullscreen={() => setTreeFullscreen((f) => !f)}
+          theme={theme}
+        />
+      )}
 
       {showKeys && (
         <KeyManager

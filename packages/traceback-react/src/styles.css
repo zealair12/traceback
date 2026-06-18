@@ -127,16 +127,16 @@
   overflow-y: hidden;
 }
 
-/* React Flow controls: make icons contrast against dark backgrounds */
+/* React Flow controls — follow the active theme via CSS custom properties */
 .react-flow__controls-button {
-  background: #1a1a1a !important;
-  border: 1px solid #2a2a2a !important;
+  background: var(--color-gray-800) !important;
+  border: 1px solid var(--color-gray-700) !important;
   border-radius: 6px !important;
-  fill: #a3a3a3 !important;
+  fill: var(--color-gray-400) !important;
 }
 .react-flow__controls-button:hover {
-  background: #2a2a2a !important;
-  fill: #e5e5e5 !important;
+  background: var(--color-gray-700) !important;
+  fill: var(--color-gray-100) !important;
 }
 .react-flow__controls-button svg {
   fill: inherit !important;

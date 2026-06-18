@@ -25,6 +25,8 @@ interface ChatPanelProps {
   onNavigateToNode: (nodeId: string) => void;
   sidebarOpen: boolean;
   onToggleSidebar: () => void;
+  treePanelVisible: boolean;
+  onToggleTreePanel: () => void;
   incognito: boolean;
   onToggleIncognito: () => void;
   providers: ProviderInfo[];
@@ -52,6 +54,8 @@ export function ChatPanel({
   onNavigateToNode,
   sidebarOpen,
   onToggleSidebar,
+  treePanelVisible,
+  onToggleTreePanel,
   incognito,
   onToggleIncognito,
   providers,
@@ -95,6 +99,8 @@ export function ChatPanel({
         onNavigateToNode={onNavigateToNode}
         sidebarOpen={sidebarOpen}
         onToggleSidebar={onToggleSidebar}
+        treePanelVisible={treePanelVisible}
+        onToggleTreePanel={onToggleTreePanel}
         incognito={incognito}
         onToggleIncognito={onToggleIncognito}
       />

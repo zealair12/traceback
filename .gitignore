@@ -83,3 +83,10 @@ server/prisma/migrations/**/*.db
 
 # Standalone widget build output
 dist-widget/
+
+# Local Claude Code workspace (plugins, skills, launch config) - never commit
+.claude/
+
+# BMad Method: personal install answers and generated artifacts - never commit
+_bmad/config.user.toml
+_bmad-output/

@@ -13,6 +13,7 @@ import { Sidebar } from './components/Sidebar';
 import { ChatPanel } from './components/ChatPanel';
 import { TreePanel } from './components/TreePanel';
 import { KeyManager } from './components/KeyManager';
+import { ImportPanel } from './components/ImportPanel';
 import { useTraceback } from './useTraceback';
 
 export interface TracebackChatProps {
@@ -27,6 +28,7 @@ export function TracebackChat({ apiUrl }: TracebackChatProps) {
   const [treePanelWidth, setTreePanelWidth] = useState(360);
   const [treeFullscreen, setTreeFullscreen] = useState(false);
   const [showKeys, setShowKeys] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const isDragging = useRef(false);
 
   const handleDividerMouseDown = useCallback(() => {
@@ -59,6 +61,7 @@ export function TracebackChat({ apiUrl }: TracebackChatProps) {
           onSelectSession={tb.handleSelectSession}
           onRenameSession={tb.handleRenameSession}
           onOpenKeys={() => setShowKeys(true)}
+          onOpenImport={() => setShowImport(true)}
         />
       )}
 
@@ -66,6 +69,7 @@ export function TracebackChat({ apiUrl }: TracebackChatProps) {
         <ChatPanel
           threadPath={tb.threadPath}
           onSendMessage={tb.handleSendMessage}
+          onTranscribeAudio={tb.handleTranscribeAudio}
           onBranchFromMessage={tb.handleBranchFromMessage}
           branchingFromMessageId={tb.branchingFromMessageId}
           branchingFromPreview={tb.branchingFromPreview}
@@ -111,6 +115,10 @@ export function TracebackChat({ apiUrl }: TracebackChatProps) {
           onClear={tb.clearProviderKey}
           onClose={() => setShowKeys(false)}
         />
+      )}
+
+      {showImport && (
+        <ImportPanel onImport={tb.handleImportConversations} onClose={() => setShowImport(false)} />
       )}
     </div>
   );

@@ -1,0 +1,126 @@
+[
+  {
+    "title": "Databases explained",
+    "create_time": 1717171717.0,
+    "mapping": {
+      "root": { "id": "root", "message": null, "parent": null, "children": ["sys1"] },
+      "sys1": {
+        "id": "sys1",
+        "parent": "root",
+        "children": ["u1"],
+        "message": {
+          "author": { "role": "system" },
+          "create_time": 1717171718.0,
+          "content": { "content_type": "text", "parts": [""] },
+          "metadata": {}
+        }
+      },
+      "u1": {
+        "id": "u1",
+        "parent": "sys1",
+        "children": ["a1"],
+        "message": {
+          "author": { "role": "user" },
+          "create_time": 1717171719.0,
+          "content": { "content_type": "text", "parts": ["What is a database?"] },
+          "metadata": {}
+        }
+      },
+      "a1": {
+        "id": "a1",
+        "parent": "u1",
+        "children": ["u2a", "u2b"],
+        "message": {
+          "author": { "role": "assistant" },
+          "create_time": 1717171720.0,
+          "content": { "content_type": "text", "parts": ["A database is an organized collection of data."] },
+          "metadata": { "model_slug": "gpt-4o" }
+        }
+      },
+      "u2a": {
+        "id": "u2a",
+        "parent": "a1",
+        "children": ["tool1"],
+        "message": {
+          "author": { "role": "user" },
+          "create_time": 1717171721.0,
+          "content": { "content_type": "text", "parts": ["Give me a SQL example."] },
+          "metadata": {}
+        }
+      },
+      "tool1": {
+        "id": "tool1",
+        "parent": "u2a",
+        "children": ["a2a"],
+        "message": {
+          "author": { "role": "tool" },
+          "create_time": 1717171722.0,
+          "content": { "content_type": "text", "parts": ["internal tool output"] },
+          "metadata": {}
+        }
+      },
+      "a2a": {
+        "id": "a2a",
+        "parent": "tool1",
+        "children": [],
+        "message": {
+          "author": { "role": "assistant" },
+          "create_time": 1717171723.0,
+          "content": { "content_type": "text", "parts": ["SELECT * FROM users;"] },
+          "metadata": { "model_slug": "gpt-4o" }
+        }
+      },
+      "u2b": {
+        "id": "u2b",
+        "parent": "a1",
+        "children": ["a2b"],
+        "message": {
+          "author": { "role": "user" },
+          "create_time": 1717171725.0,
+          "content": { "content_type": "text", "parts": ["Compare SQL and NoSQL instead."] },
+          "metadata": {}
+        }
+      },
+      "a2b": {
+        "id": "a2b",
+        "parent": "u2b",
+        "children": [],
+        "message": {
+          "author": { "role": "assistant" },
+          "create_time": 1717171726.0,
+          "content": { "content_type": "text", "parts": ["SQL stores tables; NoSQL stores documents."] },
+          "metadata": { "model_slug": "gpt-4-turbo" }
+        }
+      }
+    }
+  },
+  {
+    "title": "Quick hello",
+    "create_time": 1717171800.0,
+    "mapping": {
+      "r2": { "id": "r2", "message": null, "parent": null, "children": ["u9"] },
+      "u9": {
+        "id": "u9",
+        "parent": "r2",
+        "children": ["a9"],
+        "message": {
+          "author": { "role": "user" },
+          "create_time": 1717171801.0,
+          "content": { "content_type": "text", "parts": ["Hello there"] },
+          "metadata": {}
+        }
+      },
+      "a9": {
+        "id": "a9",
+        "parent": "u9",
+        "children": [],
+        "message": {
+          "author": { "role": "assistant" },
+          "create_time": 1717171802.0,
+          "content": { "content_type": "text", "parts": ["Hi! How can I help?"] },
+          "metadata": { "model_slug": "gpt-4o-mini" }
+        }
+      }
+    }
+  }
+]

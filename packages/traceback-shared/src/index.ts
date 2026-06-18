@@ -1,6 +1,26 @@
 import axios, { type AxiosInstance } from 'axios';
+import type { ImportedConversation } from './importers/index.js';
 
 /** Traceback HTTP API — same routes as `traceback/server` (sessions + branching messages). */
+
+// Conversation importers (ChatGPT export, generic message lists) and the
+// neutral conversation shape they produce.
+export {
+  parseImportFile,
+  parseImportText,
+  detectImporter,
+  conversationStats,
+  chatgptImporter,
+  claudeCodeImporter,
+  claudeAiImporter,
+  geminiImporter,
+  genericImporter
+} from './importers/index.js';
+export type {
+  ConversationImporter,
+  ImportedConversation,
+  ImportedMessage
+} from './importers/index.js';
 
 export interface SessionResponse {
   id: string;
@@ -8,6 +28,19 @@ export interface SessionResponse {
   createdAt: string;
   updatedAt: string;
 }
+
+/**
+ * One thing attached to a message: an image or a document (PDF), carried as a
+ * base64 data URL. The name is shown for documents. (The type is named for
+ * its original image-only days; it now covers files too.)
+ */
+export interface ImageAttachment {
+  type: 'image' | 'file';
+  mediaType: string;
+  dataUrl: string;
+  name?: string;
+}
+export type Attachment = ImageAttachment;
 
 export interface MessageResponse {
   id: string;
@@ -17,6 +50,8 @@ export interface MessageResponse {
   content: string;
   depth: number;
   branchLabel: string | null;
+  // Images attached to this message, when any.
+  attachments?: ImageAttachment[] | null;
   // Which backend/model produced this message (assistant messages only).
   // Null/absent for user messages and pre-existing rows.
   provider?: string | null;
@@ -29,6 +64,10 @@ export interface ProviderInfo {
   id: string;
   defaultModel: string;
   suggestedModels: string[];
+  // Which of this backend's models accept images (used by Auto routing).
+  visionModels: string[];
+  // Which of this backend's models accept document (PDF) attachments.
+  documentModels: string[];
   configured: boolean;
 }
 
@@ -42,6 +81,8 @@ export interface ProvidersResponse {
 export interface SendMessageOptions {
   provider?: string;
   model?: string;
+  // Images to attach to this message (base64 data URLs, max 4).
+  attachments?: ImageAttachment[];
   // Optional "bring your own key": the user's API key for this request. Sent in
   // a header (never the URL or body), used by the server for this request only,
   // and never stored or logged.
@@ -63,88 +104,107 @@ export interface SendMessageResult {
   }>;
 }
 
-export interface TracebackClient {
+/** Result of importing conversations: one entry per created session. */
+export interface ImportResult {
+  imported: Array<{ sessionId: string; name: string | null; messageCount: number }>;
+}
+
+/**
+ * The Traceback HTTP client: one object holding every call the server
+ * understands. A class so embedders can extend or wrap it; the
+ * createTracebackClient factory below is the conventional way to make one.
+ */
+export class TracebackClient {
   readonly api: AxiosInstance;
-  fetchSessions(): Promise<SessionResponse[]>;
-  createSession(name?: string): Promise<SessionResponse>;
-  updateSessionName(sessionId: string, name: string | null): Promise<SessionResponse>;
-  fetchSessionMessages(sessionId: string): Promise<MessageResponse[]>;
-  deleteSubtree(messageId: string): Promise<void>;
+
+  constructor(baseURL: string, options?: { axiosInstance?: AxiosInstance }) {
+    this.api =
+      options?.axiosInstance ??
+      axios.create({ baseURL: baseURL.replace(/\/$/, ''), withCredentials: false });
+  }
+
+  // The user's key (if any) travels in a header -- never the URL or body --
+  // so it cannot land in request logs.
+  private auth(apiKey?: string) {
+    return apiKey ? { headers: { 'x-provider-key': apiKey } } : undefined;
+  }
+
+  async fetchSessions(): Promise<SessionResponse[]> {
+    const { data } = await this.api.get<SessionResponse[]>('/sessions');
+    return data;
+  }
+
+  async createSession(name?: string): Promise<SessionResponse> {
+    const { data } = await this.api.post<SessionResponse>('/sessions', { name });
+    return data;
+  }
+
+  async updateSessionName(sessionId: string, name: string | null): Promise<SessionResponse> {
+    const { data } = await this.api.patch<SessionResponse>(`/sessions/${sessionId}`, { name });
+    return data;
+  }
+
+  async fetchSessionMessages(sessionId: string): Promise<MessageResponse[]> {
+    const { data } = await this.api.get<MessageResponse[]>(`/sessions/${sessionId}/messages`);
+    return data;
+  }
+
+  async deleteSubtree(messageId: string): Promise<void> {
+    await this.api.delete(`/messages/${messageId}`);
+  }
+
   /** Ask the server which LLM providers/models are available. */
-  fetchProviders(): Promise<ProvidersResponse>;
-  sendMessage(
+  async fetchProviders(): Promise<ProvidersResponse> {
+    const { data } = await this.api.get<ProvidersResponse>('/providers');
+    return data;
+  }
+
+  /** Write normalized conversations (from an importer) into the tree store. */
+  async importConversations(conversations: ImportedConversation[]): Promise<ImportResult> {
+    const { data } = await this.api.post<ImportResult>('/import', { conversations });
+    return data;
+  }
+
+  /** Turn recorded audio (base64 data URL) into text via the server. */
+  async transcribeAudio(
+    audioDataUrl: string,
+    mediaType: string,
+    options?: { apiKey?: string }
+  ): Promise<{ text: string; provider: string; model: string }> {
+    const { data } = await this.api.post<{ text: string; provider: string; model: string }>(
+      '/transcribe',
+      { audio: audioDataUrl, mediaType },
+      this.auth(options?.apiKey)
+    );
+    return data;
+  }
+
+  async sendMessage(
     sessionId: string,
     content: string,
     parentId: string | null,
     // Optional: pick which backend/model answers this specific message.
     options?: SendMessageOptions
-  ): Promise<SendMessageResult>;
+  ): Promise<SendMessageResult> {
+    const { data } = await this.api.post<SendMessageResult>(
+      '/message/send',
+      {
+        session_id: sessionId,
+        parent_id: parentId,
+        content,
+        provider: options?.provider,
+        model: options?.model,
+        attachments: options?.attachments
+      },
+      this.auth(options?.apiKey)
+    );
+    return data;
+  }
 }
 
 export function createTracebackClient(
   baseURL: string,
   options?: { axiosInstance?: AxiosInstance }
 ): TracebackClient {
-  const api =
-    options?.axiosInstance ??
-    axios.create({
-      baseURL: baseURL.replace(/\/$/, ''),
-      withCredentials: false
-    });
-
-  return {
-    api,
-
-    async fetchSessions() {
-      const { data } = await api.get<SessionResponse[]>('/sessions');
-      return data;
-    },
-
-    async createSession(name?: string) {
-      const { data } = await api.post<SessionResponse>('/sessions', { name });
-      return data;
-    },
-
-    async updateSessionName(sessionId: string, name: string | null) {
-      const { data } = await api.patch<SessionResponse>(`/sessions/${sessionId}`, { name });
-      return data;
-    },
-
-    async fetchSessionMessages(sessionId: string) {
-      const { data } = await api.get<MessageResponse[]>(`/sessions/${sessionId}/messages`);
-      return data;
-    },
-
-    async deleteSubtree(messageId: string) {
-      await api.delete(`/messages/${messageId}`);
-    },
-
-    async fetchProviders() {
-      const { data } = await api.get<ProvidersResponse>('/providers');
-      return data;
-    },
-
-    async sendMessage(
-      sessionId: string,
-      content: string,
-      parentId: string | null,
-      options?: SendMessageOptions
-    ) {
-      const { data } = await api.post<SendMessageResult>(
-        '/message/send',
-        {
-          session_id: sessionId,
-          parent_id: parentId,
-          content,
-          // Only included when the caller chose a specific backend/model.
-          provider: options?.provider,
-          model: options?.model
-        },
-        // The user's key (if any) goes in a header, not the body, so it never
-        // lands in request logs that record bodies/URLs.
-        options?.apiKey ? { headers: { 'x-provider-key': options.apiKey } } : undefined
-      );
-      return data;
-    }
-  };
+  return new TracebackClient(baseURL, options);
 }

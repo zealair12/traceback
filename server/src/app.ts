@@ -1,12 +1,9 @@
-// Builds the Express application (routes + middleware) and returns it WITHOUT
-// starting to listen.
+// Builds the Express application (middleware + routes) and returns it WITHOUT
+// starting to listen, so the normal server, the tests, and any embedder all
+// share the exact same application.
 //
-// Plain-English big picture:
-// Previously the server created the app and immediately started listening in one
-// file, which made it impossible to import the app for tests or to mount extra
-// routes cleanly. This factory just assembles the app and hands it back, so the
-// normal server, tests, and the OpenAI-compatible proxy all share the exact same
-// application.
+// Each route family lives in its own module under routes/; this file only
+// assembles them and owns the shared error handling.
 
 import express, { type Request, type Response, type NextFunction } from 'express';
 import cors from 'cors';
@@ -15,19 +12,19 @@ import passport from 'passport';
 import './auth/google.js';
 
 import { prisma } from './prismaClient.js';
-import {
-  createMessageWithAutoReply,
-  ApiRateLimitError,
-  LlmTimeoutError
-} from './services/messageService.js';
+import { ApiRateLimitError, LlmTimeoutError } from './services/messageService.js';
 import {
   listProviders,
   defaultProviderId,
   ProviderNotAvailableError,
   InsecureKeyTransportError
 } from './providers/index.js';
+import { registerSessionRoutes } from './routes/sessionRoutes.js';
+import { registerMessageRoutes } from './routes/messageRoutes.js';
 import { registerOpenAiProxy } from './routes/openaiProxy.js';
-import { resolveApiKey } from './auth/apiKey.js';
+import { registerImportRoutes } from './routes/importRoutes.js';
+import { registerTranscribeRoutes } from './routes/transcribeRoutes.js';
+import { wrap } from './routes/wrap.js';
 
 export function createApp() {
   const app = express();
@@ -60,8 +57,9 @@ export function createApp() {
   });
 
   // Lightweight local metrics for perf scripts / debugging.
-  app.get('/debug/metrics', async (_req: Request, res: Response, next: NextFunction) => {
-    try {
+  app.get(
+    '/debug/metrics',
+    wrap(async (_req, res) => {
       const [sessionCount, messageCount] = await Promise.all([
         prisma.session.count(),
         prisma.message.count()
@@ -77,25 +75,16 @@ export function createApp() {
           external: mem.external,
           arrayBuffers: mem.arrayBuffers
         },
-        counts: {
-          sessions: sessionCount,
-          messages: messageCount
-        },
+        counts: { sessions: sessionCount, messages: messageCount },
         timestamp: new Date().toISOString()
       });
-    } catch (error: unknown) {
-      next(error);
-    }
-  });
+    })
+  );
 
-  // List the available LLM providers and their models, so a frontend can show a
-  // "pick your model" menu (Cursor-style). Reports which provider is the default
-  // and whether each one is configured, but never exposes any API keys.
+  // The model picker's menu: which backends exist, what they can do, and which
+  // are configured. Never exposes any API keys.
   app.get('/providers', (_req: Request, res: Response) => {
-    res.json({
-      default: defaultProviderId(),
-      providers: listProviders()
-    });
+    res.json({ default: defaultProviderId(), providers: listProviders() });
   });
 
   // List all sessions (used by the sidebar).
@@ -237,9 +226,10 @@ export function createApp() {
   // OpenAI-compatible proxy endpoint (POST /v1/chat/completions). Registered
   // before the error handler so its errors are handled the same way.
   registerOpenAiProxy(app);
+  registerImportRoutes(app);
+  registerTranscribeRoutes(app);
 
-  // --- Error handling -------------------------------------------------------
-
+  // Shared error handling: map known failure types onto helpful statuses.
   app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
     let status = 500;
     let label = 'Unknown Error';
@@ -251,12 +241,9 @@ export function createApp() {
       label = 'LLM Timeout';
       status = 504;
     } else if (err instanceof ProviderNotAvailableError) {
-      // The caller asked for a provider/model we do not know about: that is a
-      // bad request, not a server fault.
       label = 'Provider Not Available';
       status = 400;
     } else if (err instanceof InsecureKeyTransportError) {
-      // A key was sent over plain HTTP in production -- refuse it.
       label = 'Insecure Key Transport';
       status = 400;
     } else if (err instanceof Error) {
@@ -264,7 +251,6 @@ export function createApp() {
     }
 
     console.error(`[${label}]`, err);
-
     const message = err instanceof Error ? err.message : 'Internal server error';
     res.status(status).json({ error: message, type: label });
   });

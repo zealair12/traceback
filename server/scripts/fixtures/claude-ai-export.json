@@ -1,0 +1,61 @@
+[
+  {
+    "uuid": "conv-1",
+    "name": "Planning a garden",
+    "created_at": "2026-05-01T09:00:00.000Z",
+    "updated_at": "2026-05-01T09:10:00.000Z",
+    "model": "claude-sonnet-4-5",
+    "chat_messages": [
+      {
+        "uuid": "m1",
+        "sender": "human",
+        "text": "What vegetables grow well in shade?",
+        "content": [{ "type": "text", "text": "What vegetables grow well in shade?" }],
+        "created_at": "2026-05-01T09:00:10.000Z"
+      },
+      {
+        "uuid": "m2",
+        "sender": "assistant",
+        "text": "Leafy greens like lettuce, spinach, and kale tolerate shade well.",
+        "content": [
+          { "type": "text", "text": "Leafy greens like lettuce, spinach, and kale tolerate shade well." }
+        ],
+        "created_at": "2026-05-01T09:00:20.000Z"
+      },
+      {
+        "uuid": "m3",
+        "sender": "human",
+        "text": "Which needs the least water?",
+        "content": [{ "type": "text", "text": "Which needs the least water?" }],
+        "created_at": "2026-05-01T09:01:00.000Z"
+      },
+      {
+        "uuid": "m4",
+        "sender": "assistant",
+        "text": "Kale is the most drought-tolerant of the three.",
+        "content": [{ "type": "text", "text": "Kale is the most drought-tolerant of the three." }],
+        "created_at": "2026-05-01T09:01:10.000Z"
+      }
+    ]
+  },
+  {
+    "uuid": "conv-2",
+    "name": "Quick question",
+    "created_at": "2026-05-02T12:00:00.000Z",
+    "updated_at": "2026-05-02T12:01:00.000Z",
+    "chat_messages": [
+      {
+        "uuid": "m5",
+        "sender": "human",
+        "text": "Define entropy in one line.",
+        "created_at": "2026-05-02T12:00:05.000Z"
+      },
+      {
+        "uuid": "m6",
+        "sender": "assistant",
+        "text": "Entropy measures how spread out or disordered a system's energy is.",
+        "created_at": "2026-05-02T12:00:15.000Z"
+      }
+    ]
+  }
+]

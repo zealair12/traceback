@@ -41,22 +41,26 @@ export function ModelPicker({
     selectedModel &&
     !providers
       .find((p) => p.id === selectedProvider)
-      ?.suggestedModels.includes(selectedModel);
+      ?.suggestedModels?.includes(selectedModel);
 
+  // A small quiet control at the left of the input frame's bottom row, sized
+  // to match the message text. No chrome of its own; the menu stays grouped by
+  // backend.
   return (
-    <div className="max-w-2xl mx-auto mb-2 flex items-center gap-2 text-[11px] text-gray-500">
-      <span className="text-gray-600">Answer with</span>
-      <select
-        value={currentValue}
-        onChange={(e) => {
-          const [providerId, model] = e.target.value.split(SEP);
-          onSelect(providerId, model);
-        }}
-        className="bg-gray-900 border border-gray-800 rounded-md px-2 py-1 text-[11px] text-gray-200 focus:outline-none focus:ring-1 focus:ring-emerald-600/50 hover:border-gray-700 cursor-pointer max-w-[260px] truncate"
-        title="Choose which model answers the next message"
-      >
+    <select
+      value={currentValue}
+      onChange={(e) => {
+        const [providerId, model] = e.target.value.split(SEP);
+        onSelect(providerId, model);
+      }}
+      className="bg-transparent text-sm text-gray-400 hover:text-gray-100 focus:outline-none cursor-pointer max-w-[150px] truncate px-1.5 py-0.5 rounded-md hover:bg-gray-800/60 transition-colors"
+      title="Choose which model answers the next message"
+    >
+        {/* Auto picks the model for each message: image messages go to a
+            connected image-capable model, text to the default backend. */}
+        <option value={encode('auto', 'auto')}>Auto</option>
         {providers.map((p) => {
-          const models = [...p.suggestedModels];
+          const models = [...(p.suggestedModels ?? [])];
           if (extraForCurrent && p.id === selectedProvider && !models.includes(selectedModel!)) {
             models.unshift(selectedModel!);
           }
@@ -71,7 +75,6 @@ export function ModelPicker({
             </optgroup>
           );
         })}
-      </select>
-    </div>
+    </select>
   );
 }

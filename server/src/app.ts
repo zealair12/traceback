@@ -13,6 +13,7 @@ import './auth/google.js';
 
 import { prisma } from './prismaClient.js';
 import { ApiRateLimitError, LlmTimeoutError } from './services/messageService.js';
+import { createMessageWithAutoReply } from './services/messageService.js';
 import {
   listProviders,
   defaultProviderId,
@@ -24,6 +25,7 @@ import { registerMessageRoutes } from './routes/messageRoutes.js';
 import { registerOpenAiProxy } from './routes/openaiProxy.js';
 import { registerImportRoutes } from './routes/importRoutes.js';
 import { registerTranscribeRoutes } from './routes/transcribeRoutes.js';
+import { resolveApiKey } from './auth/apiKey.js';
 import { wrap } from './routes/wrap.js';
 
 export function createApp() {

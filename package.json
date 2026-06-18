@@ -1,0 +1,8 @@
+{
+  "name": "traceback",
+  "private": true,
+  "workspaces": [
+    "client",
+    "packages/*"
+  ]
+}

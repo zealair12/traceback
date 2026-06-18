@@ -10,6 +10,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import Dagre from '@dagrejs/dagre';
+import { Maximize2, Minimize2 } from 'lucide-react';
 import { TreeNode } from './TreeNode';
 
 const nodeTypes = { custom: TreeNode };
@@ -201,17 +202,18 @@ export function TreePanel({
       className={`h-full bg-tree flex flex-col flex-shrink-0 ${isFullscreen ? '' : 'border-l border-gray-800'}`}
       style={{ width: isFullscreen ? '100%' : width }}
     >
-      <div className="px-4 py-2.5 border-b border-gray-800 flex items-center justify-between flex-shrink-0">
-        <p className="text-[10px] text-gray-500 uppercase tracking-widest">Conversation Tree</p>
+      {/* No header bar: the tree speaks for itself. The expand/collapse toggle
+          floats over the canvas as a single icon. */}
+      <div className="flex-1 h-0 relative">
         <button
           type="button"
           onClick={onToggleFullscreen}
-          className="text-[10px] text-gray-500 hover:text-white transition-colors px-2 py-0.5 rounded border border-gray-700 hover:border-gray-500"
+          className="absolute top-2.5 right-2.5 z-10 h-8 w-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-100 bg-gray-900/60 hover:bg-gray-800/80 backdrop-blur-md border border-gray-800/80 transition-colors"
+          title={isFullscreen ? 'Back to chat' : 'Expand the tree'}
+          aria-label={isFullscreen ? 'Back to chat' : 'Expand the tree'}
         >
-          {isFullscreen ? '← Back to chat' : '⛶ Expand'}
+          {isFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
         </button>
-      </div>
-      <div className="flex-1 h-0">
         <ReactFlowProvider>
           <TreeFlowInner
             nodes={styledNodes}

@@ -1,0 +1,21 @@
+{
+  "conversations": [
+    {
+      "conversation_id": "g-conv-1",
+      "title": "Trip to Kyoto",
+      "messages": [
+        { "role": "user", "text": "Best month to visit Kyoto?", "create_time": "2026-04-10T08:00:00.000Z" },
+        { "role": "model", "text": "November, for autumn foliage and mild weather.", "create_time": "2026-04-10T08:00:05.000Z" },
+        { "role": "user", "text": "And the rainy season is when?", "create_time": "2026-04-10T08:01:00.000Z" },
+        { "role": "model", "text": "Roughly mid-June through mid-July.", "create_time": "2026-04-10T08:01:05.000Z" }
+      ]
+    },
+    {
+      "conversation_id": "g-conv-2",
+      "messages": [
+        { "role": "user", "text": "Convert 5 miles to km.", "create_time": "2026-04-11T10:00:00.000Z" },
+        { "role": "model", "text": "5 miles is about 8.05 kilometers.", "create_time": "2026-04-11T10:00:03.000Z" }
+      ]
+    }
+  ]
+}

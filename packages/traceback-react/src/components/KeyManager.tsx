@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { ProviderInfo } from '@traceback/shared';
-import { getStoredKey, keyHint } from '../keys';
+import { keyStore } from '../lib/keyStore';
 
 interface KeyManagerProps {
   providers: ProviderInfo[];
@@ -48,14 +48,14 @@ export function KeyManager({ providers, keyedProviders, onSave, onClear, onClose
         <div className="space-y-3">
           {providers.map((p) => {
             const hasKey = keyedProviders.has(p.id);
-            const stored = hasKey ? getStoredKey(p.id) : null;
+            const stored = hasKey ? keyStore.get(p.id) : null;
             return (
               <div key={p.id} className="border border-gray-800 rounded-lg p-3">
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-[12px] font-medium text-gray-200">{p.id}</span>
                   {hasKey ? (
                     <span className="text-[10px] text-emerald-400">
-                      saved {stored ? keyHint(stored) : ''}
+                      saved {stored ? keyStore.hint(stored) : ''}
                     </span>
                   ) : p.configured ? (
                     <span className="text-[10px] text-gray-500">using server key</span>

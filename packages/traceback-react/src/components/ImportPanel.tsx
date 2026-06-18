@@ -70,11 +70,24 @@ export function ImportPanel({ onImport, onClose }: ImportPanelProps) {
             Close
           </button>
         </div>
-        <p className="text-[11px] text-gray-500 mb-4 leading-relaxed">
-          Bring your history from ChatGPT: Settings &gt;&gt; Data controls &gt;&gt; Export data
-          &gt;&gt; drop the conversations.json from the zip. Claude Code sessions (.jsonl) and
-          plain JSON message lists work too.
-        </p>
+        <div className="text-[11px] text-gray-500 mb-4 leading-relaxed space-y-1">
+          <p className="text-gray-400">Bring your history from:</p>
+          <ul className="space-y-1 pl-1">
+            <li>
+              <span className="text-gray-300">ChatGPT</span> (Settings &gt;&gt; Data controls
+              &gt;&gt; Export data &gt;&gt; drop the conversations.json from the zip)
+            </li>
+            <li>
+              <span className="text-gray-300">Claude</span> (Settings &gt;&gt; Privacy &gt;&gt;
+              Export data)
+            </li>
+            <li>
+              <span className="text-gray-300">Gemini</span> (Takeout &gt;&gt; My Activity
+              &gt;&gt; Gemini Apps)
+            </li>
+          </ul>
+          <p>Claude Code .jsonl files and plain JSON message lists work too.</p>
+        </div>
 
         {phase.step === 'pick' && (
           <div

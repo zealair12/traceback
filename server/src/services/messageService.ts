@@ -14,6 +14,7 @@ import type { Role, Message } from '@prisma/client';
 import { Prisma } from '@prisma/client';
 import { getProvider } from '../providers/index.js';
 import type { LlmMessage, ImageAttachment } from '../providers/index.js';
+import { HUMANIZE_WRITING_PROMPT } from '../prompts/humanizeWriting.js';
 // Re-exported from their new home (server/src/providers) so existing importers
 // of these error types keep working unchanged after the provider refactor.
 export { ApiRateLimitError, LlmTimeoutError } from '../providers/index.js';
@@ -169,7 +170,10 @@ export async function createMessageWithAutoReply(options: {
         role: 'system',
         content:
           'Be concise and direct. Keep answers under 4 sentences unless the user asks for detail. ' +
-          'Use markdown for formatting. For math, use LaTeX with $...$ for inline and $$...$$ for display equations.'
+          'Use markdown for formatting. For math, use LaTeX with $...$ for inline and $$...$$ for display equations.\n\n' +
+          // Every reply passes through the anti-trope guide so the writing
+          // reads like a person, whichever provider answers.
+          HUMANIZE_WRITING_PROMPT
       },
       ...lineage.map((m) => {
         // Anything attached along the path travels with its turn: images for

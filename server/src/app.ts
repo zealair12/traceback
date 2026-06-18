@@ -10,6 +10,9 @@
 
 import express, { type Request, type Response, type NextFunction } from 'express';
 import cors from 'cors';
+import session from 'express-session';
+import passport from 'passport';
+import './auth/google.js';
 
 import { prisma } from './prismaClient.js';
 import {
@@ -37,6 +40,18 @@ export function createApp() {
   );
 
   app.use(express.json());
+
+  app.use(session({
+    secret: process.env.SESSION_SECRET!,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    },
+  }));
+  app.use(passport.initialize());
+  app.use(passport.session());
 
   // --- Routes ---------------------------------------------------------------
 
@@ -198,6 +213,25 @@ export function createApp() {
     } catch (error: unknown) {
       next(error);
     }
+  });
+
+  // --- Google OAuth routes --------------------------------------------------
+
+  app.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+
+  app.get(
+    '/auth/google/callback',
+    passport.authenticate('google', { failureRedirect: '/' }),
+    (req: Request, res: Response) => res.redirect(process.env.CLIENT_ORIGIN + '/')
+  );
+
+  app.get('/auth/me', (req: Request, res: Response) => {
+    if (req.isAuthenticated()) res.json(req.user);
+    else res.status(401).json({ error: 'Not logged in' });
+  });
+
+  app.post('/auth/logout', (req: Request, res: Response) => {
+    req.logout(() => res.json({ success: true }));
   });
 
   // OpenAI-compatible proxy endpoint (POST /v1/chat/completions). Registered

@@ -25,6 +25,8 @@ interface ChatPanelProps {
   onNavigateToParent: () => void;
   onNavigateToSibling: (offset: number) => void;
   onNavigateToNode: (nodeId: string) => void;
+  sidebarOpen: boolean;
+  onToggleSidebar: () => void;
   // Model picker.
   providers: ProviderInfo[];
   selectedProvider: string | null;
@@ -47,6 +49,8 @@ export function ChatPanel({
   onNavigateToParent,
   onNavigateToSibling,
   onNavigateToNode,
+  sidebarOpen,
+  onToggleSidebar,
   providers,
   selectedProvider,
   selectedModel,
@@ -70,6 +74,8 @@ export function ChatPanel({
         onNavigateToParent={onNavigateToParent}
         onNavigateToSibling={onNavigateToSibling}
         onNavigateToNode={onNavigateToNode}
+        sidebarOpen={sidebarOpen}
+        onToggleSidebar={onToggleSidebar}
       />
 
       {/* Messages area */}
@@ -95,7 +101,7 @@ export function ChatPanel({
       </div>
 
       {/* Input bar */}
-      <footer className="border-t border-gray-800 px-4 py-3 flex-shrink-0">
+      <footer className="px-4 py-3 flex-shrink-0">
         {error && (
           <div className="max-w-2xl mx-auto mb-2 text-xs text-red-400 bg-red-400/10 rounded-md px-3 py-1.5">
             {error}

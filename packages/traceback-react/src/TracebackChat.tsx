@@ -1,14 +1,4 @@
-// TracebackChat: the standard, ready-to-use chat UI.
-//
-// Plain-English big picture:
-// This is the "drop it in and it just works" interface. Give it the address of
-// a Traceback server and it renders the whole experience: a sidebar of
-// conversations, the chat thread in the middle, and the branching tree on the
-// right. All the actual logic lives in the useTraceback hook; this component is
-// only the layout. Technical users who want a different look can skip this and
-// use useTraceback directly.
-
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { ChatPanel } from './components/ChatPanel';
 import { TreePanel } from './components/TreePanel';
@@ -17,31 +7,66 @@ import { ImportPanel } from './components/ImportPanel';
 import { useTraceback } from './useTraceback';
 
 export interface TracebackChatProps {
-  // Base URL of the Traceback server (e.g. "http://localhost:4000").
   apiUrl: string;
 }
 
 export function TracebackChat({ apiUrl }: TracebackChatProps) {
   const tb = useTraceback({ apiUrl });
 
-  // Layout-only state (how wide the tree panel is, whether it is fullscreen).
   const [treePanelWidth, setTreePanelWidth] = useState(360);
   const [treeFullscreen, setTreeFullscreen] = useState(false);
   const [showKeys, setShowKeys] = useState(false);
   const [showImport, setShowImport] = useState(false);
-  const isDragging = useRef(false);
 
-  const handleDividerMouseDown = useCallback(() => {
-    isDragging.current = true;
+  // Sidebar open/width state — width is remembered across collapses.
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarWidth, setSidebarWidth] = useState(256);
+
+  const isTreeDragging = useRef(false);
+  const isSidebarDragging = useRef(false);
+
+  // Cmd/Ctrl+B toggles sidebar.
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'b') {
+        e.preventDefault();
+        setSidebarOpen((v) => !v);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
+
+  const handleSidebarDividerMouseDown = useCallback(() => {
+    isSidebarDragging.current = true;
     document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
     const onMouseMove = (e: MouseEvent) => {
-      if (!isDragging.current) return;
+      if (!isSidebarDragging.current) return;
+      setSidebarWidth(Math.max(180, Math.min(e.clientX, 480)));
+    };
+    const onMouseUp = () => {
+      isSidebarDragging.current = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  }, []);
+
+  const handleTreeDividerMouseDown = useCallback(() => {
+    isTreeDragging.current = true;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    const onMouseMove = (e: MouseEvent) => {
+      if (!isTreeDragging.current) return;
       const newWidth = window.innerWidth - e.clientX;
       setTreePanelWidth(Math.max(200, Math.min(newWidth, window.innerWidth * 0.6)));
     };
     const onMouseUp = () => {
-      isDragging.current = false;
+      isTreeDragging.current = false;
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
       window.removeEventListener('mousemove', onMouseMove);
@@ -53,17 +78,34 @@ export function TracebackChat({ apiUrl }: TracebackChatProps) {
 
   return (
     <div className="h-full w-full overflow-hidden bg-background text-gray-100 flex">
+      {/* Sidebar — width controlled by parent, collapses to 0 when closed */}
       {!treeFullscreen && (
-        <Sidebar
-          sessions={tb.sessions}
-          activeSessionId={tb.activeSessionId}
-          onNewSession={tb.handleNewSession}
-          onSelectSession={tb.handleSelectSession}
-          onRenameSession={tb.handleRenameSession}
-          onDeleteSession={tb.handleDeleteSession}
-          onOpenKeys={() => setShowKeys(true)}
-          onOpenImport={() => setShowImport(true)}
-        />
+        <>
+          <div
+            style={{ width: sidebarOpen ? sidebarWidth : 0 }}
+            className="overflow-hidden flex-shrink-0 transition-[width] duration-200"
+          >
+            <div style={{ width: sidebarWidth }} className="h-full">
+              <Sidebar
+                sessions={tb.sessions}
+                activeSessionId={tb.activeSessionId}
+                onNewSession={tb.handleNewSession}
+                onSelectSession={tb.handleSelectSession}
+                onRenameSession={tb.handleRenameSession}
+                onDeleteSession={tb.handleDeleteSession}
+                onOpenKeys={() => setShowKeys(true)}
+                onOpenImport={() => setShowImport(true)}
+              />
+            </div>
+          </div>
+
+          {sidebarOpen && (
+            <div
+              onMouseDown={handleSidebarDividerMouseDown}
+              className="w-1 cursor-col-resize bg-gray-800 hover:bg-emerald-900/50 transition-colors flex-shrink-0"
+            />
+          )}
+        </>
       )}
 
       {!treeFullscreen && (
@@ -81,6 +123,8 @@ export function TracebackChat({ apiUrl }: TracebackChatProps) {
           onNavigateToParent={tb.handleNavigateToParent}
           onNavigateToSibling={tb.handleNavigateToSibling}
           onNavigateToNode={tb.handleNavigateToNode}
+          sidebarOpen={sidebarOpen}
+          onToggleSidebar={() => setSidebarOpen((v) => !v)}
           providers={tb.availableProviders}
           selectedProvider={tb.selectedProvider}
           selectedModel={tb.selectedModel}
@@ -91,7 +135,7 @@ export function TracebackChat({ apiUrl }: TracebackChatProps) {
 
       {!treeFullscreen && (
         <div
-          onMouseDown={handleDividerMouseDown}
+          onMouseDown={handleTreeDividerMouseDown}
           className="w-1.5 cursor-col-resize bg-gray-800 hover:bg-emerald-900/50 transition-colors flex-shrink-0"
         />
       )}

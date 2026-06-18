@@ -1,27 +1,33 @@
+import { useState, useRef, useEffect } from 'react';
+import { Check, ChevronDown } from 'lucide-react';
 import type { ProviderInfo } from '@traceback/shared';
 
 interface ModelPickerProps {
   providers: ProviderInfo[];
   selectedProvider: string | null;
   selectedModel: string | null;
-  // Backends the user has supplied their own key for (so they count as usable
-  // even if the server has no key for them).
   keyedProviders?: Set<string>;
-  // Called with the backend id and model name when the user picks one.
   onSelect: (providerId: string, model: string) => void;
 }
 
-// Encode a provider+model pair into a single <option> value, and back again.
-// Providers and models never contain this separator.
-const SEP = '::';
-const encode = (providerId: string, model: string) => `${providerId}${SEP}${model}`;
+// Friendly short names shown in the trigger button.
+const providerLabel: Record<string, string> = {
+  groq: 'Groq',
+  openai: 'OpenAI',
+  anthropic: 'Anthropic',
+  local: 'Local',
+  auto: 'Auto'
+};
 
-/**
- * A single dropdown for choosing which LLM answers the next message. Every model
- * across every backend is listed in one menu, grouped by backend (Groq, OpenAI,
- * Anthropic, local). Picking one sets both the backend and the model at once, so
- * different branches of the conversation tree can be answered by different models.
- */
+// Shorten long model names for display (keep the meaningful part).
+function shortModel(model: string): string {
+  return model
+    .replace(/^(llama|gemma|mixtral|mistral|deepseek)-?/i, '')
+    .replace(/-?(instruct|chat|preview|latest|turbo|mini)$/i, '')
+    .replace(/[_-]/g, ' ')
+    .trim() || model;
+}
+
 export function ModelPicker({
   providers,
   selectedProvider,
@@ -29,52 +35,92 @@ export function ModelPicker({
   keyedProviders,
   onSelect
 }: ModelPickerProps) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent) => {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const timer = setTimeout(() => document.addEventListener('click', close), 0);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('click', close);
+    };
+  }, [open]);
+
   if (providers.length === 0) return null;
 
-  const currentValue =
-    selectedProvider && selectedModel ? encode(selectedProvider, selectedModel) : '';
+  const isAuto = !selectedProvider || selectedProvider === 'auto';
+  const currentProviderLabel = isAuto
+    ? 'Auto'
+    : (providerLabel[selectedProvider] ?? selectedProvider);
+  const currentModelLabel = isAuto || !selectedModel ? '' : shortModel(selectedModel);
 
-  // If the current model is not among a provider's suggestions, still show it so
-  // the dropdown can reflect the active choice.
-  const extraForCurrent =
-    selectedProvider &&
-    selectedModel &&
-    !providers
-      .find((p) => p.id === selectedProvider)
-      ?.suggestedModels?.includes(selectedModel);
+  const triggerLabel = currentModelLabel
+    ? `${currentProviderLabel} · ${currentModelLabel}`
+    : currentProviderLabel;
 
-  // A small quiet control at the left of the input frame's bottom row, sized
-  // to match the message text. No chrome of its own; the menu stays grouped by
-  // backend.
   return (
-    <select
-      value={currentValue}
-      onChange={(e) => {
-        const [providerId, model] = e.target.value.split(SEP);
-        onSelect(providerId, model);
-      }}
-      className="bg-transparent text-sm text-gray-400 hover:text-gray-100 focus:outline-none cursor-pointer max-w-[150px] truncate px-1.5 py-0.5 rounded-md hover:bg-gray-800/60 transition-colors"
-      title="Choose which model answers the next message"
-    >
-        {/* Auto picks the model for each message: image messages go to a
-            connected image-capable model, text to the default backend. */}
-        <option value={encode('auto', 'auto')}>Auto</option>
-        {providers.map((p) => {
-          const models = [...(p.suggestedModels ?? [])];
-          if (extraForCurrent && p.id === selectedProvider && !models.includes(selectedModel!)) {
-            models.unshift(selectedModel!);
-          }
-          const usable = p.configured || keyedProviders?.has(p.id);
-          return (
-            <optgroup key={p.id} label={usable ? p.id : `${p.id} (no key)`}>
-              {models.map((m) => (
-                <option key={`${p.id}${SEP}${m}`} value={encode(p.id, m)}>
-                  {p.id} / {m}
-                </option>
-              ))}
-            </optgroup>
-          );
-        })}
-    </select>
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-sm text-gray-400 hover:text-gray-100 hover:bg-gray-800/60 transition-colors"
+      >
+        <span className="truncate max-w-[160px]">{triggerLabel}</span>
+        <ChevronDown size={12} className="flex-shrink-0 opacity-60" />
+      </button>
+
+      {open && (
+        <div className="absolute bottom-full left-0 mb-1 w-60 rounded-xl border border-gray-700/60 bg-gray-950/95 backdrop-blur-xl shadow-2xl overflow-hidden z-50">
+          {/* Auto */}
+          <button
+            type="button"
+            onClick={() => { onSelect('auto', 'auto'); setOpen(false); }}
+            className="w-full px-4 py-2.5 text-left text-sm flex items-center justify-between hover:bg-gray-800/50 transition-colors"
+          >
+            <span className={isAuto ? 'text-white font-medium' : 'text-gray-300'}>Auto</span>
+            {isAuto && <Check size={14} className="text-emerald-400 flex-shrink-0" />}
+          </button>
+
+          <div className="h-px bg-gray-800/60" />
+
+          {providers.map((p) => {
+            const usable = p.configured || keyedProviders?.has(p.id);
+            const label = providerLabel[p.id] ?? p.id;
+            const models = p.suggestedModels ?? [];
+            if (models.length === 0) return null;
+            return (
+              <div key={p.id}>
+                <div className="px-4 pt-2.5 pb-1 text-[10px] font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                  {label}
+                  {!usable && <span className="normal-case font-normal text-gray-600">no key</span>}
+                </div>
+                {models.map((model) => {
+                  const isSelected = selectedProvider === p.id && selectedModel === model;
+                  return (
+                    <button
+                      key={model}
+                      type="button"
+                      disabled={!usable}
+                      onClick={() => { onSelect(p.id, model); setOpen(false); }}
+                      className="w-full px-4 py-1.5 text-left text-sm flex items-center justify-between hover:bg-gray-800/50 transition-colors disabled:opacity-35 disabled:cursor-not-allowed"
+                    >
+                      <span className={isSelected ? 'text-white font-medium' : 'text-gray-300'}>
+                        {model}
+                      </span>
+                      {isSelected && <Check size={13} className="text-emerald-400 flex-shrink-0" />}
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })}
+          <div className="pb-1" />
+        </div>
+      )}
+    </div>
   );
 }

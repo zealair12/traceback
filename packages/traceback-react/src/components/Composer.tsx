@@ -175,11 +175,11 @@ export function Composer({
   return (
     <>
       {micError && (
-        <div className="max-w-2xl mx-auto mb-2 text-xs text-amber-400 bg-amber-400/10 rounded-md px-3 py-1.5">
+        <div className="mb-2 text-xs text-amber-400 bg-amber-400/10 rounded-md px-3 py-1.5">
           {micError}
         </div>
       )}
-      <div className="max-w-2xl mx-auto rounded-2xl bg-inputBg/75 backdrop-blur-md border border-gray-800 focus-within:ring-1 focus-within:ring-gray-600">
+      <div className="w-full rounded-2xl bg-inputBg/75 backdrop-blur-md border border-gray-800 focus-within:ring-1 focus-within:ring-gray-600">
         {pending.length > 0 && (
           <div className="flex gap-2 px-3 pt-3 flex-wrap">
             {pending.map((att, i) => (

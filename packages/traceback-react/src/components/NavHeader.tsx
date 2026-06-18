@@ -1,8 +1,4 @@
-// The single navigation line above the chat: up to the parent, the breadcrumb
-// path so far, and -- only when the current point has sibling branches -- a
-// compact pager through them.
-
-import { ChevronLeft, ChevronRight, CornerLeftUp } from 'lucide-react';
+import { ChevronLeft, ChevronRight, PanelLeft } from 'lucide-react';
 import type { ChatMessage } from '../types';
 import type { SiblingInfo } from '../lib/conversationTree';
 import { stripMarkdown } from '../utils/text';
@@ -13,6 +9,8 @@ interface NavHeaderProps {
   onNavigateToParent: () => void;
   onNavigateToSibling: (offset: number) => void;
   onNavigateToNode: (nodeId: string) => void;
+  sidebarOpen: boolean;
+  onToggleSidebar: () => void;
 }
 
 const iconButton =
@@ -21,40 +19,59 @@ const iconButton =
 export function NavHeader({
   threadPath,
   siblingInfo,
-  onNavigateToParent,
   onNavigateToSibling,
-  onNavigateToNode
+  onNavigateToNode,
+  sidebarOpen,
+  onToggleSidebar
 }: NavHeaderProps) {
+  // Show only user messages as breadcrumb items (Q-A pairs).
+  // Clicking a pair navigates to the assistant's reply so both Q and A are visible.
+  const pairs = threadPath.reduce<{ id: string; content: string; navigateToId: string }[]>(
+    (acc, msg, i) => {
+      if (msg.role === 'user') {
+        const answer = threadPath[i + 1];
+        acc.push({
+          id: msg.id,
+          content: msg.content,
+          navigateToId: answer ? answer.id : msg.id
+        });
+      }
+      return acc;
+    },
+    []
+  );
+
   return (
-    <header className="px-3 py-1.5 border-b border-gray-800 flex-shrink-0 flex items-center gap-2">
+    <header className="px-3 py-1.5 flex-shrink-0 flex items-center gap-2">
       <button
         type="button"
-        disabled={!siblingInfo?.parentId}
-        onClick={onNavigateToParent}
+        onClick={onToggleSidebar}
         className={iconButton}
-        title="Go to the parent message"
-        aria-label="Go to the parent message"
+        title={sidebarOpen ? 'Close sidebar  ⌘B' : 'Open sidebar  ⌘B'}
+        aria-label={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
       >
-        <CornerLeftUp size={14} />
+        <PanelLeft size={15} />
       </button>
 
       <div className="flex-1 min-w-0 overflow-x-auto">
         <div className="flex items-center gap-1 text-[11px] min-w-0">
-          {threadPath.length === 0 ? (
+          {pairs.length === 0 ? (
             <span className="text-gray-600">No messages yet</span>
           ) : (
-            threadPath.map((msg, i) => {
-              const isLast = i === threadPath.length - 1;
-              const clean = stripMarkdown(msg.content);
-              const label = clean.length > 20 ? clean.slice(0, 20) + '…' : clean;
+            pairs.map((pair, i) => {
+              const isLast = i === pairs.length - 1;
+              const clean = stripMarkdown(pair.content);
+              const label = clean.length > 24 ? clean.slice(0, 24) + '…' : clean;
               return (
-                <span key={msg.id} className="flex items-center gap-1 min-w-0">
+                <span key={pair.id} className="flex items-center gap-1 min-w-0">
                   {i > 0 && <span className="text-gray-700 flex-shrink-0">›</span>}
                   <button
                     type="button"
-                    onClick={() => onNavigateToNode(msg.id)}
-                    className={`truncate max-w-[140px] transition-colors ${
-                      isLast ? 'text-gray-200 font-medium' : 'text-gray-500 hover:text-gray-300'
+                    onClick={() => onNavigateToNode(pair.navigateToId)}
+                    className={`truncate max-w-[150px] transition-colors ${
+                      isLast
+                        ? 'text-gray-200 font-medium'
+                        : 'text-gray-500 hover:text-gray-300'
                     }`}
                   >
                     {label}

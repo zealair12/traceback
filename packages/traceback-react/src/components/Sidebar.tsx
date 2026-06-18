@@ -43,7 +43,7 @@ export function Sidebar({
   }, [menuOpen]);
 
   return (
-    <aside className="w-64 h-full bg-sidebar text-gray-100 flex flex-col flex-shrink-0">
+    <aside className="w-full h-full bg-sidebar text-gray-100 flex flex-col flex-shrink-0">
       <div className="px-4 py-4">
         <h1 className="text-lg font-semibold tracking-tight flex items-center gap-2">
           <BrandIcon size={22} className="text-blue-400" />
@@ -58,7 +58,6 @@ export function Sidebar({
         </button>
       </div>
 
-      <div className="h-px bg-gray-800" />
 
       <div className="flex-1 h-0 overflow-y-auto px-2 py-3">
         <p className="text-[10px] text-gray-500 uppercase tracking-widest px-2 mb-2">
@@ -136,7 +135,6 @@ export function Sidebar({
         </div>
       </div>
 
-      <div className="h-px bg-gray-800" />
       {/* Utility actions live behind one gear: less chrome, same reach. */}
       <div className="px-3 py-2.5 relative">
         <button

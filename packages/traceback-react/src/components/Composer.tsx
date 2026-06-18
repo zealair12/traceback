@@ -278,7 +278,7 @@ export function Composer({
           onKeyDown={handleKeyDown}
           onPaste={handlePaste}
           rows={input.includes('\n') ? 3 : 1}
-          placeholder="Highlight anything unclear in a response to explore it…"
+          placeholder="Ask…"
           disabled={sending}
           className="block w-full resize-none bg-transparent text-sm text-gray-100 px-4 pt-3 pb-1 focus:outline-none disabled:opacity-50"
         />

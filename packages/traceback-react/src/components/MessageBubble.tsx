@@ -30,7 +30,7 @@ export function MessageBubble({ message, onBranchFromMessage, onResendMessage, o
   const [copied, setCopied] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const handleMouseUp = useCallback(() => {
+  const showToolbar = useCallback(() => {
     const sel = window.getSelection();
     if (!sel || sel.isCollapsed || sel.rangeCount === 0) return;
     if (!containerRef.current?.contains(sel.anchorNode)) return;
@@ -41,14 +41,28 @@ export function MessageBubble({ message, onBranchFromMessage, onResendMessage, o
     setPopover({ x: rect.left + rect.width / 2, top: rect.top, bottom: rect.bottom, text });
   }, []);
 
+  // Desktop: mouseup fires immediately after selection ends.
+  const handleMouseUp = showToolbar;
+
   useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
     const onSelectionChange = () => {
+      clearTimeout(timer);
       const sel = window.getSelection();
-      if (!sel || sel.isCollapsed) setPopover(null);
+      if (!sel || sel.isCollapsed) {
+        setPopover(null);
+        return;
+      }
+      // On mobile, selectionchange fires continuously while dragging handles.
+      // Debounce so the toolbar appears only once the selection stabilises.
+      timer = setTimeout(showToolbar, 300);
     };
     document.addEventListener('selectionchange', onSelectionChange);
-    return () => document.removeEventListener('selectionchange', onSelectionChange);
-  }, []);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('selectionchange', onSelectionChange);
+    };
+  }, [showToolbar]);
 
   const actAndDismiss = useCallback((action: () => void) => {
     action();

@@ -1,6 +1,6 @@
 import type { SessionResponse } from '@traceback/shared';
 import { useState } from 'react';
-import { FolderDown, KeyRound, Trash2 } from 'lucide-react';
+import { Settings, FolderDown, KeyRound, Trash2 } from 'lucide-react';
 import { BrandIcon } from './BrandIcon';
 
 type Theme = 'dark' | 'blue' | 'light';
@@ -18,6 +18,13 @@ interface SidebarProps {
   onSetTheme: (t: Theme) => void;
 }
 
+const themeStyle: Record<Theme, string> = {
+  dark:  'bg-gray-900 text-gray-100 ring-1 ring-gray-600',
+  blue:  'bg-blue-950 text-blue-300 ring-1 ring-blue-700',
+  light: 'bg-gray-100 text-gray-800 ring-1 ring-gray-300',
+};
+const themeIdle = 'text-gray-500 hover:text-gray-300';
+
 export function Sidebar({
   sessions,
   activeSessionId,
@@ -32,9 +39,11 @@ export function Sidebar({
 }: SidebarProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
+  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <aside className="w-full h-full bg-sidebar text-gray-100 flex flex-col flex-shrink-0">
+    // `relative` so the settings menu can be absolutely positioned inside
+    <aside className="relative w-full h-full bg-sidebar text-gray-100 flex flex-col flex-shrink-0">
       <div className="px-4 py-4">
         <h1 className="flex items-center gap-2">
           <BrandIcon size={22} className="text-blue-400" />
@@ -45,12 +54,13 @@ export function Sidebar({
         <button
           type="button"
           onClick={onNewSession}
-          className="mt-4 w-full rounded-full bg-white text-black text-sm py-2 font-medium hover:bg-gray-200 transition-colors"
+          className="mt-4 w-full rounded-full bg-white text-black text-sm py-2.5 font-medium hover:bg-gray-200 transition-colors"
         >
           + New Chat
         </button>
       </div>
 
+      {/* Session list — larger tap targets, rename/delete always visible on mobile */}
       <div className="flex-1 h-0 overflow-y-auto px-2 py-3">
         <div className="space-y-0.5">
           {sessions.map((session) => {
@@ -60,7 +70,7 @@ export function Sidebar({
             return (
               <div
                 key={session.id}
-                className={`group w-full px-2 py-1.5 rounded-lg text-sm transition-colors ${
+                className={`group w-full px-2 py-2.5 rounded-lg text-sm transition-colors ${
                   isActive ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'
                 }`}
               >
@@ -70,17 +80,10 @@ export function Sidebar({
                       autoFocus
                       value={editValue}
                       onChange={(e) => setEditValue(e.target.value)}
-                      onBlur={() => {
-                        onRenameSession(session.id, editValue);
-                        setEditingId(null);
-                      }}
+                      onBlur={() => { onRenameSession(session.id, editValue); setEditingId(null); }}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          onRenameSession(session.id, editValue);
-                          setEditingId(null);
-                        } else if (e.key === 'Escape') {
-                          setEditingId(null);
-                        }
+                        if (e.key === 'Enter') { onRenameSession(session.id, editValue); setEditingId(null); }
+                        else if (e.key === 'Escape') { setEditingId(null); }
                       }}
                       className="flex-1 min-w-0 bg-gray-900 border border-gray-700 rounded px-2 py-1 text-xs text-gray-100 outline-none"
                     />
@@ -93,13 +96,11 @@ export function Sidebar({
                       {displayName}
                     </button>
                   )}
+                  {/* Always visible on mobile; hidden until hover on desktop */}
                   <button
                     type="button"
-                    onClick={() => {
-                      setEditingId(session.id);
-                      setEditValue(displayName === 'Untitled' ? '' : displayName);
-                    }}
-                    className="text-[11px] text-gray-500 hover:text-gray-200 px-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => { setEditingId(session.id); setEditValue(displayName === 'Untitled' ? '' : displayName); }}
+                    className="text-[11px] text-gray-500 hover:text-gray-200 px-1.5 py-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
                     title="Rename"
                   >
                     ✎
@@ -107,7 +108,7 @@ export function Sidebar({
                   <button
                     type="button"
                     onClick={() => onDeleteSession(session.id)}
-                    className="text-gray-500 hover:text-red-400 px-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="text-gray-500 hover:text-red-400 px-1.5 py-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
                     title="Delete"
                   >
                     <Trash2 size={12} />
@@ -117,47 +118,70 @@ export function Sidebar({
             );
           })}
           {sessions.length === 0 && (
-            <p className="text-xs text-gray-600 px-2 pt-4 text-center">
-              No sessions yet.
-            </p>
+            <p className="text-xs text-gray-600 px-2 pt-4 text-center">No sessions yet.</p>
           )}
         </div>
       </div>
 
-      <div className="px-3 py-3 border-t border-gray-800/50 space-y-2">
-        {/* Theme switcher */}
-        <div className="flex gap-1">
+      {/* Bottom bar: theme + settings gear */}
+      <div className="px-3 py-3 border-t border-gray-800/50 flex items-center gap-2">
+        {/* Coloured theme buttons */}
+        <div className="flex gap-1 flex-1">
           {(['dark', 'blue', 'light'] as const).map((t) => (
             <button
               key={t}
               type="button"
               onClick={() => onSetTheme(t)}
-              className={`flex-1 py-1 rounded text-[11px] capitalize transition-colors ${
-                theme === t ? 'bg-gray-700/80 text-white' : 'text-gray-500 hover:text-gray-300'
+              className={`flex-1 py-1.5 rounded text-[11px] capitalize transition-colors ${
+                theme === t ? themeStyle[t] : themeIdle
               }`}
             >
               {t}
             </button>
           ))}
         </div>
-        {/* Import and API keys */}
-        <div className="flex gap-1">
+
+        {/* Settings gear — opens a simple absolute menu (no portal) */}
+        <div className="relative">
           <button
             type="button"
-            onClick={onOpenImport}
-            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[12px] text-gray-400 hover:text-gray-100 hover:bg-gray-800 transition-colors"
+            onClick={() => setMenuOpen((v) => !v)}
+            className={`h-8 w-8 rounded-lg flex items-center justify-center transition-colors ${
+              menuOpen ? 'text-gray-100 bg-gray-800' : 'text-gray-400 hover:text-gray-100 hover:bg-gray-800'
+            }`}
+            title="Settings"
           >
-            <FolderDown size={13} />
-            <span>Import</span>
+            <Settings size={16} />
           </button>
-          <button
-            type="button"
-            onClick={onOpenKeys}
-            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[12px] text-gray-400 hover:text-gray-100 hover:bg-gray-800 transition-colors"
-          >
-            <KeyRound size={13} />
-            <span>API keys</span>
-          </button>
+
+          {menuOpen && (
+            <>
+              {/* Backdrop — closes menu when clicking anywhere outside */}
+              <div
+                className="fixed inset-0 z-40"
+                onClick={() => setMenuOpen(false)}
+              />
+              {/* Menu — above backdrop, opens upward */}
+              <div className="absolute bottom-full right-0 mb-2 w-44 rounded-xl border border-gray-700/50 bg-gray-900 shadow-xl z-50 py-1.5">
+                <button
+                  type="button"
+                  onClick={() => { setMenuOpen(false); onOpenImport(); }}
+                  className="w-full text-left px-3 py-2.5 text-[13px] text-gray-300 hover:bg-gray-800/80 hover:text-white flex items-center gap-2.5"
+                >
+                  <FolderDown size={15} className="text-gray-500 flex-shrink-0" />
+                  Import chats
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setMenuOpen(false); onOpenKeys(); }}
+                  className="w-full text-left px-3 py-2.5 text-[13px] text-gray-300 hover:bg-gray-800/80 hover:text-white flex items-center gap-2.5"
+                >
+                  <KeyRound size={15} className="text-gray-500 flex-shrink-0" />
+                  API keys
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </aside>

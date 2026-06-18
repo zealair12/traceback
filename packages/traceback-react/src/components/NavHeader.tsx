@@ -18,7 +18,7 @@ interface NavHeaderProps {
 }
 
 const iconButton =
-  'h-7 w-7 rounded-lg flex items-center justify-center text-gray-500 hover:text-gray-100 hover:bg-gray-800 transition-colors disabled:opacity-20 disabled:cursor-default flex-shrink-0';
+  'h-7 w-7 min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 rounded-lg flex items-center justify-center text-gray-500 hover:text-gray-100 hover:bg-gray-800 transition-colors disabled:opacity-20 disabled:cursor-default flex-shrink-0';
 
 export function NavHeader({
   threadPath,

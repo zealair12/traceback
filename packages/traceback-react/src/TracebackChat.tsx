@@ -91,7 +91,17 @@ export function TracebackChat({ apiUrl }: TracebackChatProps) {
     const onMouseMove = (e: MouseEvent) => {
       if (!isTreeDragging.current) return;
       const newWidth = window.innerWidth - e.clientX;
-      setTreePanelWidth(Math.max(200, Math.min(newWidth, window.innerWidth * 0.6)));
+      // Drag past 85% → snap to fullscreen
+      if (newWidth > window.innerWidth * 0.85) {
+        setTreeFullscreen(true);
+        return;
+      }
+      // Drag below 150px → hide the panel
+      if (newWidth < 150) {
+        setTreePanelVisible(false);
+        return;
+      }
+      setTreePanelWidth(Math.max(200, Math.min(newWidth, window.innerWidth * 0.7)));
     };
     const onMouseUp = () => {
       isTreeDragging.current = false;
@@ -104,15 +114,18 @@ export function TracebackChat({ apiUrl }: TracebackChatProps) {
     window.addEventListener('mouseup', onMouseUp);
   }, []);
 
-  // Touch-drag equivalent for the tree divider (mobile resize).
-  const handleTreeDividerTouchStart = useCallback((e: React.TouchEvent) => {
+  // Touch-drag for the tree divider. On mobile the panel is already full-screen
+  // so this only applies on desktop-sized touch screens (e.g. tablets).
+  const handleTreeDividerTouchStart = useCallback((_e: React.TouchEvent) => {
     isTreeDragging.current = true;
     document.body.style.userSelect = 'none';
     const onTouchMove = (ev: TouchEvent) => {
       if (!isTreeDragging.current) return;
       ev.preventDefault();
       const newWidth = window.innerWidth - ev.touches[0].clientX;
-      setTreePanelWidth(Math.max(160, Math.min(newWidth, window.innerWidth * 0.85)));
+      if (newWidth > window.innerWidth * 0.85) { setTreeFullscreen(true); return; }
+      if (newWidth < 150) { setTreePanelVisible(false); return; }
+      setTreePanelWidth(Math.max(200, Math.min(newWidth, window.innerWidth * 0.7)));
     };
     const onTouchEnd = () => {
       isTreeDragging.current = false;
@@ -120,7 +133,6 @@ export function TracebackChat({ apiUrl }: TracebackChatProps) {
       document.removeEventListener('touchmove', onTouchMove);
       document.removeEventListener('touchend', onTouchEnd);
     };
-    // passive: false so preventDefault() can stop scroll during drag
     document.addEventListener('touchmove', onTouchMove, { passive: false });
     document.addEventListener('touchend', onTouchEnd);
   }, []);
@@ -204,30 +216,44 @@ export function TracebackChat({ apiUrl }: TracebackChatProps) {
         />
       )}
 
+      {/* Tree divider — desktop only; hidden on mobile where tree is full-screen */}
       {!treeFullscreen && treePanelVisible && (
-        /* Wider hit area (touch-friendly); thin visual line inside */
         <div
           onMouseDown={handleTreeDividerMouseDown}
           onTouchStart={handleTreeDividerTouchStart}
-          className="flex w-5 flex-shrink-0 cursor-col-resize items-center justify-center group"
+          className="hidden md:flex w-5 flex-shrink-0 cursor-col-resize items-center justify-center group"
         >
           <div className="w-px h-full bg-gray-800 group-hover:bg-emerald-900/50 transition-colors" />
         </div>
       )}
 
       {(treePanelVisible || treeFullscreen) && (
-        <TreePanel
-          nodes={tb.nodes}
-          edges={tb.edges}
-          activeNodeId={tb.activeNodeId}
-          activePathIds={tb.activePathIds}
-          onSelectNode={tb.handleSelectTreeNode}
-          onDeleteSubtree={tb.handleDeleteSubtree}
-          width={treeFullscreen ? window.innerWidth : treePanelWidth}
-          isFullscreen={treeFullscreen}
-          onToggleFullscreen={() => setTreeFullscreen((f) => !f)}
-          theme={theme}
-        />
+        <>
+          {/* Mobile: dim backdrop behind the tree — tap to close */}
+          {treePanelVisible && !treeFullscreen && (
+            <div
+              className="fixed inset-0 z-20 bg-black/40 md:hidden"
+              onClick={() => setTreePanelVisible(false)}
+            />
+          )}
+
+          {/* On mobile: fixed full-screen overlay (z-30, above backdrop).
+              On desktop: normal flex child at treePanelWidth. */}
+          <div className="max-md:fixed max-md:inset-0 max-md:z-30 max-md:flex md:contents">
+            <TreePanel
+              nodes={tb.nodes}
+              edges={tb.edges}
+              activeNodeId={tb.activeNodeId}
+              activePathIds={tb.activePathIds}
+              onSelectNode={tb.handleSelectTreeNode}
+              onDeleteSubtree={tb.handleDeleteSubtree}
+              width={treeFullscreen ? window.innerWidth : window.innerWidth < 768 ? window.innerWidth : treePanelWidth}
+              isFullscreen={treeFullscreen}
+              onToggleFullscreen={() => setTreeFullscreen((f) => !f)}
+              theme={theme}
+            />
+          </div>
+        </>
       )}
 
       {showKeys && (

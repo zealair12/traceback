@@ -114,6 +114,16 @@ export function createApp() {
     }
   });
 
+  // Delete a session and all its messages (cascade via Prisma schema).
+  app.delete('/sessions/:id', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      await prisma.session.delete({ where: { id: req.params.id } });
+      res.json({ deleted: true });
+    } catch (error: unknown) {
+      next(error);
+    }
+  });
+
   // Rename a session.
   app.patch('/sessions/:id', async (req: Request, res: Response, next: NextFunction) => {
     try {

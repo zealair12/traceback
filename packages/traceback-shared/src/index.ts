@@ -149,6 +149,10 @@ export class TracebackClient {
     return data;
   }
 
+  async deleteSession(sessionId: string): Promise<void> {
+    await this.api.delete(`/sessions/${sessionId}`);
+  }
+
   async deleteSubtree(messageId: string): Promise<void> {
     await this.api.delete(`/messages/${messageId}`);
   }

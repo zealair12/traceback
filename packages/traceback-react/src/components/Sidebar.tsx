@@ -1,6 +1,6 @@
 import type { SessionResponse } from '@traceback/shared';
 import { useEffect, useRef, useState } from 'react';
-import { Settings, FolderDown, KeyRound } from 'lucide-react';
+import { Settings, FolderDown, KeyRound, Trash2 } from 'lucide-react';
 import { BrandIcon } from './BrandIcon';
 
 interface SidebarProps {
@@ -9,6 +9,7 @@ interface SidebarProps {
   onNewSession: () => void;
   onSelectSession: (sessionId: string) => void;
   onRenameSession: (sessionId: string, name: string) => void;
+  onDeleteSession: (sessionId: string) => void;
   onOpenKeys: () => void;
   onOpenImport: () => void;
 }
@@ -19,6 +20,7 @@ export function Sidebar({
   onNewSession,
   onSelectSession,
   onRenameSession,
+  onDeleteSession,
   onOpenKeys,
   onOpenImport
 }: SidebarProps) {
@@ -70,7 +72,7 @@ export function Sidebar({
             return (
               <div
                 key={session.id}
-                className={`w-full px-2 py-1.5 rounded-lg text-sm transition-colors ${
+                className={`group w-full px-2 py-1.5 rounded-lg text-sm transition-colors ${
                   isActive ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'
                 }`}
               >
@@ -109,10 +111,18 @@ export function Sidebar({
                       setEditingId(session.id);
                       setEditValue(displayName === 'Untitled' ? '' : displayName);
                     }}
-                    className="text-[11px] text-gray-500 hover:text-gray-200 px-1"
+                    className="text-[11px] text-gray-500 hover:text-gray-200 px-1 opacity-0 group-hover:opacity-100 transition-opacity"
                     title="Rename"
                   >
                     ✎
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onDeleteSession(session.id)}
+                    className="text-gray-500 hover:text-red-400 px-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Delete"
+                  >
+                    <Trash2 size={12} />
                   </button>
                 </div>
               </div>

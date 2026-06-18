@@ -69,13 +69,20 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
       .catch((err) => console.error('Failed to load providers:', err));
   }, [client]);
 
-  // Load the session list, backfilling names for old unnamed sessions.
+  // Load the session list. Auto-creates one if the DB is empty so new users
+  // always land in an active chat without a manual "New Chat" step.
   useEffect(() => {
     client
       .fetchSessions()
       .then(async (s) => {
+        if (s.length === 0) {
+          const newSession = await client.createSession();
+          setSessions([newSession]);
+          setActiveSessionId(newSession.id);
+          return;
+        }
         setSessions(s);
-        if (s.length > 0) setActiveSessionId(s[0].id);
+        setActiveSessionId(s[0].id);
 
         const unnamed = s.filter((x) => isUntitledSessionName(x.name));
         if (unnamed.length === 0) return;
@@ -223,6 +230,28 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
       }
     },
     [client]
+  );
+
+  const handleDeleteSession = useCallback(
+    async (sessionId: string) => {
+      try {
+        await client.deleteSession(sessionId);
+        const remaining = sessions.filter((s) => s.id !== sessionId);
+        if (remaining.length === 0) {
+          const newSession = await client.createSession();
+          setSessions([newSession]);
+          setActiveSessionId(newSession.id);
+          setAllMessages([]);
+          setActiveNodeId(null);
+        } else {
+          setSessions(remaining);
+          if (activeSessionId === sessionId) setActiveSessionId(remaining[0].id);
+        }
+      } catch (err: any) {
+        setError(err?.response?.data?.error ?? err?.message ?? 'Delete failed');
+      }
+    },
+    [client, sessions, activeSessionId]
   );
 
   // Shared core of "send a message": route it, send it, place the reply.
@@ -383,6 +412,7 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
     handleNewSession,
     handleSelectSession,
     handleRenameSession,
+    handleDeleteSession,
     handleSendMessage,
     handleBranchFromMessage,
     handleSelectTreeNode,

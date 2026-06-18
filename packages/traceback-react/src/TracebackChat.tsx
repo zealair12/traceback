@@ -60,6 +60,7 @@ export function TracebackChat({ apiUrl }: TracebackChatProps) {
           onNewSession={tb.handleNewSession}
           onSelectSession={tb.handleSelectSession}
           onRenameSession={tb.handleRenameSession}
+          onDeleteSession={tb.handleDeleteSession}
           onOpenKeys={() => setShowKeys(true)}
           onOpenImport={() => setShowImport(true)}
         />

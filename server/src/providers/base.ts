@@ -73,8 +73,30 @@ export abstract class BaseChatProvider implements ChatProvider {
     const timeoutMs = options?.timeoutMs ?? this.timeoutMs;
     const model = options?.model ?? this.defaultModel;
 
+    // Strip attachments the chosen model can't process. Rather than letting an
+    // unsupported attachment cause a malformed API request, we remove it and
+    // leave a plain-text note so the model (and user) know what was there.
+    const canSeeImages = this.visionModels.includes(model);
+    const canReadFiles = this.documentModels.includes(model);
+    const preparedMessages: LlmMessage[] = messages.map((m) => {
+      const hasImages = (m.images?.length ?? 0) > 0;
+      const hasFiles = (m.files?.length ?? 0) > 0;
+      if (!hasImages && !hasFiles) return m;
+      const notes: string[] = [];
+      if (hasImages && !canSeeImages) notes.push('[Image attached — switch to Auto, gpt-4o, or claude to analyse it]');
+      if (hasFiles && !canReadFiles) notes.push('[Document attached — switch to gpt-4o or claude to read it]');
+      return {
+        role: m.role,
+        content: notes.length > 0
+          ? (m.content ? m.content + '\n' : '') + notes.join('\n')
+          : m.content,
+        images: canSeeImages ? m.images : undefined,
+        files: canReadFiles ? m.files : undefined,
+      };
+    });
+
     return callWithRetry<string>(
-      () => this.performRequest({ messages, model, apiKey, timeoutMs, options }),
+      () => this.performRequest({ messages: preparedMessages, model, apiKey, timeoutMs, options }),
       { timeoutMs, label: this.id }
     );
   }

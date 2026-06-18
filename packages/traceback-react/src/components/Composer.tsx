@@ -50,6 +50,20 @@ export function Composer({
   const [pending, setPending] = useState<ImageAttachment[]>([]);
   const [micState, setMicState] = useState<'idle' | 'recording' | 'transcribing'>('idle');
   const [micError, setMicError] = useState<string | null>(null);
+
+  // Warn when the selected model can't process the pending attachments.
+  const attachmentWarning = (() => {
+    if (pending.length === 0 || !selectedProvider || selectedProvider === 'auto') return null;
+    const p = providers.find((x) => x.id === selectedProvider);
+    if (!p) return null;
+    const hasImages = pending.some((a) => a.type === 'image');
+    const hasFiles = pending.some((a) => a.type === 'file');
+    const canImage = selectedModel ? (p.visionModels ?? []).includes(selectedModel) : false;
+    const canFile = selectedModel ? (p.documentModels ?? []).includes(selectedModel) : false;
+    if (hasImages && !canImage) return `${selectedModel ?? p.id} can't analyse images. Switch to Auto, gpt-4o, or claude.`;
+    if (hasFiles && !canFile) return `${selectedModel ?? p.id} can't read documents. Switch to gpt-4o or claude.`;
+    return null;
+  })();
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
   const recognitionRef = useRef<any>(null);
@@ -218,6 +232,11 @@ export function Composer({
 
   return (
     <>
+      {attachmentWarning && (
+        <div className="mb-2 text-xs text-amber-400 bg-amber-400/10 rounded-md px-3 py-1.5">
+          {attachmentWarning}
+        </div>
+      )}
       {micError && (
         <div className="mb-2 text-xs text-amber-400 bg-amber-400/10 rounded-md px-3 py-1.5">
           {micError}

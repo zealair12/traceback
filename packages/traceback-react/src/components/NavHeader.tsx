@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, PanelLeft } from 'lucide-react';
+import { ChevronLeft, ChevronRight, PanelLeft, Ghost } from 'lucide-react';
 import type { ChatMessage } from '../types';
 import type { SiblingInfo } from '../lib/conversationTree';
 import { stripMarkdown } from '../utils/text';
@@ -11,6 +11,8 @@ interface NavHeaderProps {
   onNavigateToNode: (nodeId: string) => void;
   sidebarOpen: boolean;
   onToggleSidebar: () => void;
+  incognito: boolean;
+  onToggleIncognito: () => void;
 }
 
 const iconButton =
@@ -22,7 +24,9 @@ export function NavHeader({
   onNavigateToSibling,
   onNavigateToNode,
   sidebarOpen,
-  onToggleSidebar
+  onToggleSidebar,
+  incognito,
+  onToggleIncognito
 }: NavHeaderProps) {
   // Show only user messages as breadcrumb items (Q-A pairs).
   // Clicking a pair navigates to the assistant's reply so both Q and A are visible.
@@ -110,6 +114,16 @@ export function NavHeader({
           </button>
         </div>
       )}
+
+      <button
+        type="button"
+        onClick={onToggleIncognito}
+        className={`${iconButton} ml-auto ${incognito ? 'text-violet-400 bg-violet-400/10' : ''}`}
+        title={incognito ? 'Incognito on — chats not saved' : 'Incognito off'}
+        aria-label="Toggle incognito mode"
+      >
+        <Ghost size={15} />
+      </button>
     </header>
   );
 }

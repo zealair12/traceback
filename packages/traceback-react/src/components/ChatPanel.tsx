@@ -27,6 +27,8 @@ interface ChatPanelProps {
   onNavigateToNode: (nodeId: string) => void;
   sidebarOpen: boolean;
   onToggleSidebar: () => void;
+  incognito: boolean;
+  onToggleIncognito: () => void;
   // Model picker.
   providers: ProviderInfo[];
   selectedProvider: string | null;
@@ -51,6 +53,8 @@ export function ChatPanel({
   onNavigateToNode,
   sidebarOpen,
   onToggleSidebar,
+  incognito,
+  onToggleIncognito,
   providers,
   selectedProvider,
   selectedModel,
@@ -76,6 +80,8 @@ export function ChatPanel({
         onNavigateToNode={onNavigateToNode}
         sidebarOpen={sidebarOpen}
         onToggleSidebar={onToggleSidebar}
+        incognito={incognito}
+        onToggleIncognito={onToggleIncognito}
       />
 
       {/* Messages area */}

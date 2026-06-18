@@ -52,7 +52,9 @@ export function Composer({
   const [micError, setMicError] = useState<string | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
-  const recorderRef = useRef<MediaRecorder | null>(null);
+  const recognitionRef = useRef<any>(null);
+  const finalTranscriptRef = useRef('');
+  const baseInputRef = useRef('');
 
   // Branching pre-fills the input with the chosen passage and focuses it.
   useEffect(() => {
@@ -76,34 +78,62 @@ export function Composer({
     }
   };
 
-  // Mic: first click starts recording, second click stops and transcribes.
-  const toggleRecording = async () => {
-    if (micState === 'transcribing') return;
+  // Mic: real-time speech-to-text via the Web Speech API (no audio upload needed).
+  const toggleRecording = () => {
     if (micState === 'recording') {
-      recorderRef.current?.stop();
+      recognitionRef.current?.stop();
       return;
     }
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
-      const chunks: Blob[] = [];
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunks.push(e.data);
-      };
-      recorder.onstop = () => {
-        stream.getTracks().forEach((t) => t.stop());
-        const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
-        const reader = new FileReader();
-        reader.onload = () => transcribeAndInsert(String(reader.result ?? ''), blob.type);
-        reader.readAsDataURL(blob);
-      };
-      recorderRef.current = recorder;
-      recorder.start();
-      setMicState('recording');
-      setMicError(null);
-    } catch (err: any) {
-      setMicError(err?.message ?? 'Microphone unavailable.');
+
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) {
+      setMicError('Speech recognition not supported. Try Chrome or Edge.');
+      return;
     }
+
+    finalTranscriptRef.current = '';
+    baseInputRef.current = input;
+
+    const rec = new SR();
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.lang = 'en-US';
+
+    rec.onresult = (e: any) => {
+      let finals = '';
+      let interim = '';
+      for (let i = 0; i < e.results.length; i++) {
+        if (e.results[i].isFinal) {
+          finals += e.results[i][0].transcript;
+        } else {
+          interim += e.results[i][0].transcript;
+        }
+      }
+      finalTranscriptRef.current = finals;
+      const base = baseInputRef.current;
+      const speech = finals + interim;
+      setInput(base + (base.trim() && speech ? ' ' : '') + speech);
+    };
+
+    rec.onerror = (e: any) => {
+      setMicError(e.error === 'not-allowed' ? 'Microphone access denied.' : `Recognition error: ${e.error}`);
+      setMicState('idle');
+    };
+
+    rec.onend = () => {
+      const base = baseInputRef.current;
+      const finals = finalTranscriptRef.current.trim();
+      if (finals) {
+        setInput(base + (base.trim() ? ' ' : '') + finals);
+      }
+      setMicState('idle');
+      inputRef.current?.focus();
+    };
+
+    recognitionRef.current = rec;
+    rec.start();
+    setMicState('recording');
+    setMicError(null);
   };
 
   const addFiles = (files: Iterable<File>) => {
@@ -255,17 +285,9 @@ export function Composer({
               className={`h-7 w-7 rounded-full flex items-center justify-center transition-colors disabled:opacity-30 ${
                 micState === 'recording'
                   ? 'text-red-400 bg-red-400/10 animate-pulse'
-                  : micState === 'transcribing'
-                    ? 'text-emerald-400 animate-pulse'
-                    : 'text-gray-400 hover:text-gray-100 hover:bg-gray-800'
+                  : 'text-gray-400 hover:text-gray-100 hover:bg-gray-800'
               }`}
-              title={
-                micState === 'recording'
-                  ? 'Stop recording'
-                  : micState === 'transcribing'
-                    ? 'Transcribing...'
-                    : 'Dictate a message'
-              }
+              title={micState === 'recording' ? 'Stop' : 'Dictate'}
             >
               <Mic size={15} />
             </button>

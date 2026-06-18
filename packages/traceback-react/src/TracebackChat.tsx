@@ -21,6 +21,8 @@ export function TracebackChat({ apiUrl }: TracebackChatProps) {
   // Sidebar open/width state — width is remembered across collapses.
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sidebarWidth, setSidebarWidth] = useState(256);
+  const [sidebarResizing, setSidebarResizing] = useState(false);
+  const [incognito, setIncognito] = useState(false);
 
   const isTreeDragging = useRef(false);
   const isSidebarDragging = useRef(false);
@@ -39,6 +41,7 @@ export function TracebackChat({ apiUrl }: TracebackChatProps) {
 
   const handleSidebarDividerMouseDown = useCallback(() => {
     isSidebarDragging.current = true;
+    setSidebarResizing(true);
     document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
     const onMouseMove = (e: MouseEvent) => {
@@ -47,6 +50,7 @@ export function TracebackChat({ apiUrl }: TracebackChatProps) {
     };
     const onMouseUp = () => {
       isSidebarDragging.current = false;
+      setSidebarResizing(false);
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
       window.removeEventListener('mousemove', onMouseMove);
@@ -83,7 +87,7 @@ export function TracebackChat({ apiUrl }: TracebackChatProps) {
         <>
           <div
             style={{ width: sidebarOpen ? sidebarWidth : 0 }}
-            className="overflow-hidden flex-shrink-0 transition-[width] duration-200"
+            className={`overflow-hidden flex-shrink-0 ${!sidebarResizing ? 'transition-[width] duration-200' : ''}`}
           >
             <div style={{ width: sidebarWidth }} className="h-full">
               <Sidebar
@@ -99,12 +103,10 @@ export function TracebackChat({ apiUrl }: TracebackChatProps) {
             </div>
           </div>
 
-          {sidebarOpen && (
-            <div
-              onMouseDown={handleSidebarDividerMouseDown}
-              className="w-1 cursor-col-resize bg-gray-800 hover:bg-emerald-900/50 transition-colors flex-shrink-0"
-            />
-          )}
+          <div
+            onMouseDown={handleSidebarDividerMouseDown}
+            className="w-1 cursor-col-resize bg-gray-800 hover:bg-emerald-900/50 transition-colors flex-shrink-0"
+          />
         </>
       )}
 
@@ -125,6 +127,8 @@ export function TracebackChat({ apiUrl }: TracebackChatProps) {
           onNavigateToNode={tb.handleNavigateToNode}
           sidebarOpen={sidebarOpen}
           onToggleSidebar={() => setSidebarOpen((v) => !v)}
+          incognito={incognito}
+          onToggleIncognito={() => setIncognito((v) => !v)}
           providers={tb.availableProviders}
           selectedProvider={tb.selectedProvider}
           selectedModel={tb.selectedModel}
@@ -136,7 +140,7 @@ export function TracebackChat({ apiUrl }: TracebackChatProps) {
       {!treeFullscreen && (
         <div
           onMouseDown={handleTreeDividerMouseDown}
-          className="w-1.5 cursor-col-resize bg-gray-800 hover:bg-emerald-900/50 transition-colors flex-shrink-0"
+          className="w-1 cursor-col-resize bg-gray-800 hover:bg-emerald-900/50 transition-colors flex-shrink-0"
         />
       )}
 

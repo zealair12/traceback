@@ -60,9 +60,6 @@ export function Sidebar({
 
 
       <div className="flex-1 h-0 overflow-y-auto px-2 py-3">
-        <p className="text-[10px] text-gray-500 uppercase tracking-widest px-2 mb-2">
-          Chat history
-        </p>
         <div className="space-y-0.5">
           {sessions.map((session) => {
             const isActive = session.id === activeSessionId;

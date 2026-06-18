@@ -74,7 +74,7 @@ export function MessageBubble({ message, onBranchFromMessage, onResendMessage, o
             <button
               type="button"
               onClick={() => { setEditValue(message.content); setIsEditing(true); }}
-              className="h-6 w-6 rounded flex items-center justify-center text-gray-500 hover:text-gray-200 hover:bg-gray-800 transition-colors"
+              className="h-6 w-6 rounded flex items-center justify-center text-gray-400 hover:text-gray-100 hover:bg-gray-700 transition-colors"
               title="Edit"
             >
               <Pencil size={12} />
@@ -82,7 +82,7 @@ export function MessageBubble({ message, onBranchFromMessage, onResendMessage, o
             <button
               type="button"
               onClick={() => onResendMessage(message.id)}
-              className="h-6 w-6 rounded flex items-center justify-center text-gray-500 hover:text-gray-200 hover:bg-gray-800 transition-colors"
+              className="h-6 w-6 rounded flex items-center justify-center text-gray-400 hover:text-gray-100 hover:bg-gray-700 transition-colors"
               title="Resend"
             >
               <RotateCcw size={12} />
@@ -169,7 +169,7 @@ export function MessageBubble({ message, onBranchFromMessage, onResendMessage, o
   const placeAbove = popover ? popover.top > 70 : true;
 
   const toolbarButton =
-    'px-2.5 py-1 text-[12px] text-gray-200 hover:bg-gray-700/70 transition-colors flex items-center gap-1.5 whitespace-nowrap';
+    'px-2.5 py-1 text-[12px] text-gray-100 hover:bg-gray-700/60 transition-colors flex items-center gap-1.5 whitespace-nowrap';
 
   return (
     <div className="group flex items-start gap-3">
@@ -199,15 +199,15 @@ export function MessageBubble({ message, onBranchFromMessage, onResendMessage, o
         <button
           type="button"
           onClick={() => handleCopy(message.content)}
-          className="h-6 w-6 rounded flex items-center justify-center text-gray-500 hover:text-gray-200 hover:bg-gray-800 transition-colors"
+          className="h-6 w-6 rounded flex items-center justify-center text-gray-400 hover:text-gray-100 hover:bg-gray-700 transition-colors"
           title="Copy"
         >
-          {copied ? <Check size={12} className="text-gray-300" /> : <Copy size={12} />}
+          {copied ? <Check size={12} className="text-gray-200" /> : <Copy size={12} />}
         </button>
         <button
           type="button"
           onClick={() => onBranchFromMessage(message.id, '', 'ask')}
-          className="text-[11px] text-gray-500 hover:text-gray-200 border border-gray-800 hover:border-gray-600 rounded-md px-2 py-0.5 transition-colors"
+          className="text-[11px] text-gray-400 hover:text-gray-100 border border-gray-600 hover:border-gray-400 rounded-md px-2 py-0.5 transition-colors"
           title="Branch the conversation from this reply"
         >
           ⎇
@@ -217,12 +217,11 @@ export function MessageBubble({ message, onBranchFromMessage, onResendMessage, o
       {/* Floating selection toolbar */}
       {popover && (
         <div
-          className="fixed z-[100] flex rounded-lg shadow-2xl border border-gray-700/80 backdrop-blur-xl overflow-hidden"
+          className="fixed z-[100] flex rounded-lg shadow-2xl border border-gray-600/60 bg-gray-700 overflow-hidden"
           style={{
             top: placeAbove ? popover.top - 8 : popover.bottom + 8,
             left: popover.x,
             transform: placeAbove ? 'translate(-50%, -100%)' : 'translate(-50%, 0)',
-            background: 'rgba(17,17,27,0.96)'
           }}
           onMouseDown={(e) => e.preventDefault()}
         >
@@ -234,7 +233,7 @@ export function MessageBubble({ message, onBranchFromMessage, onResendMessage, o
             <span>↳</span>
             <span>Explain</span>
           </button>
-          <div className="w-px bg-gray-700/60" />
+          <div className="w-px bg-gray-600/50" />
           <button
             type="button"
             className={toolbarButton}
@@ -243,7 +242,7 @@ export function MessageBubble({ message, onBranchFromMessage, onResendMessage, o
             <span>?</span>
             <span>Ask</span>
           </button>
-          <div className="w-px bg-gray-700/60" />
+          <div className="w-px bg-gray-600/50" />
           <button
             type="button"
             className={toolbarButton}

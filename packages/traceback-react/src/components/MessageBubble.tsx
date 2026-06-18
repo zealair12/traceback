@@ -6,15 +6,16 @@ import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
 import type { ChatMessage } from '../types';
 import { normalizeLatex } from '../utils/text';
-import { FileText } from 'lucide-react';
+import { FileText, Pencil, RotateCcw, Copy, Check } from 'lucide-react';
 import { BrandIcon } from './BrandIcon';
 
 interface MessageBubbleProps {
   message: ChatMessage;
   onBranchFromMessage: (messageId: string, selectedText: string, action: 'dig' | 'ask') => void;
+  onResendMessage: (messageId: string) => void;
+  onEditMessage: (messageId: string, newContent: string) => void;
 }
 
-// Where the selection toolbar should appear, in screen coordinates.
 interface PopoverState {
   x: number;
   top: number;
@@ -22,27 +23,17 @@ interface PopoverState {
   text: string;
 }
 
-/**
- * Renders a single chat message with markdown formatting.
- *
- * Branching from an assistant reply works two ways, both designed to feel like
- * familiar editor behavior (no right-click needed):
- * - Select any text in the reply and a small floating toolbar appears at the
- *   selection: dig deeper, ask about it, or copy it.
- * - Hover the reply and a subtle "Branch" button appears, to fork the
- *   conversation from this point without picking a specific passage.
- */
-export function MessageBubble({ message, onBranchFromMessage }: MessageBubbleProps) {
+export function MessageBubble({ message, onBranchFromMessage, onResendMessage, onEditMessage }: MessageBubbleProps) {
   const [popover, setPopover] = useState<PopoverState | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState('');
+  const [copied, setCopied] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Show the toolbar when the user finishes selecting text inside this bubble.
   const handleMouseUp = useCallback(() => {
     const sel = window.getSelection();
     if (!sel || sel.isCollapsed || sel.rangeCount === 0) return;
     if (!containerRef.current?.contains(sel.anchorNode)) return;
-    // Read the text from the range rather than the selection: it is identical
-    // for a normal click-drag, but keeps working when the window lacks focus.
     const range = sel.getRangeAt(0);
     const text = range.toString().trim();
     if (!text) return;
@@ -50,7 +41,6 @@ export function MessageBubble({ message, onBranchFromMessage }: MessageBubblePro
     setPopover({ x: rect.left + rect.width / 2, top: rect.top, bottom: rect.bottom, text });
   }, []);
 
-  // Hide the toolbar whenever the selection goes away (click elsewhere, Escape).
   useEffect(() => {
     const onSelectionChange = () => {
       const sel = window.getSelection();
@@ -66,11 +56,40 @@ export function MessageBubble({ message, onBranchFromMessage }: MessageBubblePro
     setPopover(null);
   }, []);
 
+  const handleCopy = useCallback((text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }, []);
+
   const isUser = message.role === 'user';
 
+  // ── User message ──────────────────────────────────────────────
   if (isUser) {
     return (
-      <div className="flex justify-end">
+      <div className="group flex justify-end items-start gap-2">
+        {/* Edit / resend — shown on hover, hidden while editing */}
+        {!isEditing && (
+          <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 mt-2 flex-shrink-0">
+            <button
+              type="button"
+              onClick={() => { setEditValue(message.content); setIsEditing(true); }}
+              className="h-6 w-6 rounded flex items-center justify-center text-gray-500 hover:text-gray-200 hover:bg-gray-800 transition-colors"
+              title="Edit"
+            >
+              <Pencil size={12} />
+            </button>
+            <button
+              type="button"
+              onClick={() => onResendMessage(message.id)}
+              className="h-6 w-6 rounded flex items-center justify-center text-gray-500 hover:text-gray-200 hover:bg-gray-800 transition-colors"
+              title="Resend"
+            >
+              <RotateCcw size={12} />
+            </button>
+          </div>
+        )}
+
         <div className="max-w-xl rounded-3xl bg-bubbleUser px-4 py-3 text-sm text-white whitespace-pre-wrap">
           {message.attachments && message.attachments.length > 0 && (
             <div className="flex gap-2 flex-wrap mb-2">
@@ -94,14 +113,59 @@ export function MessageBubble({ message, onBranchFromMessage }: MessageBubblePro
               )}
             </div>
           )}
-          {message.content}
+
+          {isEditing ? (
+            <div>
+              <textarea
+                autoFocus
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (editValue.trim()) {
+                      onEditMessage(message.id, editValue.trim());
+                      setIsEditing(false);
+                    }
+                  } else if (e.key === 'Escape') {
+                    setIsEditing(false);
+                  }
+                }}
+                className="w-full bg-transparent resize-none outline-none text-sm leading-relaxed"
+                rows={Math.max(2, editValue.split('\n').length)}
+              />
+              <div className="flex gap-2 mt-2.5">
+                <button
+                  type="button"
+                  disabled={!editValue.trim()}
+                  onClick={() => {
+                    if (editValue.trim()) {
+                      onEditMessage(message.id, editValue.trim());
+                      setIsEditing(false);
+                    }
+                  }}
+                  className="text-[11px] px-2.5 py-1 rounded-full bg-white text-black hover:bg-gray-200 disabled:opacity-40"
+                >
+                  Send ↑
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(false)}
+                  className="text-[11px] px-2.5 py-1 rounded-full border border-white/20 text-gray-300 hover:bg-white/10"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            message.content
+          )}
         </div>
       </div>
     );
   }
 
-  // Place the toolbar above the selection, or below it when too close to the
-  // top of the window to fit.
+  // ── Assistant message ─────────────────────────────────────────
   const placeAbove = popover ? popover.top > 70 : true;
 
   const toolbarButton =
@@ -123,8 +187,6 @@ export function MessageBubble({ message, onBranchFromMessage }: MessageBubblePro
         >
           {normalizeLatex(message.content)}
         </ReactMarkdown>
-        {/* Small "answered by" badge so you can see which model produced
-            this reply -- useful when branches use different models. */}
         {message.model && (
           <div className="mt-1.5 text-[10px] text-gray-600">
             {message.provider ? `${message.provider} · ${message.model}` : message.model}
@@ -132,18 +194,27 @@ export function MessageBubble({ message, onBranchFromMessage }: MessageBubblePro
         )}
       </div>
 
-      {/* Fork the conversation from this reply without selecting text.
-          Appears when hovering the message. */}
-      <button
-        type="button"
-        onClick={() => onBranchFromMessage(message.id, '', 'ask')}
-        className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-1 text-[11px] text-gray-500 hover:text-emerald-400 border border-gray-800 hover:border-emerald-700 rounded-md px-2 py-0.5"
-        title="Branch the conversation from this reply"
-      >
-        ⎇ Branch
-      </button>
+      {/* Copy + Branch actions */}
+      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 mt-1 flex-shrink-0">
+        <button
+          type="button"
+          onClick={() => handleCopy(message.content)}
+          className="h-6 w-6 rounded flex items-center justify-center text-gray-500 hover:text-gray-200 hover:bg-gray-800 transition-colors"
+          title="Copy"
+        >
+          {copied ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
+        </button>
+        <button
+          type="button"
+          onClick={() => onBranchFromMessage(message.id, '', 'ask')}
+          className="text-[11px] text-gray-500 hover:text-gray-200 border border-gray-800 hover:border-gray-600 rounded-md px-2 py-0.5 transition-colors"
+          title="Branch the conversation from this reply"
+        >
+          ⎇
+        </button>
+      </div>
 
-      {/* Floating toolbar at the text selection. */}
+      {/* Floating selection toolbar */}
       {popover && (
         <div
           className="fixed z-[100] flex rounded-lg shadow-2xl border border-gray-700/80 backdrop-blur-xl overflow-hidden"
@@ -153,7 +224,7 @@ export function MessageBubble({ message, onBranchFromMessage }: MessageBubblePro
             transform: placeAbove ? 'translate(-50%, -100%)' : 'translate(-50%, 0)',
             background: 'rgba(17,17,27,0.96)'
           }}
-          onMouseDown={(e) => e.preventDefault() /* keep the selection alive while clicking */}
+          onMouseDown={(e) => e.preventDefault()}
         >
           <button
             type="button"

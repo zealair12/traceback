@@ -134,6 +134,8 @@ export function TracebackChat({ apiUrl }: TracebackChatProps) {
           onSendMessage={tb.handleSendMessage}
           onTranscribeAudio={tb.handleTranscribeAudio}
           onBranchFromMessage={tb.handleBranchFromMessage}
+          onResendMessage={tb.handleResendMessage}
+          onEditMessage={tb.handleEditMessage}
           branchingFromMessageId={tb.branchingFromMessageId}
           branchingFromPreview={tb.branchingFromPreview}
           branchingFromText={tb.branchingFromText}
@@ -172,6 +174,7 @@ export function TracebackChat({ apiUrl }: TracebackChatProps) {
         width={treeFullscreen ? window.innerWidth : treePanelWidth}
         isFullscreen={treeFullscreen}
         onToggleFullscreen={() => setTreeFullscreen((f) => !f)}
+        theme={theme}
       />
 
       {showKeys && (

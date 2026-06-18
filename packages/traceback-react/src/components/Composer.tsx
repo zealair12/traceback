@@ -136,6 +136,24 @@ export function Composer({
     setMicError(null);
   };
 
+  // Compress images before attaching — keeps base64 payloads small enough for the server.
+  const compressImage = (file: File): Promise<string> =>
+    new Promise((resolve) => {
+      const MAX = 1120;
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
+        URL.revokeObjectURL(url);
+        resolve(canvas.toDataURL('image/jpeg', 0.85));
+      };
+      img.src = url;
+    });
+
   const addFiles = (files: Iterable<File>) => {
     for (const file of files) {
       if (file.type.startsWith('audio/')) {
@@ -164,15 +182,11 @@ export function Composer({
         continue;
       }
       if (!file.type.startsWith('image/')) continue;
-      const reader = new FileReader();
-      reader.onload = () => {
-        const dataUrl = String(reader.result ?? '');
-        if (!dataUrl.startsWith('data:image/')) return;
+      compressImage(file).then((dataUrl) => {
         setPending((prev) =>
-          prev.length >= 4 ? prev : [...prev, { type: 'image', mediaType: file.type, dataUrl }]
+          prev.length >= 4 ? prev : [...prev, { type: 'image', mediaType: 'image/jpeg', dataUrl }]
         );
-      };
-      reader.readAsDataURL(file);
+      });
     }
   };
 

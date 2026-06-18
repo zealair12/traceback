@@ -1,7 +1,3 @@
-// The middle column: navigation line on top, the conversation thread, and the
-// composer at the bottom. Each piece is its own component; this file only
-// arranges them.
-
 import { useEffect, useRef } from 'react';
 import type { ChatMessage } from '../types';
 import type { ProviderInfo, ImageAttachment } from '@traceback/shared';
@@ -16,6 +12,8 @@ interface ChatPanelProps {
   onSendMessage: (content: string, attachments?: ImageAttachment[]) => void;
   onTranscribeAudio: (audioDataUrl: string, mediaType: string) => Promise<string>;
   onBranchFromMessage: (messageId: string, selectedText: string, action: 'dig' | 'ask') => void;
+  onResendMessage: (messageId: string) => void;
+  onEditMessage: (messageId: string, newContent: string) => void;
   branchingFromMessageId: string | null;
   branchingFromPreview: string | null;
   branchingFromText: string | null;
@@ -29,7 +27,6 @@ interface ChatPanelProps {
   onToggleSidebar: () => void;
   incognito: boolean;
   onToggleIncognito: () => void;
-  // Model picker.
   providers: ProviderInfo[];
   selectedProvider: string | null;
   selectedModel: string | null;
@@ -42,6 +39,8 @@ export function ChatPanel({
   onSendMessage,
   onTranscribeAudio,
   onBranchFromMessage,
+  onResendMessage,
+  onEditMessage,
   branchingFromMessageId,
   branchingFromPreview,
   branchingFromText,
@@ -63,12 +62,28 @@ export function ChatPanel({
 }: ChatPanelProps) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
-  // Auto-scroll to bottom when new messages arrive.
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [threadPath.length]);
+
+  const isEmpty = threadPath.length === 0 && !sending;
+
+  const composer = (
+    <Composer
+      sending={sending}
+      branchingFromMessageId={branchingFromMessageId}
+      branchingFromText={branchingFromText}
+      onSendMessage={onSendMessage}
+      onTranscribeAudio={onTranscribeAudio}
+      providers={providers}
+      selectedProvider={selectedProvider}
+      selectedModel={selectedModel}
+      keyedProviders={keyedProviders}
+      onSelectModel={onSelectModel}
+    />
+  );
 
   return (
     <main className="flex-1 flex flex-col bg-chat text-gray-100 min-w-0">
@@ -84,55 +99,59 @@ export function ChatPanel({
         onToggleIncognito={onToggleIncognito}
       />
 
-      {/* Messages area */}
-      <div ref={scrollRef} className="flex-1 h-0 overflow-y-auto">
-        <div className="max-w-2xl mx-auto px-4 pt-4 pb-2 space-y-5">
-          {threadPath.map((message) => (
-            <MessageBubble key={message.id} message={message} onBranchFromMessage={onBranchFromMessage} />
-          ))}
-          {sending && (
-            <div className="flex items-start gap-3">
-              <div className="w-7 h-7 rounded-full bg-gray-800 flex items-center justify-center text-blue-400 mt-1 flex-shrink-0">
-                <BrandIcon size={15} />
+      {isEmpty ? (
+        /* Empty state: composer floats in the vertical center */
+        <div className="flex-1 flex flex-col items-center justify-center px-4 pb-8">
+          <div className="w-full max-w-2xl">
+            {error && (
+              <div className="mb-2 text-xs text-red-400 bg-red-400/10 rounded-md px-3 py-1.5">
+                {error}
               </div>
-              <div className="text-sm text-gray-500 animate-pulse">Thinking…</div>
-            </div>
-          )}
-          {threadPath.length === 0 && !sending && (
-            <p className="text-sm text-gray-500 text-center pt-24">
-              Start a new conversation by sending a message below.
-            </p>
-          )}
+            )}
+            {composer}
+          </div>
         </div>
-      </div>
+      ) : (
+        <>
+          <div ref={scrollRef} className="flex-1 h-0 overflow-y-auto">
+            <div className="max-w-2xl mx-auto px-4 pt-4 pb-2 space-y-5">
+              {threadPath.map((message) => (
+                <MessageBubble
+                  key={message.id}
+                  message={message}
+                  onBranchFromMessage={onBranchFromMessage}
+                  onResendMessage={onResendMessage}
+                  onEditMessage={onEditMessage}
+                />
+              ))}
+              {sending && (
+                <div className="flex items-start gap-3">
+                  <div className="w-7 h-7 rounded-full bg-gray-800 flex items-center justify-center text-blue-400 mt-1 flex-shrink-0">
+                    <BrandIcon size={15} />
+                  </div>
+                  <div className="text-sm text-gray-500 animate-pulse">Thinking…</div>
+                </div>
+              )}
+            </div>
+          </div>
 
-      {/* Input bar */}
-      <footer className="px-4 py-3 flex-shrink-0">
-        {error && (
-          <div className="max-w-2xl mx-auto mb-2 text-xs text-red-400 bg-red-400/10 rounded-md px-3 py-1.5">
-            {error}
-          </div>
-        )}
-        {branchingFromMessageId && branchingFromPreview && (
-          <div className="max-w-2xl mx-auto mb-2 text-xs text-emerald-400 flex items-center gap-1.5">
-            <span>⎇</span>
-            <span>Branching from:</span>
-            <span className="text-gray-300 truncate max-w-[300px]">"{branchingFromPreview}"</span>
-          </div>
-        )}
-        <Composer
-          sending={sending}
-          branchingFromMessageId={branchingFromMessageId}
-          branchingFromText={branchingFromText}
-          onSendMessage={onSendMessage}
-          onTranscribeAudio={onTranscribeAudio}
-          providers={providers}
-          selectedProvider={selectedProvider}
-          selectedModel={selectedModel}
-          keyedProviders={keyedProviders}
-          onSelectModel={onSelectModel}
-        />
-      </footer>
+          <footer className="px-4 py-3 flex-shrink-0">
+            {error && (
+              <div className="max-w-2xl mx-auto mb-2 text-xs text-red-400 bg-red-400/10 rounded-md px-3 py-1.5">
+                {error}
+              </div>
+            )}
+            {branchingFromMessageId && branchingFromPreview && (
+              <div className="max-w-2xl mx-auto mb-2 text-xs text-emerald-400 flex items-center gap-1.5">
+                <span>⎇</span>
+                <span>Branching from:</span>
+                <span className="text-gray-300 truncate max-w-[300px]">"{branchingFromPreview}"</span>
+              </div>
+            )}
+            <div className="max-w-2xl mx-auto">{composer}</div>
+          </footer>
+        </>
+      )}
     </main>
   );
 }

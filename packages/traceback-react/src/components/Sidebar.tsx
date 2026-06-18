@@ -50,9 +50,11 @@ export function Sidebar({
   return (
     <aside className="w-full h-full bg-sidebar text-gray-100 flex flex-col flex-shrink-0">
       <div className="px-4 py-4">
-        <h1 className="text-lg font-semibold tracking-tight flex items-center gap-2">
+        <h1 className="flex items-center gap-2">
           <BrandIcon size={22} className="text-blue-400" />
-          <span>TraceBack</span>
+          <span style={{ fontFamily: "'Playfair Display', Georgia, serif", fontWeight: 400, fontSize: '1.1rem', letterSpacing: '0.01em' }}>
+            traceback
+          </span>
         </h1>
         <button
           type="button"

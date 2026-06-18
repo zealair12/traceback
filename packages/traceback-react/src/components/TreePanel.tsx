@@ -15,6 +15,17 @@ import { TreeNode } from './TreeNode';
 
 const nodeTypes = { custom: TreeNode };
 
+type Theme = 'dark' | 'blue' | 'light';
+
+const themeTokens: Record<Theme, {
+  canvasBg: string; dots: string; edgeDefault: string; edgeActive: string;
+  controlBg: string; controlBorder: string; ctxBg: string;
+}> = {
+  dark:  { canvasBg: '#080810', dots: '#141428', edgeDefault: '#1e293b', edgeActive: '#10b981', controlBg: '#0f0f1a', controlBorder: '#2a2a40', ctxBg: 'rgba(17,17,27,0.96)' },
+  blue:  { canvasBg: '#040a18', dots: '#0a1228', edgeDefault: '#1a2a4a', edgeActive: '#3b82f6', controlBg: '#060c1a', controlBorder: '#1a2a4a', ctxBg: 'rgba(6,12,26,0.96)' },
+  light: { canvasBg: '#f0f2f5', dots: '#dde0e8', edgeDefault: '#cbd5e1', edgeActive: '#3b82f6', controlBg: '#e8ecf0', controlBorder: '#d1d5db', ctxBg: 'rgba(240,242,245,0.96)' },
+};
+
 interface TreePanelProps {
   nodes: Node[];
   edges: Edge[];
@@ -25,6 +36,7 @@ interface TreePanelProps {
   width: number;
   isFullscreen: boolean;
   onToggleFullscreen: () => void;
+  theme: Theme;
 }
 
 function layoutTree(nodes: Node[], edges: Edge[]): Node[] {
@@ -50,13 +62,15 @@ function TreeFlowInner({
   edges,
   activeNodeId,
   onSelectNode,
-  onDeleteSubtree
+  onDeleteSubtree,
+  tokens
 }: {
   nodes: Node[];
   edges: Edge[];
   activeNodeId: string | null;
   onSelectNode: (nodeId: string) => void;
   onDeleteSubtree: (nodeId: string) => void;
+  tokens: typeof themeTokens['dark'];
 }) {
   const reactFlow = useReactFlow();
   const prevActiveRef = useRef<string | null>(null);
@@ -111,18 +125,18 @@ function TreeFlowInner({
         fitViewOptions={{ padding: 0.4 }}
         nodesDraggable
         proOptions={{ hideAttribution: true }}
-        style={{ background: '#080810' }}
+        style={{ background: tokens.canvasBg }}
         minZoom={0.05}
         maxZoom={3}
       >
-        <Background gap={30} size={0.3} color="#141428" />
+        <Background gap={30} size={0.3} color={tokens.dots} />
         <Controls
           showInteractive={false}
           position="bottom-center"
           orientation="horizontal"
           style={{
-            background: '#0f0f1a',
-            border: '1px solid #2a2a40',
+            background: tokens.controlBg,
+            border: `1px solid ${tokens.controlBorder}`,
             borderRadius: 10,
             padding: '2px 4px',
             display: 'flex',
@@ -133,7 +147,7 @@ function TreeFlowInner({
       {ctxMenu && (
         <div
           className="fixed z-[100] min-w-[160px] py-1 rounded-lg shadow-2xl border border-gray-700/80 backdrop-blur-xl"
-          style={{ top: ctxMenu.y, left: ctxMenu.x, background: 'rgba(17,17,27,0.96)' }}
+          style={{ top: ctxMenu.y, left: ctxMenu.x, background: tokens.ctxBg }}
         >
           <button
             type="button"
@@ -158,8 +172,10 @@ export function TreePanel({
   onDeleteSubtree,
   width,
   isFullscreen,
-  onToggleFullscreen
+  onToggleFullscreen,
+  theme
 }: TreePanelProps) {
+  const tokens = themeTokens[theme];
   const nodeIds = useMemo(() => nodes.map((n) => n.id).join(','), [nodes]);
   const edgeIds = useMemo(() => edges.map((e) => e.id).join(','), [edges]);
 
@@ -191,10 +207,10 @@ export function TreePanel({
           ...e,
           type: 'smoothstep',
           animated: onPath,
-          style: { stroke: onPath ? '#10b981' : '#1e293b', strokeWidth: onPath ? 2 : 1 }
+          style: { stroke: onPath ? tokens.edgeActive : tokens.edgeDefault, strokeWidth: onPath ? 2 : 1 }
         };
       }),
-    [edges, activePathIds]
+    [edges, activePathIds, tokens]
   );
 
   return (
@@ -221,6 +237,7 @@ export function TreePanel({
             activeNodeId={activeNodeId}
             onSelectNode={onSelectNode}
             onDeleteSubtree={onDeleteSubtree}
+            tokens={tokens}
           />
         </ReactFlowProvider>
       </div>

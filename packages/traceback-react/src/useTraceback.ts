@@ -389,6 +389,40 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
     [clearBranching]
   );
 
+  const handleResendMessage = useCallback(
+    async (messageId: string) => {
+      const msg = allMessages.find((m) => m.id === messageId);
+      if (!msg || !activeSessionId || sending) return;
+      setSending(true);
+      setError(null);
+      try {
+        await send(activeSessionId, msg.content, msg.parentId ?? null);
+      } catch (err: any) {
+        setError(err?.response?.data?.error ?? err?.message ?? 'Something went wrong');
+      } finally {
+        setSending(false);
+      }
+    },
+    [activeSessionId, allMessages, sending, send]
+  );
+
+  const handleEditMessage = useCallback(
+    async (messageId: string, newContent: string) => {
+      const msg = allMessages.find((m) => m.id === messageId);
+      if (!msg || !activeSessionId || sending) return;
+      setSending(true);
+      setError(null);
+      try {
+        await send(activeSessionId, newContent, msg.parentId ?? null);
+      } catch (err: any) {
+        setError(err?.response?.data?.error ?? err?.message ?? 'Something went wrong');
+      } finally {
+        setSending(false);
+      }
+    },
+    [activeSessionId, allMessages, sending, send]
+  );
+
   const handleToggleIncognito = useCallback(async () => {
     if (!incognito) {
       prevSessionIdRef.current = activeSessionId;
@@ -453,7 +487,9 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
     handleNavigateToSibling,
     handleNavigateToNode,
     handleSelectModel,
-    handleToggleIncognito
+    handleToggleIncognito,
+    handleResendMessage,
+    handleEditMessage
   };
 }
 

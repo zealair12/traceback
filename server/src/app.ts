@@ -38,7 +38,7 @@ export function createApp() {
     })
   );
 
-  app.use(express.json());
+  app.use(express.json({ limit: '20mb' }));
 
   app.use(session({
     secret: process.env.SESSION_SECRET!,
@@ -163,7 +163,8 @@ export function createApp() {
         parent_id: parentIdRaw,
         content,
         provider: providerRaw,
-        model: modelRaw
+        model: modelRaw,
+        attachments: attachmentsRaw
       } = req.body ?? {};
 
       if (!sessionId || typeof sessionId !== 'string') {
@@ -176,14 +177,14 @@ export function createApp() {
       }
 
       const parentId = parentIdRaw ? String(parentIdRaw) : null;
-      // Optional per-message model choice. Left undefined when not supplied so
-      // the service falls back to the app's default provider and model.
       const provider = typeof providerRaw === 'string' && providerRaw ? providerRaw : undefined;
       const model = typeof modelRaw === 'string' && modelRaw ? modelRaw : undefined;
-      // Optional per-request "bring your own key" from the request headers.
       const apiKey = resolveApiKey(req);
 
-      const result = await createMessageWithAutoReply({ sessionId, parentId, content, provider, model, apiKey });
+      const result = await createMessageWithAutoReply({
+        sessionId, parentId, content, provider, model, apiKey,
+        attachments: Array.isArray(attachmentsRaw) ? attachmentsRaw : undefined
+      });
 
       res.status(201).json({
         userMessage: result.userMessage,

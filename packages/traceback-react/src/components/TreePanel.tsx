@@ -21,7 +21,7 @@ const themeTokens: Record<Theme, {
   canvasBg: string; dots: string; edgeDefault: string; edgeActive: string;
   controlBg: string; controlBorder: string; ctxBg: string;
 }> = {
-  dark:  { canvasBg: '#080810', dots: '#141428', edgeDefault: '#1e293b', edgeActive: '#10b981', controlBg: '#0f0f1a', controlBorder: '#2a2a40', ctxBg: 'rgba(17,17,27,0.96)' },
+  dark:  { canvasBg: '#0d0d0d', dots: '#1a1a1a', edgeDefault: '#2a2a2a', edgeActive: '#10b981', controlBg: '#111111', controlBorder: '#2a2a2a', ctxBg: 'rgba(17,17,17,0.96)' },
   blue:  { canvasBg: '#040a18', dots: '#0a1228', edgeDefault: '#1a2a4a', edgeActive: '#3b82f6', controlBg: '#060c1a', controlBorder: '#1a2a4a', ctxBg: 'rgba(6,12,26,0.96)' },
   light: { canvasBg: '#f0f2f5', dots: '#dde0e8', edgeDefault: '#cbd5e1', edgeActive: '#3b82f6', controlBg: '#e8ecf0', controlBorder: '#d1d5db', ctxBg: 'rgba(240,242,245,0.96)' },
 };

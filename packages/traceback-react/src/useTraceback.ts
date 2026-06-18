@@ -29,6 +29,29 @@ export interface UseTracebackOptions {
   apiUrl: string;
 }
 
+function friendlyError(err: any): string {
+  const raw: string = err?.response?.data?.error ?? err?.message ?? 'Something went wrong';
+  if (/^\d{3}\s/i.test(raw) || /messages\[\d+\]/.test(raw)) {
+    return 'The AI had trouble processing this conversation. Try starting a new chat or picking a different model.';
+  }
+  if (raw.toLowerCase().includes('no api key') || (raw.toLowerCase().includes('api key') && raw.toLowerCase().includes('set '))) {
+    return 'No API key configured. Add one in Settings → API keys.';
+  }
+  if (raw.toLowerCase().includes('rate limit')) {
+    return 'Rate limit reached. Please wait a moment and try again.';
+  }
+  if (raw.toLowerCase().includes('timeout')) {
+    return 'The request timed out. Try again or pick a faster model.';
+  }
+  if (raw.toLowerCase().includes('not available')) {
+    return 'This provider is unavailable. Check your API key in Settings.';
+  }
+  if (raw.toLowerCase().includes('content') && raw.toLowerCase().includes('must be a string')) {
+    return 'A message in this conversation could not be sent. Try starting a new chat.';
+  }
+  return raw;
+}
+
 export function useTraceback({ apiUrl }: UseTracebackOptions) {
   // One HTTP client per server address. Rebuilt only if the address changes.
   const client = useMemo(() => createTracebackClient(apiUrl), [apiUrl]);
@@ -206,6 +229,7 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
   );
 
   const handleNewSession = useCallback(async () => {
+    setError(null);
     try {
       const session = await client.createSession();
       setSessions((prev) => [session, ...prev]);
@@ -219,6 +243,7 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
 
   const handleSelectSession = useCallback(
     (sessionId: string) => {
+      setError(null);
       setActiveSessionId(sessionId);
       clearBranching();
     },
@@ -253,7 +278,7 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
           if (activeSessionId === sessionId) setActiveSessionId(remaining[0].id);
         }
       } catch (err: any) {
-        setError(err?.response?.data?.error ?? err?.message ?? 'Delete failed');
+        setError(friendlyError(err));
       }
     },
     [client, sessions, activeSessionId]
@@ -296,7 +321,7 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
         }
       } catch (err: any) {
         console.error('Send failed:', err);
-        setError(err?.response?.data?.error ?? err?.message ?? 'Something went wrong');
+        setError(friendlyError(err));
       } finally {
         setSending(false);
       }
@@ -322,7 +347,7 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
         await send(activeSessionId, `Explain this in more detail: "${selectedText}"`, messageId);
       } catch (err: any) {
         console.error('Branch send failed:', err);
-        setError(err?.response?.data?.error ?? err?.message ?? 'Something went wrong');
+        setError(friendlyError(err));
       } finally {
         setSending(false);
         clearBranching();
@@ -357,7 +382,7 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
           }
         }
       } catch (err: any) {
-        setError(err?.response?.data?.error ?? err?.message ?? 'Delete failed');
+        setError(friendlyError(err));
       }
     },
     [client, activeSessionId, activeNodeId, allMessages]
@@ -398,7 +423,7 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
       try {
         await send(activeSessionId, msg.content, msg.parentId ?? null);
       } catch (err: any) {
-        setError(err?.response?.data?.error ?? err?.message ?? 'Something went wrong');
+        setError(friendlyError(err));
       } finally {
         setSending(false);
       }
@@ -415,7 +440,7 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
       try {
         await send(activeSessionId, newContent, msg.parentId ?? null);
       } catch (err: any) {
-        setError(err?.response?.data?.error ?? err?.message ?? 'Something went wrong');
+        setError(friendlyError(err));
       } finally {
         setSending(false);
       }

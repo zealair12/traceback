@@ -23,7 +23,27 @@
   --color-chat: #0d0d0d;
   --color-bubbleUser: #2f2f2f;
   --color-inputBg: #1e1e1e;
-  --color-borderSubtle: #1f2933;
+  --color-borderSubtle: #1f1f1f;
+}
+
+/*
+ * Tailwind v4's default gray palette uses oklch values with a ~264° hue,
+ * giving every gray a visible blue tint. Override to true neutral grays
+ * so dark mode looks dark, not slate/blue.
+ */
+:root,
+[data-theme="dark"] {
+  --color-gray-50:  #fafafa;
+  --color-gray-100: #f5f5f5;
+  --color-gray-200: #e5e5e5;
+  --color-gray-300: #d4d4d4;
+  --color-gray-400: #a3a3a3;
+  --color-gray-500: #737373;
+  --color-gray-600: #525252;
+  --color-gray-700: #404040;
+  --color-gray-800: #262626;
+  --color-gray-900: #171717;
+  --color-gray-950: #0a0a0a;
 }
 
 /*
@@ -55,6 +75,19 @@ body {
   --color-bubbleUser: #0f1e38;
   --color-inputBg:    #0a1628;
   --color-borderSubtle: #162540;
+
+  /* Give Tailwind grays a navy tint so hovers/borders match the blue palette */
+  --color-gray-50:  #eef2ff;
+  --color-gray-100: #dce6f7;
+  --color-gray-200: #b8cced;
+  --color-gray-300: #8aabdc;
+  --color-gray-400: #5b87c5;
+  --color-gray-500: #3d6499;
+  --color-gray-600: #2a4870;
+  --color-gray-700: #1e3455;
+  --color-gray-800: #152440;
+  --color-gray-900: #0d1a30;
+  --color-gray-950: #070e1e;
 }
 
 /* ── Light theme ─────────────────────────────────────────────── */
@@ -67,17 +100,18 @@ body {
   --color-inputBg:    #ffffff;
   --color-borderSubtle: #dde0e8;
 
-  /* Flip the Tailwind gray scale so low = dark text, high = light bg */
-  --color-gray-100: #111827;
-  --color-gray-200: #1f2937;
-  --color-gray-300: #374151;
-  --color-gray-400: #555f6e;
-  --color-gray-500: #6b7280;
-  --color-gray-600: #9ca3af;
-  --color-gray-700: #d1d5db;
-  --color-gray-800: #e5e7eb;
-  --color-gray-900: #f3f4f6;
-  --color-gray-950: #f9fafb;
+  /* Flip the neutral gray scale so low = dark text, high = light bg */
+  --color-gray-50:  #0a0a0a;
+  --color-gray-100: #171717;
+  --color-gray-200: #262626;
+  --color-gray-300: #404040;
+  --color-gray-400: #525252;
+  --color-gray-500: #737373;
+  --color-gray-600: #a3a3a3;
+  --color-gray-700: #d4d4d4;
+  --color-gray-800: #e5e5e5;
+  --color-gray-900: #f5f5f5;
+  --color-gray-950: #fafafa;
 }
 
 /* text-white stays white in dark/blue, but needs to be dark on light backgrounds */

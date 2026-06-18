@@ -44,3 +44,46 @@ body {
   background-color: #0d0d0d;
   color: #e5e7eb;
 }
+
+/* ── Blue theme ──────────────────────────────────────────────── */
+[data-theme="blue"] {
+  --color-background: #060c1a;
+  --color-sidebar:    #08101e;
+  --color-tree:       #08101e;
+  --color-chat:       #060c1a;
+  --color-bubbleUser: #0f1e38;
+  --color-inputBg:    #0a1628;
+  --color-borderSubtle: #162540;
+}
+
+/* ── Light theme ─────────────────────────────────────────────── */
+[data-theme="light"] {
+  --color-background: #f7f8fa;
+  --color-sidebar:    #eeeef0;
+  --color-tree:       #eeeef0;
+  --color-chat:       #f7f8fa;
+  --color-bubbleUser: #dde0e8;
+  --color-inputBg:    #ffffff;
+  --color-borderSubtle: #dde0e8;
+
+  /* Flip the Tailwind gray scale so low = dark text, high = light bg */
+  --color-gray-100: #111827;
+  --color-gray-200: #1f2937;
+  --color-gray-300: #374151;
+  --color-gray-400: #555f6e;
+  --color-gray-500: #6b7280;
+  --color-gray-600: #9ca3af;
+  --color-gray-700: #d1d5db;
+  --color-gray-800: #e5e7eb;
+  --color-gray-900: #f3f4f6;
+  --color-gray-950: #f9fafb;
+}
+
+/* text-white stays white in dark/blue, but needs to be dark on light backgrounds */
+[data-theme="light"] .text-white {
+  color: #111827;
+}
+[data-theme="light"] body {
+  background-color: #f7f8fa;
+  color: #111827;
+}

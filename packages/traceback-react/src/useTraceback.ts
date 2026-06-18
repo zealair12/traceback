@@ -9,7 +9,7 @@
 // this hook, but a technical user can call it directly -- or skip React
 // entirely and use the classes -- and get the same engine.
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   createTracebackClient,
   type SessionResponse,
@@ -43,6 +43,11 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
 
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Incognito: creates a throwaway session that is deleted when toggled off.
+  const [incognito, setIncognito] = useState(false);
+  const [incognitoSessionId, setIncognitoSessionId] = useState<string | null>(null);
+  const prevSessionIdRef = useRef<string | null>(null);
 
   const [availableProviders, setAvailableProviders] = useState<ProviderInfo[]>([]);
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
@@ -384,9 +389,35 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
     [clearBranching]
   );
 
+  const handleToggleIncognito = useCallback(async () => {
+    if (!incognito) {
+      prevSessionIdRef.current = activeSessionId;
+      try {
+        const session = await client.createSession();
+        setIncognitoSessionId(session.id);
+        setActiveSessionId(session.id);
+        setAllMessages([]);
+        setActiveNodeId(null);
+        setIncognito(true);
+      } catch (err) {
+        console.error('Failed to start incognito session:', err);
+      }
+    } else {
+      const id = incognitoSessionId;
+      setIncognito(false);
+      setIncognitoSessionId(null);
+      setActiveSessionId(prevSessionIdRef.current);
+      setAllMessages([]);
+      setActiveNodeId(null);
+      if (id) {
+        client.deleteSession(id).catch(() => {});
+      }
+    }
+  }, [incognito, incognitoSessionId, activeSessionId, client]);
+
   return {
     // data
-    sessions,
+    sessions: sessions.filter((s) => s.id !== incognitoSessionId),
     activeSessionId,
     allMessages,
     activeNodeId,
@@ -404,6 +435,7 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
     selectedProvider,
     selectedModel,
     keyedProviders,
+    incognito,
     // actions
     setProviderKey,
     clearProviderKey,
@@ -420,7 +452,8 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
     handleNavigateToParent,
     handleNavigateToSibling,
     handleNavigateToNode,
-    handleSelectModel
+    handleSelectModel,
+    handleToggleIncognito
   };
 }
 

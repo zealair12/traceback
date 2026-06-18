@@ -22,7 +22,23 @@ export function TracebackChat({ apiUrl }: TracebackChatProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sidebarWidth, setSidebarWidth] = useState(256);
   const [sidebarResizing, setSidebarResizing] = useState(false);
-  const [incognito, setIncognito] = useState(false);
+
+  type Theme = 'dark' | 'blue' | 'light';
+  const [theme, setTheme] = useState<Theme>(
+    () => (localStorage.getItem('tb-theme') as Theme | null) ?? 'dark'
+  );
+
+  const handleSetTheme = useCallback((t: Theme) => {
+    setTheme(t);
+    localStorage.setItem('tb-theme', t);
+    const bgMap = { dark: '#0d0d0d', blue: '#060c1a', light: '#f7f8fa' };
+    document.body.style.backgroundColor = bgMap[t];
+  }, []);
+
+  useEffect(() => {
+    const bgMap = { dark: '#0d0d0d', blue: '#060c1a', light: '#f7f8fa' };
+    document.body.style.backgroundColor = bgMap[theme];
+  }, [theme]);
 
   const isTreeDragging = useRef(false);
   const isSidebarDragging = useRef(false);
@@ -81,7 +97,7 @@ export function TracebackChat({ apiUrl }: TracebackChatProps) {
   }, []);
 
   return (
-    <div className="h-full w-full overflow-hidden bg-background text-gray-100 flex">
+    <div className="h-full w-full overflow-hidden bg-background text-gray-100 flex" data-theme={theme}>
       {/* Sidebar — width controlled by parent, collapses to 0 when closed */}
       {!treeFullscreen && (
         <>
@@ -99,6 +115,8 @@ export function TracebackChat({ apiUrl }: TracebackChatProps) {
                 onDeleteSession={tb.handleDeleteSession}
                 onOpenKeys={() => setShowKeys(true)}
                 onOpenImport={() => setShowImport(true)}
+                theme={theme}
+                onSetTheme={handleSetTheme}
               />
             </div>
           </div>
@@ -127,8 +145,8 @@ export function TracebackChat({ apiUrl }: TracebackChatProps) {
           onNavigateToNode={tb.handleNavigateToNode}
           sidebarOpen={sidebarOpen}
           onToggleSidebar={() => setSidebarOpen((v) => !v)}
-          incognito={incognito}
-          onToggleIncognito={() => setIncognito((v) => !v)}
+          incognito={tb.incognito}
+          onToggleIncognito={tb.handleToggleIncognito}
           providers={tb.availableProviders}
           selectedProvider={tb.selectedProvider}
           selectedModel={tb.selectedModel}

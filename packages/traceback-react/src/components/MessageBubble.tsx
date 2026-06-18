@@ -160,7 +160,7 @@ export function MessageBubble({ message, onBranchFromMessage }: MessageBubblePro
             className={toolbarButton}
             onClick={() => actAndDismiss(() => onBranchFromMessage(message.id, popover.text, 'dig'))}
           >
-            <span className="text-emerald-400">↳</span>
+            <span>↳</span>
             <span>Explain</span>
           </button>
           <div className="w-px bg-gray-700/60" />
@@ -169,7 +169,7 @@ export function MessageBubble({ message, onBranchFromMessage }: MessageBubblePro
             className={toolbarButton}
             onClick={() => actAndDismiss(() => onBranchFromMessage(message.id, popover.text, 'ask'))}
           >
-            <span className="text-emerald-400">?</span>
+            <span>?</span>
             <span>Ask</span>
           </button>
           <div className="w-px bg-gray-700/60" />

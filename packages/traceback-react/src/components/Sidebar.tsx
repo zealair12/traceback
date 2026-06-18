@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Settings, FolderDown, KeyRound, Trash2 } from 'lucide-react';
 import { BrandIcon } from './BrandIcon';
 
+type Theme = 'dark' | 'blue' | 'light';
+
 interface SidebarProps {
   sessions: SessionResponse[];
   activeSessionId: string | null;
@@ -12,6 +14,8 @@ interface SidebarProps {
   onDeleteSession: (sessionId: string) => void;
   onOpenKeys: () => void;
   onOpenImport: () => void;
+  theme: Theme;
+  onSetTheme: (t: Theme) => void;
 }
 
 export function Sidebar({
@@ -22,14 +26,15 @@ export function Sidebar({
   onRenameSession,
   onDeleteSession,
   onOpenKeys,
-  onOpenImport
+  onOpenImport,
+  theme,
+  onSetTheme
 }: SidebarProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
-  // Close the gear menu when clicking anywhere outside it.
   useEffect(() => {
     if (!menuOpen) return;
     const close = (e: MouseEvent) => {
@@ -57,7 +62,6 @@ export function Sidebar({
           + New Chat
         </button>
       </div>
-
 
       <div className="flex-1 h-0 overflow-y-auto px-2 py-3">
         <div className="space-y-0.5">
@@ -132,7 +136,6 @@ export function Sidebar({
         </div>
       </div>
 
-      {/* Utility actions live behind one gear: less chrome, same reach. */}
       <div className="px-3 py-2.5 relative">
         <button
           type="button"
@@ -146,8 +149,27 @@ export function Sidebar({
         {menuOpen && (
           <div
             ref={menuRef}
-            className="absolute bottom-12 left-3 z-50 min-w-[170px] rounded-xl border border-gray-700/70 bg-gray-900/90 backdrop-blur-xl shadow-2xl py-1.5"
+            className="absolute bottom-12 left-3 z-50 min-w-[180px] rounded-xl border border-gray-700/70 bg-gray-900/90 backdrop-blur-xl shadow-2xl py-1.5"
           >
+            {/* Theme switcher */}
+            <div className="px-3 pt-1.5 pb-2 border-b border-gray-800/60">
+              <div className="flex gap-1">
+                {(['dark', 'blue', 'light'] as const).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => onSetTheme(t)}
+                    className={`flex-1 py-1 rounded text-[11px] capitalize transition-colors ${
+                      theme === t
+                        ? 'bg-gray-700/80 text-white'
+                        : 'text-gray-500 hover:text-gray-300'
+                    }`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
             <button
               type="button"
               onClick={() => {

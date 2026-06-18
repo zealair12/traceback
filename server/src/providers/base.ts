@@ -83,8 +83,8 @@ export abstract class BaseChatProvider implements ChatProvider {
       const hasFiles = (m.files?.length ?? 0) > 0;
       if (!hasImages && !hasFiles) return m;
       const notes: string[] = [];
-      if (hasImages && !canSeeImages) notes.push('[Image attached — switch to Auto, gpt-4o, or claude to analyse it]');
-      if (hasFiles && !canReadFiles) notes.push('[Document attached — switch to gpt-4o or claude to read it]');
+      if (hasImages && !canSeeImages) notes.push('[Image attached — this model cannot view images; switch to a vision-capable model to analyse it]');
+      if (hasFiles && !canReadFiles) notes.push('[Document attached — this model cannot read documents; switch to a model that supports file uploads]');
       return {
         role: m.role,
         content: notes.length > 0

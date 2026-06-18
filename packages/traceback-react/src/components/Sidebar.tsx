@@ -52,7 +52,7 @@ export function Sidebar({
       <div className="px-4 py-4">
         <h1 className="flex items-center gap-2">
           <BrandIcon size={22} className="text-blue-400" />
-          <span style={{ fontFamily: "'Playfair Display', Georgia, serif", fontWeight: 400, fontSize: '1.1rem', letterSpacing: '0.01em' }}>
+          <span style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 300, fontSize: '1.25rem', letterSpacing: '0.18em' }}>
             traceback
           </span>
         </h1>

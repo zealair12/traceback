@@ -171,8 +171,13 @@ export function createApp() {
         res.status(400).json({ error: 'session_id is required and must be a string.' });
         return;
       }
-      if (!content || typeof content !== 'string') {
-        res.status(400).json({ error: 'content is required and must be a string.' });
+      if (typeof content !== 'string') {
+        res.status(400).json({ error: 'content must be a string.' });
+        return;
+      }
+      // Empty text is fine as long as there is at least one attachment.
+      if (!content && (!Array.isArray(attachmentsRaw) || attachmentsRaw.length === 0)) {
+        res.status(400).json({ error: 'Please type a message or attach a file.' });
         return;
       }
 

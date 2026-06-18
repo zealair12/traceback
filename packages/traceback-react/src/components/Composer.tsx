@@ -60,8 +60,8 @@ export function Composer({
     const hasFiles = pending.some((a) => a.type === 'file');
     const canImage = selectedModel ? (p.visionModels ?? []).includes(selectedModel) : false;
     const canFile = selectedModel ? (p.documentModels ?? []).includes(selectedModel) : false;
-    if (hasImages && !canImage) return `${selectedModel ?? p.id} can't analyse images. Switch to Auto, gpt-4o, or claude.`;
-    if (hasFiles && !canFile) return `${selectedModel ?? p.id} can't read documents. Switch to gpt-4o or claude.`;
+    if (hasImages && !canImage) return `This model can't analyse images. Switch to Auto or a vision-capable model.`;
+    if (hasFiles && !canFile) return `This model can't read documents. Switch to Auto or a model that supports file uploads.`;
     return null;
   })();
   const inputRef = useRef<HTMLTextAreaElement | null>(null);

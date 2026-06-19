@@ -38,7 +38,7 @@ function friendlyError(err: any): string {
     return 'No API key configured. Add one in Settings → API keys.';
   }
   if (raw.toLowerCase().includes('rate limit')) {
-    return 'Rate limit reached. Please wait a moment and try again.';
+    return 'Rate limit reached — wait a moment or switch to a different model and try again.';
   }
   if (raw.toLowerCase().includes('timeout')) {
     return 'The request timed out. Try again or pick a faster model.';
@@ -51,6 +51,9 @@ function friendlyError(err: any): string {
   }
   if (raw.toLowerCase().includes('session no longer exists') || raw.toLowerCase().includes('session not found')) {
     return 'This chat was deleted or expired. Please start a new chat.';
+  }
+  if (raw.toLowerCase().includes('belong to the same session')) {
+    return 'Something got out of sync — please refresh the page and try again.';
   }
   return raw;
 }

@@ -1,11 +1,10 @@
 // Where the user's API keys live in the browser -- as a plain object.
 //
 // Plain-English big picture:
-// "Bring your own key" stores each backend's key in the browser's
-// sessionStorage, which is wiped when the tab closes, so a key never lingers
-// in permanent storage. A key is read only to send it (in a header) with a
-// request, and to show the user its last few characters. It never reaches a
-// database or a log.
+// "Bring your own key" stores each backend's key in localStorage so it
+// survives page refreshes and new tabs. A key is read only to send it (in a
+// header) with a request, and to show the user its last few characters. It
+// never reaches a database or a log.
 
 export class KeyStore {
   private readonly prefix: string;
@@ -16,15 +15,15 @@ export class KeyStore {
 
   get(provider: string): string | null {
     try {
-      return sessionStorage.getItem(this.prefix + provider);
+      return localStorage.getItem(this.prefix + provider);
     } catch {
-      return null; // sessionStorage may be unavailable (e.g. server-side render)
+      return null; // localStorage may be unavailable (e.g. private mode)
     }
   }
 
   set(provider: string, key: string): void {
     try {
-      sessionStorage.setItem(this.prefix + provider, key);
+      localStorage.setItem(this.prefix + provider, key);
     } catch {
       /* ignore */
     }
@@ -32,7 +31,7 @@ export class KeyStore {
 
   clear(provider: string): void {
     try {
-      sessionStorage.removeItem(this.prefix + provider);
+      localStorage.removeItem(this.prefix + provider);
     } catch {
       /* ignore */
     }

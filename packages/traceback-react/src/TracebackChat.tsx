@@ -171,6 +171,9 @@ export function TracebackChat({ apiUrl }: TracebackChatProps) {
                 onOpenImport={() => setShowImport(true)}
                 theme={theme}
                 onSetTheme={handleSetTheme}
+                authState={tb.authState}
+                onSignIn={tb.handleSignIn}
+                onSignOut={tb.handleSignOut}
               />
             </div>
           </div>

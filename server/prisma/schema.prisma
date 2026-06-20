@@ -43,6 +43,14 @@ model Session {
   /// One-to-many relation to messages belonging to this session.
   messages  Message[]
 
+  /// Auth: exactly one of userId or guestId is set. Both null means the
+  /// session is a legacy pre-auth row (hidden from all users after migration).
+  userId    String?   @map("user_id")
+  user      User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  guestId   String?   @map("guest_id")
+
+  @@index([userId])
+  @@index([guestId])
   @@map("sessions")
 }
 
@@ -114,12 +122,13 @@ model Message {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  googleId  String   @unique
-  email     String   @unique
+  id        String    @id @default(cuid())
+  googleId  String    @unique
+  email     String    @unique
   name      String?
   avatar    String?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
+  sessions  Session[]
 
   @@map("users")
 }

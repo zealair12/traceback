@@ -17,7 +17,8 @@ import {
   type SendMessageResult,
   type ProviderInfo,
   type ImportedConversation,
-  type ImageAttachment
+  type ImageAttachment,
+  type AuthMeResponse
 } from '@traceback/shared';
 import { ConversationTree } from './lib/conversationTree';
 import { ModelRouter } from './lib/modelRouter';
@@ -33,6 +34,9 @@ function friendlyError(err: any): string {
   const raw: string = err?.response?.data?.error ?? err?.message ?? 'Something went wrong';
   if (/^\d{3}\s/i.test(raw) || /messages\[\d+\]/.test(raw)) {
     return 'The AI had trouble processing this conversation. Try starting a new chat or picking a different model.';
+  }
+  if (raw.toLowerCase().includes('free messages for today')) {
+    return raw; // already user-friendly, pass through unchanged
   }
   if (raw.toLowerCase().includes('no api key') || (raw.toLowerCase().includes('api key') && raw.toLowerCase().includes('set '))) {
     return 'No API key configured. Add one in Settings → API keys.';
@@ -84,6 +88,15 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
   const [serverDefaultProvider, setServerDefaultProvider] = useState<string | null>(null);
   // Which backends the user has saved their own key for (in this browser tab).
   const [keyedProviders, setKeyedProviders] = useState<Set<string>>(new Set());
+
+  // Auth state: signed-in user, or guest usage counters.
+  const [authState, setAuthState] = useState<AuthMeResponse | null>(null);
+
+  const refreshAuth = useCallback(() => {
+    client.fetchCurrentUser().then(setAuthState).catch(() => {});
+  }, [client]);
+
+  useEffect(() => { refreshAuth(); }, [refreshAuth]);
 
   // Load providers once and default the picker to the server's default
   // backend + that backend's default model.
@@ -307,8 +320,10 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
       setAllMessages((prev) => [...prev, result.userMessage, result.assistantMessage]);
       setActiveNodeId(result.assistantMessage.id);
       clearBranching();
+      // Keep guest usage counter accurate after each send.
+      refreshAuth();
     },
-    [client, router, selectedProvider, selectedModel, clearBranching]
+    [client, router, selectedProvider, selectedModel, clearBranching, refreshAuth]
   );
 
   const handleSendMessage = useCallback(
@@ -501,7 +516,10 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
     selectedModel,
     keyedProviders,
     incognito,
+    authState,
     // actions
+    handleSignIn: () => client.signIn(),
+    handleSignOut: async () => { await client.signOut(); refreshAuth(); },
     setProviderKey,
     clearProviderKey,
     handleImportConversations,

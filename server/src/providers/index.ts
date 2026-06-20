@@ -10,7 +10,7 @@
 
 import type { ChatProvider, ProviderInfo } from './types.js';
 import { ProviderNotAvailableError } from './types.js';
-import { createGroqProvider, createOpenAIProvider, createLocalProvider } from './openaiDialect.js';
+import { createGroqProvider, createOpenAIProvider, createLocalProvider, createPerplexityProvider } from './openaiDialect.js';
 import { createAnthropicProvider } from './anthropic.js';
 
 // Each entry maps a short id to a function that builds that provider on demand.
@@ -21,6 +21,7 @@ const registry: Record<string, () => ChatProvider> = {
   groq: createGroqProvider,
   openai: createOpenAIProvider,
   anthropic: createAnthropicProvider,
+  perplexity: createPerplexityProvider,
   local: createLocalProvider,
 };
 

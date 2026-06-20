@@ -79,11 +79,13 @@ export class AnthropicProvider extends BaseChatProvider {
       // at ~10% of the normal input price instead of reprocessing it each turn.
       system: systemPrompt
         ? [
+            // cache_control is a prompt-caching extension; cast to bypass the
+            // SDK's type definition which may not yet include it.
             {
               type: 'text' as const,
               text: systemPrompt,
-              cache_control: { type: 'ephemeral' as const }
-            }
+              cache_control: { type: 'ephemeral' }
+            } as Anthropic.TextBlockParam
           ]
         : undefined,
       messages: conversation,

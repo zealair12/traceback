@@ -1,6 +1,6 @@
-import type { SessionResponse } from '@traceback/shared';
+import type { SessionResponse, AuthMeResponse } from '@traceback/shared';
 import { useState } from 'react';
-import { Settings, FolderDown, KeyRound, Trash2 } from 'lucide-react';
+import { Settings, FolderDown, KeyRound, Trash2, LogIn, LogOut } from 'lucide-react';
 import { BrandIcon } from './BrandIcon';
 
 type Theme = 'dark' | 'blue' | 'light';
@@ -16,6 +16,9 @@ interface SidebarProps {
   onOpenImport: () => void;
   theme: Theme;
   onSetTheme: (t: Theme) => void;
+  authState: AuthMeResponse | null;
+  onSignIn: () => void;
+  onSignOut: () => void;
 }
 
 const themeStyle: Record<Theme, string> = {
@@ -35,7 +38,10 @@ export function Sidebar({
   onOpenKeys,
   onOpenImport,
   theme,
-  onSetTheme
+  onSetTheme,
+  authState,
+  onSignIn,
+  onSignOut
 }: SidebarProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
@@ -123,6 +129,52 @@ export function Sidebar({
         </div>
       </div>
 
+      {/* Auth bar — sign in prompt for guests, avatar + name for users */}
+      {authState?.isGuest ? (
+        <div className="px-3 py-2.5 border-t border-gray-800/50">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[11px] text-gray-500">
+              {authState.messagesUsedToday}/{authState.dailyLimit} free messages today
+            </span>
+          </div>
+          <div className="w-full bg-gray-800/50 rounded-full h-1 mb-2.5">
+            <div
+              className="bg-blue-500 h-1 rounded-full transition-all"
+              style={{ width: `${Math.min(100, (authState.messagesUsedToday / authState.dailyLimit) * 100)}%` }}
+            />
+          </div>
+          <button
+            type="button"
+            onClick={onSignIn}
+            className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-white text-black text-[12px] font-medium hover:bg-gray-100 transition-colors"
+          >
+            <LogIn size={13} />
+            Sign in with Google
+          </button>
+        </div>
+      ) : authState && !authState.isGuest ? (
+        <div className="px-3 py-2.5 border-t border-gray-800/50 flex items-center gap-2">
+          {authState.avatar ? (
+            <img src={authState.avatar} alt="" className="h-7 w-7 rounded-full flex-shrink-0" />
+          ) : (
+            <div className="h-7 w-7 rounded-full bg-blue-600 flex items-center justify-center text-[11px] text-white flex-shrink-0">
+              {(authState.name ?? authState.email)?.[0]?.toUpperCase()}
+            </div>
+          )}
+          <span className="flex-1 min-w-0 text-[12px] text-gray-300 truncate">
+            {authState.name ?? authState.email}
+          </span>
+          <button
+            type="button"
+            onClick={onSignOut}
+            title="Sign out"
+            className="text-gray-500 hover:text-gray-200 transition-colors"
+          >
+            <LogOut size={14} />
+          </button>
+        </div>
+      ) : null}
+
       {/* Bottom bar: theme + settings gear */}
       <div className="px-3 py-3 border-t border-gray-800/50 flex items-center gap-2">
         {/* Coloured theme buttons */}
@@ -156,12 +208,7 @@ export function Sidebar({
 
           {menuOpen && (
             <>
-              {/* Backdrop — closes menu when clicking anywhere outside */}
-              <div
-                className="fixed inset-0 z-40"
-                onClick={() => setMenuOpen(false)}
-              />
-              {/* Menu — above backdrop, opens upward */}
+              <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
               <div className="absolute bottom-full right-0 mb-2 w-44 rounded-xl border border-gray-700/50 bg-gray-900 shadow-xl z-50 py-1.5">
                 <button
                   type="button"

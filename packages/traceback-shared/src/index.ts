@@ -77,6 +77,11 @@ export interface ProvidersResponse {
   providers: ProviderInfo[];
 }
 
+/** Response of GET /auth/me. */
+export type AuthMeResponse =
+  | { isGuest: false; id: string; name: string | null; email: string; avatar: string | null }
+  | { isGuest: true; dailyLimit: number; messagesUsedToday: number };
+
 /** Optional per-message choice of which backend and model should answer. */
 export interface SendMessageOptions {
   provider?: string;
@@ -120,7 +125,7 @@ export class TracebackClient {
   constructor(baseURL: string, options?: { axiosInstance?: AxiosInstance }) {
     this.api =
       options?.axiosInstance ??
-      axios.create({ baseURL: baseURL.replace(/\/$/, ''), withCredentials: false });
+      axios.create({ baseURL: baseURL.replace(/\/$/, ''), withCredentials: true });
   }
 
   // The user's key (if any) travels in a header -- never the URL or body --
@@ -161,6 +166,20 @@ export class TracebackClient {
   async fetchProviders(): Promise<ProvidersResponse> {
     const { data } = await this.api.get<ProvidersResponse>('/providers');
     return data;
+  }
+
+  async fetchCurrentUser(): Promise<AuthMeResponse> {
+    const { data } = await this.api.get<AuthMeResponse>('/auth/me');
+    return data;
+  }
+
+  async signOut(): Promise<void> {
+    await this.api.post('/auth/logout');
+  }
+
+  signIn(): void {
+    const base = String(this.api.defaults.baseURL ?? '');
+    window.location.href = `${base}/auth/google`;
   }
 
   /** Write normalized conversations (from an importer) into the tree store. */

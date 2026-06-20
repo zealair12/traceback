@@ -71,6 +71,24 @@ export const createGroqProvider = (): ChatProvider =>
     timeoutMs: 30_000
   });
 
+// Perplexity: OpenAI-compatible, models are search-augmented (sonar family).
+export const createPerplexityProvider = (): ChatProvider =>
+  new OpenAIDialectProvider({
+    id: 'perplexity',
+    defaultModel: 'llama-3.1-sonar-small-128k-online',
+    suggestedModels: [
+      'llama-3.1-sonar-small-128k-online',
+      'llama-3.1-sonar-large-128k-online',
+      'llama-3.1-sonar-huge-128k-online'
+    ],
+    visionModels: [],
+    documentModels: [],
+    apiKeyEnv: 'PERPLEXITY_API_KEY',
+    defaultBaseURL: 'https://api.perplexity.ai',
+    supportsFiles: false,
+    timeoutMs: 30_000
+  });
+
 // The real OpenAI service.
 export const createOpenAIProvider = (): ChatProvider =>
   new OpenAIDialectProvider({

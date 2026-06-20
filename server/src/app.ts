@@ -14,7 +14,6 @@ import './auth/google.js';
 import { Prisma } from '@prisma/client';
 import { prisma } from './prismaClient.js';
 import { ApiRateLimitError, LlmTimeoutError } from './services/messageService.js';
-import { createMessageWithAutoReply } from './services/messageService.js';
 import {
   listProviders,
   defaultProviderId,
@@ -26,7 +25,6 @@ import { registerMessageRoutes } from './routes/messageRoutes.js';
 import { registerOpenAiProxy } from './routes/openaiProxy.js';
 import { registerImportRoutes } from './routes/importRoutes.js';
 import { registerTranscribeRoutes } from './routes/transcribeRoutes.js';
-import { resolveApiKey } from './auth/apiKey.js';
 import { wrap } from './routes/wrap.js';
 
 export function createApp() {
@@ -45,14 +43,24 @@ export function createApp() {
   app.use(session({
     secret: process.env.SESSION_SECRET!,
     resave: false,
-    saveUninitialized: false,
+    saveUninitialized: true,
     cookie: {
       secure: process.env.NODE_ENV === 'production',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      maxAge: 30 * 24 * 60 * 60 * 1000,
     },
   }));
   app.use(passport.initialize());
   app.use(passport.session());
+
+  // Assign a stable guest ID to every unauthenticated visitor. This scopes
+  // their sessions so they only see their own data before signing in.
+  app.use((req: Request, _res: Response, next: NextFunction) => {
+    if (!req.isAuthenticated() && !req.session.guestId) {
+      req.session.guestId = req.sessionID;
+    }
+    next();
+  });
 
   // --- Routes ---------------------------------------------------------------
 
@@ -60,7 +68,6 @@ export function createApp() {
     res.json({ status: 'ok' });
   });
 
-  // Lightweight local metrics for perf scripts / debugging.
   app.get(
     '/debug/metrics',
     wrap(async (_req, res) => {
@@ -72,13 +79,7 @@ export function createApp() {
       res.json({
         pid: process.pid,
         uptimeSec: Number(process.uptime().toFixed(2)),
-        memory: {
-          rss: mem.rss,
-          heapTotal: mem.heapTotal,
-          heapUsed: mem.heapUsed,
-          external: mem.external,
-          arrayBuffers: mem.arrayBuffers
-        },
+        memory: { rss: mem.rss, heapTotal: mem.heapTotal, heapUsed: mem.heapUsed },
         counts: { sessions: sessionCount, messages: messageCount },
         timestamp: new Date().toISOString()
       });
@@ -91,182 +92,72 @@ export function createApp() {
     res.json({ default: defaultProviderId(), providers: listProviders() });
   });
 
-  // List all sessions (used by the sidebar).
-  app.get('/sessions', async (_req: Request, res: Response, next: NextFunction) => {
-    try {
-      const sessions = await prisma.session.findMany({
-        orderBy: { updatedAt: 'desc' }
-      });
-      res.json(sessions);
-    } catch (error: unknown) {
-      next(error);
-    }
-  });
+  // Session + message routes (scoped to the caller's account or guest cookie).
+  registerSessionRoutes(app);
+  registerMessageRoutes(app);
 
-  // Create a new session.
-  app.post('/sessions', async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { name } = req.body ?? {};
-      const session = await prisma.session.create({
-        data: { name: typeof name === 'string' ? name : null }
-      });
-      res.status(201).json(session);
-    } catch (error: unknown) {
-      next(error);
-    }
-  });
-
-  // Delete a session and all its messages (cascade via Prisma schema).
-  app.delete('/sessions/:id', async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      await prisma.session.delete({ where: { id: req.params.id } });
-      res.json({ deleted: true });
-    } catch (error: unknown) {
-      next(error);
-    }
-  });
-
-  // Rename a session.
-  app.patch('/sessions/:id', async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { name } = req.body ?? {};
-      if (name !== null && typeof name !== 'string') {
-        res.status(400).json({ error: 'name must be a string or null.' });
-        return;
-      }
-      const session = await prisma.session.update({
-        where: { id: req.params.id },
-        data: { name: name && name.trim() ? name.trim() : null }
-      });
-      res.json(session);
-    } catch (error: unknown) {
-      next(error);
-    }
-  });
-
-  // Fetch the full tree of messages for a session (for React Flow).
-  app.get('/sessions/:id/messages', async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const messages = await prisma.message.findMany({
-        where: { sessionId: req.params.id },
-        orderBy: { createdAt: 'asc' }
-      });
-      res.json(messages);
-    } catch (error: unknown) {
-      next(error);
-    }
-  });
-
-  // Send a new user message -> get LLM reply.
-  app.post('/message/send', async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const {
-        session_id: sessionId,
-        parent_id: parentIdRaw,
-        content,
-        provider: providerRaw,
-        model: modelRaw,
-        attachments: attachmentsRaw
-      } = req.body ?? {};
-
-      if (!sessionId || typeof sessionId !== 'string') {
-        res.status(400).json({ error: 'session_id is required and must be a string.' });
-        return;
-      }
-      if (typeof content !== 'string') {
-        res.status(400).json({ error: 'content must be a string.' });
-        return;
-      }
-      // Empty text is fine as long as there is at least one attachment.
-      if (!content && (!Array.isArray(attachmentsRaw) || attachmentsRaw.length === 0)) {
-        res.status(400).json({ error: 'Please type a message or attach a file.' });
-        return;
-      }
-
-      const parentId = parentIdRaw ? String(parentIdRaw) : null;
-      const provider = typeof providerRaw === 'string' && providerRaw ? providerRaw : undefined;
-      const model = typeof modelRaw === 'string' && modelRaw ? modelRaw : undefined;
-      const apiKey = resolveApiKey(req);
-
-      // Guard: verify the session still exists before starting a transaction.
-      // If another tab or user deleted it, give a clear message rather than
-      // a raw Prisma foreign-key constraint error.
-      const sessionExists = await prisma.session.findUnique({
-        where: { id: sessionId },
-        select: { id: true }
-      });
-      if (!sessionExists) {
-        res.status(404).json({ error: 'This chat session no longer exists. Please start a new chat.' });
-        return;
-      }
-
-      const result = await createMessageWithAutoReply({
-        sessionId, parentId, content, provider, model, apiKey,
-        attachments: Array.isArray(attachmentsRaw) ? attachmentsRaw : undefined
-      });
-
-      res.status(201).json({
-        userMessage: result.userMessage,
-        assistantMessage: result.assistantMessage,
-        lineage: result.lineage
-      });
-    } catch (error: unknown) {
-      next(error);
-    }
-  });
-
-  // Delete a message and its entire subtree.
-  // The message id columns are stored as text, so we compare against the id
-  // directly. (A previous version cast the id to a uuid, which always failed
-  // with "operator does not exist: text = uuid" because the column is text.)
-  app.delete('/messages/:id', async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { id } = req.params;
-      await prisma.$executeRaw`
-        WITH RECURSIVE subtree AS (
-          SELECT id FROM messages WHERE id = ${id}
-          UNION ALL
-          SELECT m.id FROM messages m INNER JOIN subtree s ON m.parent_id = s.id
-        )
-        DELETE FROM messages WHERE id IN (SELECT id FROM subtree);
-      `;
-      res.json({ deleted: true });
-    } catch (error: unknown) {
-      next(error);
-    }
-  });
-
-  // --- Google OAuth routes --------------------------------------------------
-
-  app.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
-
-  app.get(
-    '/auth/google/callback',
-    passport.authenticate('google', { failureRedirect: '/' }),
-    (req: Request, res: Response) => res.redirect(process.env.CLIENT_ORIGIN + '/')
-  );
-
-  app.get('/auth/me', (req: Request, res: Response) => {
-    if (req.isAuthenticated()) res.json(req.user);
-    else res.status(401).json({ error: 'Not logged in' });
-  });
-
-  app.post('/auth/logout', (req: Request, res: Response) => {
-    req.logout(() => res.json({ success: true }));
-  });
-
-  // OpenAI-compatible proxy endpoint (POST /v1/chat/completions). Registered
-  // before the error handler so its errors are handled the same way.
+  // OpenAI-compatible proxy + file imports + audio transcription.
   registerOpenAiProxy(app);
   registerImportRoutes(app);
   registerTranscribeRoutes(app);
 
-  // Shared error handling: map known failure types onto helpful statuses.
+  // --- Auth routes ----------------------------------------------------------
+
+  app.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+
+  // After Google redirects back, transfer any sessions the user created as a
+  // guest so their history is waiting for them when they land on the app.
+  app.get(
+    '/auth/google/callback',
+    passport.authenticate('google', { failureRedirect: '/' }),
+    wrap(async (req: Request, res: Response) => {
+      const guestId = req.session.guestId;
+      const user = req.user as any;
+      if (guestId && user?.id) {
+        await prisma.session.updateMany({
+          where: { guestId },
+          data: { userId: user.id, guestId: null }
+        });
+        delete req.session.guestId;
+      }
+      res.redirect((process.env.CLIENT_ORIGIN ?? '') + '/');
+    })
+  );
+
+  // Returns the signed-in user, or guest status + today's usage for guests.
+  app.get(
+    '/auth/me',
+    wrap(async (req: Request, res: Response) => {
+      if (req.isAuthenticated()) {
+        const user = req.user as any;
+        res.json({ id: user.id, name: user.name, email: user.email, avatar: user.avatar, isGuest: false });
+        return;
+      }
+      const dailyLimit = Number(process.env.GUEST_DAILY_LIMIT ?? 20);
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const used = await prisma.message.count({
+        where: {
+          role: 'user',
+          createdAt: { gte: today },
+          session: { guestId: req.session.guestId }
+        }
+      });
+      res.json({ isGuest: true, dailyLimit, messagesUsedToday: used });
+    })
+  );
+
+  app.post('/auth/logout', (req: Request, res: Response) => {
+    req.logout(() => {
+      req.session.destroy(() => res.json({ success: true }));
+    });
+  });
+
+  // --- Error handling -------------------------------------------------------
+
   app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
     let status = 500;
     let label = 'Unknown Error';
 
-    // Prisma FK violation — almost always means the session was deleted mid-chat.
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2003') {
       console.error('[FK Constraint]', err.message);
       res.status(400).json({ error: 'This chat session no longer exists. Please start a new chat.' });

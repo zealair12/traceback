@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc -p tsconfig.json",
-    "start": "npx prisma migrate deploy && node dist/index.js",
+    "start": "npx prisma migrate resolve --rolled-back 20260619000000_add_user_auth; npx prisma migrate deploy && node dist/index.js",
     "perf:report": "tsx scripts/perf-report.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev"

@@ -30,6 +30,10 @@ import { wrap } from './routes/wrap.js';
 export function createApp() {
   const app = express();
 
+  // Railway (and most PaaS) sits behind a reverse proxy that terminates TLS.
+  // Without this, req.secure is always false and secure cookies don't work.
+  app.set('trust proxy', 1);
+
   app.use(
     cors({
       origin: process.env.CLIENT_ORIGIN ?? '*',
@@ -40,13 +44,15 @@ export function createApp() {
 
   app.use(express.json({ limit: '20mb' }));
 
+  // COOKIE_SECURE=true in Railway; leave unset for local http dev.
+  const secureCookies = process.env.COOKIE_SECURE === 'true';
   app.use(session({
-    secret: process.env.SESSION_SECRET!,
+    secret: process.env.SESSION_SECRET ?? 'dev-secret',
     resave: false,
     saveUninitialized: true,
     cookie: {
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      secure: secureCookies,
+      sameSite: secureCookies ? 'none' : 'lax',
       maxAge: 30 * 24 * 60 * 60 * 1000,
     },
   }));

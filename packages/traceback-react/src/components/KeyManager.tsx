@@ -19,6 +19,7 @@ function detectProviderId(key: string, providers: ProviderInfo[]): string | null
     return providers.find((p) => p.id.includes('openai'))?.id ?? null;
   if (k.startsWith('AIza')) return providers.find((p) => p.id.includes('google') || p.id.includes('gemini'))?.id ?? null;
   if (k.startsWith('gsk_')) return providers.find((p) => p.id.includes('groq'))?.id ?? null;
+  if (k.startsWith('pplx-')) return providers.find((p) => p.id.includes('perplexity'))?.id ?? null;
   if (k.startsWith('mistral')) return providers.find((p) => p.id.includes('mistral'))?.id ?? null;
   return null;
 }

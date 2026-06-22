@@ -46,6 +46,8 @@ export function Sidebar({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [confirmSignOut, setConfirmSignOut] = useState(false);
 
   return (
     // `relative` so the settings menu can be absolutely positioned inside
@@ -103,22 +105,46 @@ export function Sidebar({
                     </button>
                   )}
                   {/* Always visible on mobile; hidden until hover on desktop */}
-                  <button
-                    type="button"
-                    onClick={() => { setEditingId(session.id); setEditValue(displayName === 'Untitled' ? '' : displayName); }}
-                    className="text-[11px] text-gray-500 hover:text-gray-200 px-1.5 py-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
-                    title="Rename"
-                  >
-                    ✎
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onDeleteSession(session.id)}
-                    className="text-gray-500 hover:text-red-400 px-1.5 py-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
-                    title="Delete"
-                  >
-                    <Trash2 size={12} />
-                  </button>
+                  {confirmDeleteId === session.id ? (
+                    <>
+                      <span className="text-[10px] text-gray-500 mr-0.5">Sure?</span>
+                      <button
+                        type="button"
+                        onClick={() => { onDeleteSession(session.id); setConfirmDeleteId(null); }}
+                        className="text-[10px] text-red-400 hover:text-red-300 px-1 py-1"
+                        title="Confirm delete"
+                      >
+                        Yes
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDeleteId(null)}
+                        className="text-[10px] text-gray-500 hover:text-gray-300 px-1 py-1"
+                        title="Cancel"
+                      >
+                        No
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => { setEditingId(session.id); setEditValue(displayName === 'Untitled' ? '' : displayName); }}
+                        className="text-[11px] text-gray-500 hover:text-gray-200 px-1.5 py-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                        title="Rename"
+                      >
+                        ✎
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDeleteId(session.id)}
+                        className="text-gray-500 hover:text-red-400 px-1.5 py-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                        title="Delete"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             );
@@ -170,14 +196,34 @@ export function Sidebar({
           <span className="flex-1 min-w-0 text-[12px] text-gray-300 truncate">
             {authState.name ?? authState.email}
           </span>
-          <button
-            type="button"
-            onClick={onSignOut}
-            title="Sign out"
-            className="text-gray-500 hover:text-gray-200 transition-colors"
-          >
-            <LogOut size={14} />
-          </button>
+          {confirmSignOut ? (
+            <div className="flex items-center gap-1 flex-shrink-0">
+              <span className="text-[10px] text-gray-500">Sure?</span>
+              <button
+                type="button"
+                onClick={() => { onSignOut(); setConfirmSignOut(false); }}
+                className="text-[10px] text-red-400 hover:text-red-300 px-1"
+              >
+                Yes
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmSignOut(false)}
+                className="text-[10px] text-gray-500 hover:text-gray-300 px-1"
+              >
+                No
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirmSignOut(true)}
+              title="Sign out"
+              className="text-gray-500 hover:text-gray-200 transition-colors flex-shrink-0"
+            >
+              <LogOut size={14} />
+            </button>
+          )}
         </div>
       ) : null}
 

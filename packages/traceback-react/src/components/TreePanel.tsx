@@ -19,25 +19,25 @@ type Theme = 'dark' | 'blue' | 'light';
 
 const themeTokens: Record<Theme, {
   canvasBg: string; dots: string; edgeDefault: string; edgeActive: string;
-  controlBg: string; controlBorder: string; ctxBg: string;
+  controlBg: string; controlBorder: string; confirmBg: string;
   nodeBg: string; nodeBorder: string; nodeText: string;
   nodePathBg: string; nodePathBorder: string; nodePathText: string;
 }> = {
   dark: {
     canvasBg: '#0d0d0d', dots: '#1a1a1a', edgeDefault: '#2a2a2a', edgeActive: '#10b981',
-    controlBg: '#111111', controlBorder: '#2a2a2a', ctxBg: 'rgba(17,17,17,0.96)',
+    controlBg: '#111111', controlBorder: '#2a2a2a', confirmBg: 'rgba(17,17,17,0.96)',
     nodeBg: '#1a1a1a', nodeBorder: '#2a2a2a', nodeText: '#525252',
     nodePathBg: '#262626', nodePathBorder: '#3a3a3a', nodePathText: '#a3a3a3',
   },
   blue: {
     canvasBg: '#040a18', dots: '#0a1228', edgeDefault: '#1a2a4a', edgeActive: '#3b82f6',
-    controlBg: '#060c1a', controlBorder: '#1a2a4a', ctxBg: 'rgba(6,12,26,0.96)',
+    controlBg: '#060c1a', controlBorder: '#1a2a4a', confirmBg: 'rgba(6,12,26,0.96)',
     nodeBg: '#0d1a30', nodeBorder: '#1a2a4a', nodeText: '#3d6499',
     nodePathBg: '#152440', nodePathBorder: '#2a4870', nodePathText: '#5b87c5',
   },
   light: {
     canvasBg: '#f0f2f5', dots: '#dde0e8', edgeDefault: '#d4d4d4', edgeActive: '#3b82f6',
-    controlBg: '#e8ecf0', controlBorder: '#d1d5db', ctxBg: 'rgba(240,242,245,0.96)',
+    controlBg: '#e8ecf0', controlBorder: '#d1d5db', confirmBg: 'rgba(240,242,245,0.96)',
     nodeBg: '#e5e5e5', nodeBorder: '#d4d4d4', nodeText: '#a3a3a3',
     nodePathBg: '#d4d4d4', nodePathBorder: '#a3a3a3', nodePathText: '#525252',
   },
@@ -61,11 +61,6 @@ function layoutTree(nodes: Node[], edges: Edge[]): Node[] {
   const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
   g.setGraph({ rankdir: 'TB', nodesep: 60, ranksep: 80 });
   nodes.forEach((n) => g.setNode(n.id, { width: 200, height: 50 }));
-  // Dagre lays a parent's children out in the REVERSE of the order its edges
-  // are added. The `edges` come in oldest-first creation order, which would put
-  // the newest branch on the left. We add them in reverse so the OLDEST branch
-  // ends up on the LEFT and the newest on the right -- and so the prev/next
-  // arrows (which step oldest -> newest) match left -> right.
   [...edges].reverse().forEach((e) => g.setEdge(e.source, e.target));
   Dagre.layout(g);
   return nodes.map((n) => {
@@ -75,23 +70,27 @@ function layoutTree(nodes: Node[], edges: Edge[]): Node[] {
 }
 
 function TreeFlowInner({
-  nodes,
+  layoutNodes,
   edges,
   activeNodeId,
+  activePathIds,
   onSelectNode,
   onDeleteSubtree,
   tokens
 }: {
-  nodes: Node[];
+  layoutNodes: Node[];
   edges: Edge[];
   activeNodeId: string | null;
+  activePathIds: Set<string>;
   onSelectNode: (nodeId: string) => void;
   onDeleteSubtree: (nodeId: string) => void;
   tokens: typeof themeTokens['dark'];
 }) {
   const reactFlow = useReactFlow();
   const prevActiveRef = useRef<string | null>(null);
-  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; nodeId: string } | null>(null);
+
+  // Confirmation popup: position + which node is pending
+  const [confirm, setConfirm] = useState<{ x: number; y: number; nodeId: string } | null>(null);
 
   useEffect(() => {
     if (!activeNodeId || activeNodeId === prevActiveRef.current) return;
@@ -103,38 +102,75 @@ function TreeFlowInner({
   }, [activeNodeId, reactFlow]);
 
   useEffect(() => {
-    const close = () => setCtxMenu(null);
-    window.addEventListener('click', close);
+    const close = () => setConfirm(null);
     window.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
-    return () => {
-      window.removeEventListener('click', close);
-    };
   }, []);
+
+  // Stable callback passed into each node's data so it can open the confirm popup.
+  const handleDeleteRequest = useCallback((x: number, y: number, nodeId: string) => {
+    setConfirm({ x, y, nodeId });
+  }, []);
+
+  const styledNodes: Node[] = useMemo(
+    () =>
+      layoutNodes.map((n) => ({
+        ...n,
+        type: 'custom',
+        data: {
+          ...n.data,
+          isActive: n.id === activeNodeId,
+          isOnActivePath: activePathIds.has(n.id),
+          onDeleteRequest: (x: number, y: number) => handleDeleteRequest(x, y, n.id),
+          nodeBg: tokens.nodeBg,
+          nodeBorder: tokens.nodeBorder,
+          nodeText: tokens.nodeText,
+          nodePathBg: tokens.nodePathBg,
+          nodePathBorder: tokens.nodePathBorder,
+          nodePathText: tokens.nodePathText,
+        }
+      })),
+    [layoutNodes, activeNodeId, activePathIds, tokens, handleDeleteRequest]
+  );
+
+  const styledEdges: Edge[] = useMemo(
+    () =>
+      edges.map((e) => {
+        const onPath = activePathIds.has(e.source) && activePathIds.has(e.target);
+        return {
+          ...e,
+          type: 'smoothstep',
+          animated: onPath,
+          style: { stroke: onPath ? tokens.edgeActive : tokens.edgeDefault, strokeWidth: onPath ? 2 : 1 }
+        };
+      }),
+    [edges, activePathIds, tokens]
+  );
 
   const handleNodeClick = useCallback(
     (_: React.MouseEvent, node: Node) => onSelectNode(node.id),
     [onSelectNode]
   );
 
+  // Right-click on a node opens the same confirm popup at cursor position.
   const handleNodeContextMenu = useCallback(
     (event: React.MouseEvent, node: Node) => {
       event.preventDefault();
-      setCtxMenu({ x: event.clientX, y: event.clientY, nodeId: node.id });
+      setConfirm({ x: event.clientX, y: event.clientY, nodeId: node.id });
     },
     []
   );
 
-  const handleDelete = useCallback(() => {
-    if (!ctxMenu) return;
-    onDeleteSubtree(ctxMenu.nodeId);
-    setCtxMenu(null);
-  }, [ctxMenu, onDeleteSubtree]);
+  const handleConfirmDelete = useCallback(() => {
+    if (!confirm) return;
+    onDeleteSubtree(confirm.nodeId);
+    setConfirm(null);
+  }, [confirm, onDeleteSubtree]);
 
   return (
     <>
       <ReactFlow
-        nodes={nodes}
-        edges={edges}
+        nodes={styledNodes}
+        edges={styledEdges}
         nodeTypes={nodeTypes}
         onNodeClick={handleNodeClick}
         onNodeContextMenu={handleNodeContextMenu}
@@ -161,20 +197,33 @@ function TreeFlowInner({
           }}
         />
       </ReactFlow>
-      {ctxMenu && (
-        <div
-          className="fixed z-[100] min-w-[160px] py-1 rounded-lg shadow-2xl border border-gray-700/80 backdrop-blur-xl"
-          style={{ top: ctxMenu.y, left: ctxMenu.x, background: tokens.ctxBg }}
-        >
-          <button
-            type="button"
-            onClick={handleDelete}
-            className="w-full text-left px-3 py-1.5 text-[12px] text-red-400 hover:bg-red-600/20 hover:text-red-300 flex items-center gap-2"
+
+      {confirm && (
+        <>
+          <div className="fixed inset-0 z-[99]" onClick={() => setConfirm(null)} />
+          <div
+            className="fixed z-[100] min-w-[152px] rounded-xl shadow-2xl border border-gray-700/60 backdrop-blur-xl py-2.5 px-3"
+            style={{ top: confirm.y, left: confirm.x, background: tokens.confirmBg }}
           >
-            <span>✕</span>
-            <span>Delete subtree</span>
-          </button>
-        </div>
+            <p className="text-[11px] text-gray-400 mb-2">Delete this branch?</p>
+            <div className="flex gap-1.5">
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                className="flex-1 py-1 rounded-md text-[11px] font-medium bg-red-600/20 text-red-400 hover:bg-red-600/30 transition-colors"
+              >
+                Delete
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirm(null)}
+                className="flex-1 py-1 rounded-md text-[11px] text-gray-400 bg-gray-800/40 hover:bg-gray-700/60 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </>
       )}
     </>
   );
@@ -202,47 +251,11 @@ export function TreePanel({
     [nodeIds, edgeIds]
   );
 
-  const styledNodes: Node[] = useMemo(
-    () =>
-      layoutNodes.map((n) => ({
-        ...n,
-        type: 'custom',
-        data: {
-          ...n.data,
-          isActive: n.id === activeNodeId,
-          isOnActivePath: activePathIds.has(n.id),
-          nodeBg: tokens.nodeBg,
-          nodeBorder: tokens.nodeBorder,
-          nodeText: tokens.nodeText,
-          nodePathBg: tokens.nodePathBg,
-          nodePathBorder: tokens.nodePathBorder,
-          nodePathText: tokens.nodePathText,
-        }
-      })),
-    [layoutNodes, activeNodeId, activePathIds]
-  );
-
-  const styledEdges: Edge[] = useMemo(
-    () =>
-      edges.map((e) => {
-        const onPath = activePathIds.has(e.source) && activePathIds.has(e.target);
-        return {
-          ...e,
-          type: 'smoothstep',
-          animated: onPath,
-          style: { stroke: onPath ? tokens.edgeActive : tokens.edgeDefault, strokeWidth: onPath ? 2 : 1 }
-        };
-      }),
-    [edges, activePathIds, tokens]
-  );
-
   return (
     <aside
       className={`h-full bg-tree flex flex-col flex-shrink-0 ${isFullscreen ? '' : 'border-l border-gray-800'}`}
       style={{ width: isFullscreen ? '100%' : width }}
     >
-      {/* No header bar: the tree speaks for itself. The expand/collapse toggle
-          floats over the canvas as a single icon. */}
       <div className="flex-1 h-0 relative">
         <button
           type="button"
@@ -255,9 +268,10 @@ export function TreePanel({
         </button>
         <ReactFlowProvider>
           <TreeFlowInner
-            nodes={styledNodes}
-            edges={styledEdges}
+            layoutNodes={layoutNodes}
+            edges={edges}
             activeNodeId={activeNodeId}
+            activePathIds={activePathIds}
             onSelectNode={onSelectNode}
             onDeleteSubtree={onDeleteSubtree}
             tokens={tokens}

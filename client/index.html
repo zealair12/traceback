@@ -37,6 +37,20 @@
       content="Turn your AI chats into a branching tree, so each reply doesn't carry the whole conversation."
     />
     <meta name="twitter:image" content="https://tracebackai.com/og.png" />
+
+    <!-- Structured data so machines (and AI retrieval) parse what TraceBack is -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "TraceBack",
+        "url": "https://tracebackai.com",
+        "applicationCategory": "ProductivityApplication",
+        "operatingSystem": "Web",
+        "description": "TraceBack changes the AI conversations you have into a branching tree, so you can take a question in several directions without every reply carrying the whole history. It also exposes an OpenAI-compatible API.",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

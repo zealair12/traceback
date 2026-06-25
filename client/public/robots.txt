@@ -1,0 +1,33 @@
+# TraceBack robots policy.
+# We explicitly ALLOW AI crawlers (training + retrieval) so assistants like
+# ChatGPT, Claude, Perplexity, Gemini, and Copilot can read and cite TraceBack.
+# Blocking these would remove the site from their answers.
+
+User-agent: *
+Allow: /
+
+User-agent: GPTBot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+Sitemap: https://tracebackai.com/sitemap.xml

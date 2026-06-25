@@ -64,23 +64,24 @@ function friendlyError(err: any): string {
 
 // A starter conversation seeded for brand-new visitors so they land in a real,
 // continuable chat (saved to their account/guest history) instead of a blank
-// screen. It is a relatable dad joke that then gets explained and branches a few
-// levels deep, which shows how the tree works. Written in the neutral import
+// screen. It is a relatable dad joke that gets explained, with one extra branch
+// (a mom joke) so the tree shows a real fork. Written in the neutral import
 // shape; the server gives every message a real id on first load.
+//
+// Backdated timestamps on purpose: the guest daily limit counts user messages
+// created today, so a "now" timestamp would make the seed spend the visitor's
+// free quota before they ask anything. A past date keeps the seed off the count.
+const seedTime = (i: number) => new Date(Date.UTC(2024, 0, 1, 12, 0, i)).toISOString();
 const SEED_CONVERSATION = {
   name: 'Dad jokes',
   messages: [
-    { id: 's1', parentId: null, role: 'user' as const, content: 'Tell me a dad joke' },
-    { id: 's2', parentId: 's1', role: 'assistant' as const, content: "Why don't eggs tell jokes? They would crack each other up." },
-    { id: 's3', parentId: 's2', role: 'user' as const, content: 'Explain it' },
-    { id: 's4', parentId: 's3', role: 'assistant' as const, content: 'It plays on the phrase "crack up". An egg can literally crack, and to crack up also means to burst out laughing. Both meanings land at the same time, which is what makes it a pun.' },
-    { id: 's5', parentId: 's4', role: 'user' as const, content: 'Give me one about computers' },
-    { id: 's6', parentId: 's5', role: 'assistant' as const, content: 'Why was the computer cold? It left its Windows open.' },
-    { id: 's7', parentId: 's6', role: 'user' as const, content: 'Explain that one too' },
-    { id: 's8', parentId: 's7', role: 'assistant' as const, content: 'It works on two levels. Windows is the operating system, and an open window also lets cold air in. The joke swaps one meaning for the other.' },
+    { id: 's1', parentId: null, role: 'user' as const, content: 'Tell me a dad joke', createdAt: seedTime(0) },
+    { id: 's2', parentId: 's1', role: 'assistant' as const, content: "Why don't eggs tell jokes? They would crack each other up.", createdAt: seedTime(1) },
+    { id: 's3', parentId: 's2', role: 'user' as const, content: 'Explain it', createdAt: seedTime(2) },
+    { id: 's4', parentId: 's3', role: 'assistant' as const, content: 'It plays on the phrase "crack up". An egg can literally crack, and to crack up also means to burst out laughing. Both meanings land at the same time, which is what makes it a pun.', createdAt: seedTime(3) },
     // A second branch off the first joke, so the tree shows a real fork.
-    { id: 's9', parentId: 's2', role: 'user' as const, content: 'Give me another' },
-    { id: 's10', parentId: 's9', role: 'assistant' as const, content: 'I tried to write one about pizza, but it was too cheesy.' }
+    { id: 's5', parentId: 's2', role: 'user' as const, content: 'How about a mom joke', createdAt: seedTime(4) },
+    { id: 's6', parentId: 's5', role: 'assistant' as const, content: 'What did the mom broom say to the baby broom? It is past your sweep time.', createdAt: seedTime(5) }
   ]
 };
 

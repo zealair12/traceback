@@ -19,6 +19,7 @@ import { prisma } from '../prismaClient.js';
 import { createMessageWithAutoReply } from '../services/messageService.js';
 import { getProvider, defaultProviderId } from '../providers/index.js';
 import { resolveApiKey } from '../auth/apiKey.js';
+import { getOwner } from '../auth/owner.js';
 
 type Role = 'user' | 'assistant' | 'system';
 interface IncomingMessage {
@@ -124,8 +125,13 @@ export function registerOpenAiProxy(app: Express) {
         targetParentId = parentId;
       } else {
         // Drop-in: create a fresh session and store every message before the
-        // final user turn as the lineage leading up to it.
-        const session = await prisma.session.create({ data: { name: null } });
+        // final user turn as the lineage leading up to it. Stamp the owner so
+        // the session belongs to the caller (and is visible later) rather than
+        // being orphaned.
+        const owner = getOwner(req);
+        const session = await prisma.session.create({
+          data: { name: null, ...(owner.userId ? { userId: owner.userId } : { guestId: owner.guestId }) }
+        });
         targetSessionId = session.id;
 
         let prevId: string | null = null;

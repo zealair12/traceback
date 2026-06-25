@@ -17,6 +17,7 @@ interface ChatPanelProps {
   branchingFromMessageId: string | null;
   branchingFromPreview: string | null;
   branchingFromText: string | null;
+  isExample: boolean;
   sending: boolean;
   error: string | null;
   siblingInfo: SiblingInfo | null;
@@ -46,6 +47,7 @@ export function ChatPanel({
   branchingFromMessageId,
   branchingFromPreview,
   branchingFromText,
+  isExample,
   sending,
   error,
   siblingInfo,
@@ -74,9 +76,10 @@ export function ChatPanel({
     setHintDismissed(true);
     try { localStorage.setItem('tb-hint-branch', 'seen'); } catch { /* ignore */ }
   };
-  // Only worth showing once there is a reply to branch from.
+  // Only worth showing once there is a reply to branch from — and never during
+  // the example, which carries its own banner.
   const showBranchHint =
-    !hintDismissed && !branchingFromMessageId && threadPath.some((m) => m.role === 'assistant');
+    !hintDismissed && !isExample && !branchingFromMessageId && threadPath.some((m) => m.role === 'assistant');
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -133,6 +136,12 @@ export function ChatPanel({
         <>
           <div ref={scrollRef} className="flex-1 h-0 overflow-y-auto">
             <div className="max-w-2xl mx-auto px-4 pt-4 pb-2 space-y-5">
+              {isExample && (
+                <div className="text-[11px] text-gray-400 bg-blue-500/10 border border-blue-500/20 rounded-lg px-3 py-2 leading-relaxed">
+                  <span className="text-gray-200 font-medium">Example chat.</span>{' '}
+                  Click a branch on the right to follow it — or select any text in a reply to branch from that exact spot. Type below to start your own.
+                </div>
+              )}
               {threadPath.map((message) => (
                 <MessageBubble
                   key={message.id}

@@ -53,8 +53,7 @@ function TreeNodeComponent({ data, id: _id }: NodeProps) {
       <div
         className={`
           group relative px-3 py-2 rounded-lg text-[11px] leading-snug
-          max-w-[200px] transition-all duration-200 select-none
-          ${isExample ? 'cursor-default' : 'cursor-pointer'}
+          max-w-[200px] cursor-pointer transition-all duration-200 select-none
           ${isActive
             ? 'ring-2 ring-emerald-400 shadow-[0_0_14px_rgba(16,185,129,0.25)] scale-[1.04]'
             : 'hover:opacity-90'

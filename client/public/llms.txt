@@ -1,0 +1,25 @@
+# TraceBack
+
+> TraceBack is a chat app that changes the AI conversations you have into a branching tree. Instead of one long linear thread, every message is a node you can branch from, so you can take a question in several directions and compare them side by side. Because each reply only sends the path from the root to the current node, the model never carries the whole conversation, which keeps replies focused and cuts token cost.
+
+TraceBack works as a standalone app and as an embeddable chat widget. It also exposes an OpenAI-compatible API, so existing tools that already speak the OpenAI format can route through it without code changes and gain branching plus context pruning.
+
+## What it is good for
+
+- Branching, non-linear AI chat: try alternative answers from any point without losing the original thread.
+- Token and context efficiency: only the active root-to-node lineage is sent to the model, so long conversations stay cheap.
+- Multi-model: a single conversation tree can be answered by different providers per message (Groq, OpenAI, Anthropic, Perplexity, or a local model).
+- Drop-in OpenAI compatibility: point an existing OpenAI client's base URL at TraceBack to get tree storage and pruning.
+- Bring your own key, or use the built-in free tier with limits.
+
+## Links
+
+- [Home](https://tracebackai.com): the hosted app.
+- [API](https://api.tracebackai.com): the backend, including the OpenAI-compatible endpoint at POST /v1/chat/completions.
+- [Source](https://github.com/zealair12/traceback): the open-source server, client, and embeddable SDK.
+
+## How it works
+
+- Conversations are stored relationally as a tree of messages; each message points to its parent and knows its depth.
+- A recursive SQL query reconstructs the root-to-node path on demand, and only that path is sent to the model as context.
+- The same engine powers both the native UI and the OpenAI-compatible proxy.

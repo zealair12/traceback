@@ -90,3 +90,6 @@ dist-widget/
 # BMad Method: personal install answers and generated artifacts - never commit
 _bmad/config.user.toml
 _bmad-output/
+
+# Excalidraw MCP server runtime log
+excalidraw.log

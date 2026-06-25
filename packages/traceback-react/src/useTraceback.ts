@@ -62,50 +62,27 @@ function friendlyError(err: any): string {
   return raw;
 }
 
-// A built-in example conversation shown when a session has no messages yet.
-// It's a relatable dad joke that then gets explained, already branched, so a
-// first-time user can click around the tree and read how branching works before
-// typing anything. Purely client-side: it never hits the server and vanishes the
-// moment a real message is sent.
-const EXAMPLE_ACTIVE_ID = 'ex-explain-a';
-const EXAMPLE_MESSAGES: MessageResponse[] = (() => {
-  const t = (n: number) => new Date(Date.UTC(2024, 0, 1, 12, n)).toISOString();
-  const mk = (
-    id: string,
-    role: 'user' | 'assistant',
-    content: string,
-    parentId: string | null,
-    depth: number,
-    i: number
-  ) =>
-    ({
-      id,
-      sessionId: 'example',
-      role,
-      content,
-      parentId,
-      depth,
-      provider: null,
-      model: null,
-      attachments: null,
-      createdAt: t(i)
-    } as unknown as MessageResponse);
-  return [
-    mk('ex-q', 'user', 'Tell me a dad joke 🙂', null, 0, 0),
-    mk('ex-joke', 'assistant', "Why don't eggs tell jokes?\n\nThey'd **crack** each other up. 🥚", 'ex-q', 1, 1),
-    mk('ex-explain-q', 'user', 'Haha wait — explain it', 'ex-joke', 2, 2),
-    mk(
-      'ex-explain-a',
-      'assistant',
-      "It's a pun on **crack up**:\n\n- an egg literally *cracks*\n- and to \"crack up\" also means to burst out laughing\n\nBoth meanings fire at the same time — that double meaning is the whole gag.",
-      'ex-explain-q',
-      3,
-      3
-    ),
-    mk('ex-more-q', 'user', 'Give me another', 'ex-joke', 2, 4),
-    mk('ex-more-a', 'assistant', "I'm all out — I just don't have the yolk for it anymore. 🍳", 'ex-more-q', 3, 5)
-  ];
-})();
+// A starter conversation seeded for brand-new visitors so they land in a real,
+// continuable chat (saved to their account/guest history) instead of a blank
+// screen. It is a relatable dad joke that then gets explained and branches a few
+// levels deep, which shows how the tree works. Written in the neutral import
+// shape; the server gives every message a real id on first load.
+const SEED_CONVERSATION = {
+  name: 'Dad jokes',
+  messages: [
+    { id: 's1', parentId: null, role: 'user' as const, content: 'Tell me a dad joke' },
+    { id: 's2', parentId: 's1', role: 'assistant' as const, content: "Why don't eggs tell jokes? They would crack each other up." },
+    { id: 's3', parentId: 's2', role: 'user' as const, content: 'Explain it' },
+    { id: 's4', parentId: 's3', role: 'assistant' as const, content: 'It plays on the phrase "crack up". An egg can literally crack, and to crack up also means to burst out laughing. Both meanings land at the same time, which is what makes it a pun.' },
+    { id: 's5', parentId: 's4', role: 'user' as const, content: 'Give me one about computers' },
+    { id: 's6', parentId: 's5', role: 'assistant' as const, content: 'Why was the computer cold? It left its Windows open.' },
+    { id: 's7', parentId: 's6', role: 'user' as const, content: 'Explain that one too' },
+    { id: 's8', parentId: 's7', role: 'assistant' as const, content: 'It works on two levels. Windows is the operating system, and an open window also lets cold air in. The joke swaps one meaning for the other.' },
+    // A second branch off the first joke, so the tree shows a real fork.
+    { id: 's9', parentId: 's2', role: 'user' as const, content: 'Give me another' },
+    { id: 's10', parentId: 's9', role: 'assistant' as const, content: 'I tried to write one about pizza, but it was too cheesy.' }
+  ]
+};
 
 export function useTraceback({ apiUrl }: UseTracebackOptions) {
   // One HTTP client per server address. Rebuilt only if the address changes.
@@ -115,9 +92,6 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [allMessages, setAllMessages] = useState<MessageResponse[]>([]);
   const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
-  // Which node of the built-in example tree is open (only used while a session
-  // is empty and the example is on screen).
-  const [exampleNodeId, setExampleNodeId] = useState<string | null>(null);
 
   const [branchingFromMessageId, setBranchingFromMessageId] = useState<string | null>(null);
   const [branchingFromText, setBranchingFromText] = useState<string | null>(null);
@@ -171,6 +145,19 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
       .fetchSessions()
       .then(async (s) => {
         if (s.length === 0) {
+          // Brand-new visitor: seed a real, continuable starter conversation so
+          // they land in a worked example instead of a blank screen.
+          try {
+            await client.importConversations([SEED_CONVERSATION]);
+            const seeded = await client.fetchSessions();
+            if (seeded.length > 0) {
+              setSessions(seeded);
+              setActiveSessionId(seeded[0].id);
+              return;
+            }
+          } catch (err) {
+            console.error('Failed to seed starter conversation:', err);
+          }
           const newSession = await client.createSession();
           setSessions([newSession]);
           setActiveSessionId(newSession.id);
@@ -225,15 +212,10 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
       .catch((err) => console.error('Failed to load messages:', err));
   }, [client, activeSessionId]);
 
-  // With no real messages yet (and nothing in flight), drive the UI from the
-  // built-in example so the empty state is a live, clickable demo.
-  const showExample = allMessages.length === 0 && !sending;
-  const effectiveActiveNodeId = showExample ? exampleNodeId ?? EXAMPLE_ACTIVE_ID : activeNodeId;
-
   // All tree math lives in one plain class.
   const tree = useMemo(
-    () => new ConversationTree(showExample ? EXAMPLE_MESSAGES : allMessages, effectiveActiveNodeId),
-    [showExample, allMessages, effectiveActiveNodeId]
+    () => new ConversationTree(allMessages, activeNodeId),
+    [allMessages, activeNodeId]
   );
 
   // Which backend/model a message actually goes to (Auto resolves here).
@@ -308,7 +290,6 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
       setActiveSessionId(session.id);
       setAllMessages([]);
       setActiveNodeId(null);
-      setExampleNodeId(null);
     } catch (err) {
       console.error('Failed to create session:', err);
     }
@@ -318,7 +299,6 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
     (sessionId: string) => {
       setError(null);
       setActiveSessionId(sessionId);
-      setExampleNodeId(null);
       clearBranching();
     },
     [clearBranching]
@@ -410,7 +390,6 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
   const handleBranchFromMessage = useCallback(
     async (messageId: string, selectedText: string, action: 'dig' | 'ask') => {
       if (!activeSessionId || sending) return;
-      if (allMessages.length === 0) return; // example messages aren't real; type below to start
       if (action === 'ask') {
         setBranchingFromMessageId(messageId);
         setBranchingFromText(selectedText);
@@ -430,17 +409,11 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
         clearBranching();
       }
     },
-    [activeSessionId, sending, send, clearBranching, allMessages.length]
+    [activeSessionId, sending, send, clearBranching]
   );
 
   const handleSelectTreeNode = useCallback(
     (nodeId: string) => {
-      // While the example is on screen, navigate it instead of real data.
-      if (allMessages.length === 0) {
-        const child = EXAMPLE_MESSAGES.find((m) => m.parentId === nodeId && m.role === 'assistant');
-        setExampleNodeId(child?.id ?? nodeId);
-        return;
-      }
       // The tree shows questions; jump to the answer so the full Q&A is read.
       const assistantChild = allMessages.find((m) => m.parentId === nodeId && m.role === 'assistant');
       setActiveNodeId(assistantChild?.id ?? nodeId);
@@ -452,7 +425,6 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
   const handleDeleteSubtree = useCallback(
     async (nodeId: string) => {
       if (!activeSessionId) return;
-      if (allMessages.length === 0) return; // nothing real to delete in the example
       try {
         await client.deleteSubtree(nodeId);
         const msgs = await client.fetchSessionMessages(activeSessionId);
@@ -472,23 +444,11 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
     [client, activeSessionId, activeNodeId, allMessages]
   );
 
-  // Move the active position; routes to the example when the demo is on screen.
-  const goTo = useCallback(
-    (nodeId: string) => {
-      if (allMessages.length === 0) {
-        setExampleNodeId(nodeId);
-        return;
-      }
-      setActiveNodeId(nodeId);
-      clearBranching();
-    },
-    [allMessages.length, clearBranching]
-  );
-
   const handleNavigateToParent = useCallback(() => {
     if (!tree.siblingInfo?.parentId) return;
-    goTo(tree.siblingInfo.parentId);
-  }, [tree, goTo]);
+    setActiveNodeId(tree.siblingInfo.parentId);
+    clearBranching();
+  }, [tree, clearBranching]);
 
   const handleNavigateToSibling = useCallback(
     (offset: number) => {
@@ -496,12 +456,19 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
       if (!info) return;
       const newIndex = info.currentIndex + offset;
       if (newIndex < 0 || newIndex >= info.total) return;
-      goTo(info.siblings[newIndex].id);
+      setActiveNodeId(info.siblings[newIndex].id);
+      clearBranching();
     },
-    [tree, goTo]
+    [tree, clearBranching]
   );
 
-  const handleNavigateToNode = useCallback((nodeId: string) => goTo(nodeId), [goTo]);
+  const handleNavigateToNode = useCallback(
+    (nodeId: string) => {
+      setActiveNodeId(nodeId);
+      clearBranching();
+    },
+    [clearBranching]
+  );
 
   const handleResendMessage = useCallback(
     async (messageId: string) => {
@@ -568,8 +535,7 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
     sessions: sessions.filter((s) => s.id !== incognitoSessionId),
     activeSessionId,
     allMessages,
-    activeNodeId: effectiveActiveNodeId,
-    isExample: showExample,
+    activeNodeId,
     threadPath: tree.threadPath,
     activePathIds: tree.activePathIds,
     nodes: tree.nodes,

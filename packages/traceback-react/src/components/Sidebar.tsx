@@ -160,13 +160,15 @@ export function Sidebar({
         <div className="px-3 py-2.5 border-t border-gray-800/50">
           <div className="flex items-center justify-between mb-1.5">
             <span className="text-[11px] text-gray-500">
-              {authState.messagesUsedToday}/{authState.dailyLimit} free messages today
+              {Math.max(0, authState.dailyLimit - authState.messagesUsedToday)} free messages left today
             </span>
           </div>
           <div className="w-full bg-gray-800/50 rounded-full h-1 mb-2.5">
             <div
               className="bg-blue-500 h-1 rounded-full transition-all"
-              style={{ width: `${Math.min(100, (authState.messagesUsedToday / authState.dailyLimit) * 100)}%` }}
+              style={{
+                width: `${Math.max(0, Math.min(100, ((authState.dailyLimit - authState.messagesUsedToday) / authState.dailyLimit) * 100))}%`
+              }}
             />
           </div>
           <button

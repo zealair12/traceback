@@ -13,9 +13,6 @@ export interface TreeNodeData {
   nodePathBg?: string;
   nodePathBorder?: string;
   nodePathText?: string;
-  // True for the placeholder demo tree shown in an empty session: rendered
-  // muted and non-interactive so it reads as an illustration, not real data.
-  isExample?: boolean;
   onDeleteRequest?: (x: number, y: number) => void;
 }
 
@@ -24,7 +21,7 @@ function TreeNodeComponent({ data, id: _id }: NodeProps) {
     label, timestamp, isActive, isOnActivePath,
     nodeBg = '#1a1a1a', nodeBorder = '#2a2a2a', nodeText = '#525252',
     nodePathBg = '#262626', nodePathBorder = '#3a3a3a', nodePathText = '#a3a3a3',
-    isExample, onDeleteRequest,
+    onDeleteRequest,
   } = data as unknown as TreeNodeData;
 
   const activeStyle = {
@@ -43,10 +40,6 @@ function TreeNodeComponent({ data, id: _id }: NodeProps) {
     color: nodeText,
   };
 
-  const baseStyle = isActive ? activeStyle : isOnActivePath ? pathStyle : defaultStyle;
-  // The example tree is drawn dashed + slightly faded so it reads as a hint.
-  const nodeStyle = isExample ? { ...baseStyle, borderStyle: 'dashed' as const, opacity: 0.85 } : baseStyle;
-
   return (
     <>
       <Handle type="target" position={Position.Top} className="!bg-transparent !border-0 !w-0 !h-0" />
@@ -59,7 +52,7 @@ function TreeNodeComponent({ data, id: _id }: NodeProps) {
             : 'hover:opacity-90'
           }
         `}
-        style={nodeStyle}
+        style={isActive ? activeStyle : isOnActivePath ? pathStyle : defaultStyle}
       >
         <div className="line-clamp-2 pr-3">{label}</div>
         {timestamp && (

@@ -199,7 +199,6 @@ export function TracebackChat({ apiUrl }: TracebackChatProps) {
           branchingFromMessageId={tb.branchingFromMessageId}
           branchingFromPreview={tb.branchingFromPreview}
           branchingFromText={tb.branchingFromText}
-          isExample={tb.isExample}
           sending={tb.sending}
           error={tb.error}
           siblingInfo={tb.siblingInfo}
@@ -260,7 +259,6 @@ export function TracebackChat({ apiUrl }: TracebackChatProps) {
               isFullscreen={treeFullscreen}
               onToggleFullscreen={() => setTreeFullscreen((f) => !f)}
               theme={theme}
-              isExample={tb.isExample}
             />
           </div>
         </>

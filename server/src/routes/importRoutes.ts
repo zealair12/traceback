@@ -13,6 +13,7 @@
 import { randomUUID } from 'node:crypto';
 import type { Express, Request, Response, NextFunction } from 'express';
 import { prisma } from '../prismaClient.js';
+import { getOwner } from '../auth/owner.js';
 
 interface IncomingImportedMessage {
   id: string;
@@ -77,9 +78,16 @@ export function registerImportRoutes(app: Express) {
 
       const imported: Array<{ sessionId: string; name: string | null; messageCount: number }> = [];
 
+      // Stamp the owner so imported/seeded sessions belong to the caller and are
+      // visible after reload (ownerWhere filters by these).
+      const owner = getOwner(req);
+
       for (const conv of conversations as IncomingImportedConversation[]) {
         const session = await prisma.session.create({
-          data: { name: typeof conv.name === 'string' && conv.name.trim() ? conv.name.trim() : null }
+          data: {
+            name: typeof conv.name === 'string' && conv.name.trim() ? conv.name.trim() : null,
+            ...(owner.userId ? { userId: owner.userId } : { guestId: owner.guestId })
+          }
         });
 
         // Translate the file's ids into fresh database ids, and compute each

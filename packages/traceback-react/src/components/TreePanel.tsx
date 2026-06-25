@@ -54,8 +54,6 @@ interface TreePanelProps {
   isFullscreen: boolean;
   onToggleFullscreen: () => void;
   theme: Theme;
-  // True while the built-in example tree is on screen (empty session).
-  isExample: boolean;
 }
 
 function layoutTree(nodes: Node[], edges: Edge[]): Node[] {
@@ -78,8 +76,7 @@ function TreeFlowInner({
   activePathIds,
   onSelectNode,
   onDeleteSubtree,
-  tokens,
-  isExample
+  tokens
 }: {
   layoutNodes: Node[];
   edges: Edge[];
@@ -88,7 +85,6 @@ function TreeFlowInner({
   onSelectNode: (nodeId: string) => void;
   onDeleteSubtree: (nodeId: string) => void;
   tokens: typeof themeTokens['dark'];
-  isExample: boolean;
 }) {
   const reactFlow = useReactFlow();
   const prevActiveRef = useRef<string | null>(null);
@@ -124,11 +120,7 @@ function TreeFlowInner({
           ...n.data,
           isActive: n.id === activeNodeId,
           isOnActivePath: activePathIds.has(n.id),
-          isExample,
-          // The example tree has nothing to delete.
-          onDeleteRequest: isExample
-            ? undefined
-            : (x: number, y: number) => handleDeleteRequest(x, y, n.id),
+          onDeleteRequest: (x: number, y: number) => handleDeleteRequest(x, y, n.id),
           nodeBg: tokens.nodeBg,
           nodeBorder: tokens.nodeBorder,
           nodeText: tokens.nodeText,
@@ -137,7 +129,7 @@ function TreeFlowInner({
           nodePathText: tokens.nodePathText,
         }
       })),
-    [layoutNodes, activeNodeId, activePathIds, tokens, handleDeleteRequest, isExample]
+    [layoutNodes, activeNodeId, activePathIds, tokens, handleDeleteRequest]
   );
 
   const styledEdges: Edge[] = useMemo(
@@ -163,10 +155,9 @@ function TreeFlowInner({
   const handleNodeContextMenu = useCallback(
     (event: React.MouseEvent, node: Node) => {
       event.preventDefault();
-      if (isExample) return;
       setConfirm({ x: event.clientX, y: event.clientY, nodeId: node.id });
     },
-    [isExample]
+    []
   );
 
   const handleConfirmDelete = useCallback(() => {
@@ -248,8 +239,7 @@ export function TreePanel({
   width,
   isFullscreen,
   onToggleFullscreen,
-  theme,
-  isExample
+  theme
 }: TreePanelProps) {
   const tokens = themeTokens[theme];
 
@@ -277,14 +267,6 @@ export function TreePanel({
         >
           {isFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
         </button>
-        {isExample && (
-          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 max-w-[260px] text-center pointer-events-none px-3">
-            <p className="text-[11px] font-medium text-gray-400">Example</p>
-            <p className="text-[11px] text-gray-500 leading-snug mt-0.5">
-              Branch any reply to take it a new direction.
-            </p>
-          </div>
-        )}
         <ReactFlowProvider>
           <TreeFlowInner
             layoutNodes={layoutNodes}
@@ -294,7 +276,6 @@ export function TreePanel({
             onSelectNode={onSelectNode}
             onDeleteSubtree={onDeleteSubtree}
             tokens={tokens}
-            isExample={isExample}
           />
         </ReactFlowProvider>
       </div>

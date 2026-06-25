@@ -2,9 +2,41 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Favicons. Google Search renders raster icons (ICO/PNG), not SVG, so we
+         ship both: the SVG for modern browser tabs, raster for search + legacy. -->
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png" />
+    <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192.png" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="theme-color" content="#0f172a" />
+
     <title>TraceBack</title>
+    <meta
+      name="description"
+      content="TraceBack changes AI conversations you have into a branching tree, so you can take a question in several directions without every reply carrying the whole history."
+    />
+
+    <!-- Open Graph / social preview -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="TraceBack" />
+    <meta property="og:title" content="TraceBack" />
+    <meta
+      property="og:description"
+      content="Turn your AI chats into a branching tree, so each reply doesn't carry the whole conversation."
+    />
+    <meta property="og:url" content="https://tracebackai.com" />
+    <meta property="og:image" content="https://tracebackai.com/og.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="TraceBack" />
+    <meta
+      name="twitter:description"
+      content="Turn your AI chats into a branching tree, so each reply doesn't carry the whole conversation."
+    />
+    <meta name="twitter:image" content="https://tracebackai.com/og.png" />
   </head>
   <body>
     <div id="root"></div>

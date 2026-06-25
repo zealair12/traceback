@@ -56,6 +56,27 @@ interface TreePanelProps {
   theme: Theme;
 }
 
+// A small, realistic demo tree shown when a session has no messages yet, so a
+// first-time user sees the core idea (one question branching into several) at a
+// glance instead of a blank canvas. Purely illustrative: non-interactive.
+const EXAMPLE_ACTIVE_ID = 'ex-a1';
+const EXAMPLE_PATH_IDS = new Set(['ex-root', 'ex-a', 'ex-a1']);
+const EXAMPLE_NODES: Node[] = [
+  { id: 'ex-root', type: 'custom', position: { x: 0, y: 0 }, data: { label: 'How does caching work?' } },
+  { id: 'ex-a', type: 'custom', position: { x: 0, y: 0 }, data: { label: 'What about Redis?' } },
+  { id: 'ex-b', type: 'custom', position: { x: 0, y: 0 }, data: { label: 'Give me an example' } },
+  { id: 'ex-a1', type: 'custom', position: { x: 0, y: 0 }, data: { label: 'Eviction policies?' } },
+  { id: 'ex-a2', type: 'custom', position: { x: 0, y: 0 }, data: { label: 'Redis vs Memcached?' } },
+  { id: 'ex-a3', type: 'custom', position: { x: 0, y: 0 }, data: { label: 'When not to cache?' } },
+];
+const EXAMPLE_EDGES: Edge[] = [
+  { id: 'ee-root-a', source: 'ex-root', target: 'ex-a' },
+  { id: 'ee-root-b', source: 'ex-root', target: 'ex-b' },
+  { id: 'ee-a-a1', source: 'ex-a', target: 'ex-a1' },
+  { id: 'ee-a-a2', source: 'ex-a', target: 'ex-a2' },
+  { id: 'ee-a-a3', source: 'ex-a', target: 'ex-a3' },
+];
+
 function layoutTree(nodes: Node[], edges: Edge[]): Node[] {
   if (nodes.length === 0) return nodes;
   const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
@@ -76,7 +97,8 @@ function TreeFlowInner({
   activePathIds,
   onSelectNode,
   onDeleteSubtree,
-  tokens
+  tokens,
+  isExample
 }: {
   layoutNodes: Node[];
   edges: Edge[];
@@ -85,6 +107,7 @@ function TreeFlowInner({
   onSelectNode: (nodeId: string) => void;
   onDeleteSubtree: (nodeId: string) => void;
   tokens: typeof themeTokens['dark'];
+  isExample: boolean;
 }) {
   const reactFlow = useReactFlow();
   const prevActiveRef = useRef<string | null>(null);
@@ -120,7 +143,11 @@ function TreeFlowInner({
           ...n.data,
           isActive: n.id === activeNodeId,
           isOnActivePath: activePathIds.has(n.id),
-          onDeleteRequest: (x: number, y: number) => handleDeleteRequest(x, y, n.id),
+          isExample,
+          // The example tree has nothing to delete.
+          onDeleteRequest: isExample
+            ? undefined
+            : (x: number, y: number) => handleDeleteRequest(x, y, n.id),
           nodeBg: tokens.nodeBg,
           nodeBorder: tokens.nodeBorder,
           nodeText: tokens.nodeText,
@@ -129,7 +156,7 @@ function TreeFlowInner({
           nodePathText: tokens.nodePathText,
         }
       })),
-    [layoutNodes, activeNodeId, activePathIds, tokens, handleDeleteRequest]
+    [layoutNodes, activeNodeId, activePathIds, tokens, handleDeleteRequest, isExample]
   );
 
   const styledEdges: Edge[] = useMemo(
@@ -147,17 +174,21 @@ function TreeFlowInner({
   );
 
   const handleNodeClick = useCallback(
-    (_: React.MouseEvent, node: Node) => onSelectNode(node.id),
-    [onSelectNode]
+    (_: React.MouseEvent, node: Node) => {
+      if (isExample) return; // the demo tree isn't selectable
+      onSelectNode(node.id);
+    },
+    [onSelectNode, isExample]
   );
 
   // Right-click on a node opens the same confirm popup at cursor position.
   const handleNodeContextMenu = useCallback(
     (event: React.MouseEvent, node: Node) => {
       event.preventDefault();
+      if (isExample) return;
       setConfirm({ x: event.clientX, y: event.clientY, nodeId: node.id });
     },
-    []
+    [isExample]
   );
 
   const handleConfirmDelete = useCallback(() => {
@@ -242,11 +273,20 @@ export function TreePanel({
   theme
 }: TreePanelProps) {
   const tokens = themeTokens[theme];
-  const nodeIds = useMemo(() => nodes.map((n) => n.id).join(','), [nodes]);
-  const edgeIds = useMemo(() => edges.map((e) => e.id).join(','), [edges]);
+
+  // With no real messages yet, show the illustrative example tree instead of an
+  // empty canvas. Everything below renders from these "display" values.
+  const isExample = nodes.length === 0;
+  const displayNodes = isExample ? EXAMPLE_NODES : nodes;
+  const displayEdges = isExample ? EXAMPLE_EDGES : edges;
+  const displayActiveNodeId = isExample ? EXAMPLE_ACTIVE_ID : activeNodeId;
+  const displayActivePathIds = isExample ? EXAMPLE_PATH_IDS : activePathIds;
+
+  const nodeIds = useMemo(() => displayNodes.map((n) => n.id).join(','), [displayNodes]);
+  const edgeIds = useMemo(() => displayEdges.map((e) => e.id).join(','), [displayEdges]);
 
   const layoutNodes = useMemo(
-    () => layoutTree(nodes, edges),
+    () => layoutTree(displayNodes, displayEdges),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [nodeIds, edgeIds]
   );
@@ -266,15 +306,24 @@ export function TreePanel({
         >
           {isFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
         </button>
+        {isExample && (
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 max-w-[260px] text-center pointer-events-none px-3">
+            <p className="text-[11px] font-medium text-gray-400">Example</p>
+            <p className="text-[11px] text-gray-500 leading-snug mt-0.5">
+              Your chat grows into a tree. Branch any reply to take it a new direction.
+            </p>
+          </div>
+        )}
         <ReactFlowProvider>
           <TreeFlowInner
             layoutNodes={layoutNodes}
-            edges={edges}
-            activeNodeId={activeNodeId}
-            activePathIds={activePathIds}
+            edges={displayEdges}
+            activeNodeId={displayActiveNodeId}
+            activePathIds={displayActivePathIds}
             onSelectNode={onSelectNode}
             onDeleteSubtree={onDeleteSubtree}
             tokens={tokens}
+            isExample={isExample}
           />
         </ReactFlowProvider>
       </div>

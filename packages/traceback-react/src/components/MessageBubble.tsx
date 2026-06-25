@@ -221,10 +221,11 @@ export function MessageBubble({ message, onBranchFromMessage, onResendMessage, o
         <button
           type="button"
           onClick={() => onBranchFromMessage(message.id, '', 'ask')}
-          className="text-[11px] text-gray-400 hover:text-gray-100 border border-gray-600 hover:border-gray-400 rounded-md px-2 py-0.5 transition-colors"
+          className="text-[11px] text-gray-400 hover:text-gray-100 border border-gray-600 hover:border-gray-400 rounded-md px-2 py-0.5 transition-colors flex items-center gap-1"
           title="Branch the conversation from this reply"
         >
-          ⎇
+          <span>⎇</span>
+          <span>Branch</span>
         </button>
       </div>
 

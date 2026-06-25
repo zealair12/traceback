@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ChatMessage } from '../types';
 import type { ProviderInfo, ImageAttachment } from '@traceback/shared';
 import type { SiblingInfo } from '../lib/conversationTree';
@@ -65,6 +65,18 @@ export function ChatPanel({
   onSelectModel
 }: ChatPanelProps) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
+
+  // One-time "how to branch" tip. Dismissed permanently once seen or closed.
+  const [hintDismissed, setHintDismissed] = useState(
+    () => typeof localStorage !== 'undefined' && localStorage.getItem('tb-hint-branch') === 'seen'
+  );
+  const dismissHint = () => {
+    setHintDismissed(true);
+    try { localStorage.setItem('tb-hint-branch', 'seen'); } catch { /* ignore */ }
+  };
+  // Only worth showing once there is a reply to branch from.
+  const showBranchHint =
+    !hintDismissed && !branchingFromMessageId && threadPath.some((m) => m.role === 'assistant');
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -145,6 +157,21 @@ export function ChatPanel({
             {error && (
               <div className="max-w-2xl mx-auto mb-2 text-xs text-red-400 bg-red-400/10 rounded-md px-3 py-1.5">
                 {error}
+              </div>
+            )}
+            {showBranchHint && (
+              <div className="max-w-2xl mx-auto mb-2 flex items-center justify-between gap-3 text-[11px] text-gray-400 bg-gray-500/10 rounded-md px-3 py-1.5">
+                <span>
+                  Tip: hover any reply and click <span className="text-gray-200">⎇ Branch</span> to take the chat a new direction.
+                </span>
+                <button
+                  type="button"
+                  onClick={dismissHint}
+                  className="text-gray-500 hover:text-gray-200 flex-shrink-0 leading-none text-sm"
+                  aria-label="Dismiss tip"
+                >
+                  ×
+                </button>
               </div>
             )}
             {branchingFromMessageId && branchingFromPreview && (

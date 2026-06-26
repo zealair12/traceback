@@ -13,6 +13,9 @@ export interface TreeNodeData {
   nodePathBg?: string;
   nodePathBorder?: string;
   nodePathText?: string;
+  nodeActiveBg?: string;
+  nodeActiveBorder?: string;
+  nodeActiveText?: string;
   onDeleteRequest?: (x: number, y: number) => void;
 }
 
@@ -21,13 +24,16 @@ function TreeNodeComponent({ data, id: _id }: NodeProps) {
     label, timestamp, isActive, isOnActivePath,
     nodeBg = '#1a1a1a', nodeBorder = '#2a2a2a', nodeText = '#525252',
     nodePathBg = '#262626', nodePathBorder = '#3a3a3a', nodePathText = '#a3a3a3',
+    nodeActiveBg = '#2a2a2a', nodeActiveBorder = '#fafafa', nodeActiveText = '#fafafa',
     onDeleteRequest,
   } = data as unknown as TreeNodeData;
 
   const activeStyle = {
-    background: '#064e3b',
-    border: '1.5px solid #10b981',
-    color: '#ecfdf5',
+    background: nodeActiveBg,
+    border: `1.5px solid ${nodeActiveBorder}`,
+    color: nodeActiveText,
+    // Soft glow in the same accent so the active node reads as the live one.
+    boxShadow: `0 0 14px ${nodeActiveBorder}40`,
   };
   const pathStyle = {
     background: nodePathBg,
@@ -47,10 +53,7 @@ function TreeNodeComponent({ data, id: _id }: NodeProps) {
         className={`
           group relative px-3 py-2 rounded-lg text-[11px] leading-snug
           max-w-[200px] cursor-pointer transition-all duration-200 select-none
-          ${isActive
-            ? 'ring-2 ring-emerald-400 shadow-[0_0_14px_rgba(16,185,129,0.25)] scale-[1.04]'
-            : 'hover:opacity-90'
-          }
+          ${isActive ? 'scale-[1.04]' : 'hover:opacity-90'}
         `}
         style={isActive ? activeStyle : isOnActivePath ? pathStyle : defaultStyle}
       >

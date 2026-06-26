@@ -22,24 +22,29 @@ const themeTokens: Record<Theme, {
   controlBg: string; controlBorder: string; confirmBg: string;
   nodeBg: string; nodeBorder: string; nodeText: string;
   nodePathBg: string; nodePathBorder: string; nodePathText: string;
+  nodeActiveBg: string; nodeActiveBorder: string; nodeActiveText: string;
 }> = {
   dark: {
-    canvasBg: '#0d0d0d', dots: '#1a1a1a', edgeDefault: '#2a2a2a', edgeActive: '#10b981',
+    canvasBg: '#0d0d0d', dots: '#1a1a1a', edgeDefault: '#2a2a2a', edgeActive: '#fafafa',
     controlBg: '#111111', controlBorder: '#2a2a2a', confirmBg: 'rgba(17,17,17,0.96)',
     nodeBg: '#1a1a1a', nodeBorder: '#2a2a2a', nodeText: '#525252',
     nodePathBg: '#262626', nodePathBorder: '#3a3a3a', nodePathText: '#a3a3a3',
+    // The active "flow" reads white in dark mode rather than a stray green.
+    nodeActiveBg: '#2a2a2a', nodeActiveBorder: '#fafafa', nodeActiveText: '#fafafa',
   },
   blue: {
     canvasBg: '#040a18', dots: '#0a1228', edgeDefault: '#1a2a4a', edgeActive: '#3b82f6',
     controlBg: '#060c1a', controlBorder: '#1a2a4a', confirmBg: 'rgba(6,12,26,0.96)',
     nodeBg: '#0d1a30', nodeBorder: '#1a2a4a', nodeText: '#3d6499',
     nodePathBg: '#152440', nodePathBorder: '#2a4870', nodePathText: '#5b87c5',
+    nodeActiveBg: '#10243f', nodeActiveBorder: '#3b82f6', nodeActiveText: '#dbeafe',
   },
   light: {
     canvasBg: '#f0f2f5', dots: '#dde0e8', edgeDefault: '#d4d4d4', edgeActive: '#3b82f6',
     controlBg: '#e8ecf0', controlBorder: '#d1d5db', confirmBg: 'rgba(240,242,245,0.96)',
     nodeBg: '#e5e5e5', nodeBorder: '#d4d4d4', nodeText: '#a3a3a3',
     nodePathBg: '#d4d4d4', nodePathBorder: '#a3a3a3', nodePathText: '#525252',
+    nodeActiveBg: '#dbeafe', nodeActiveBorder: '#2563eb', nodeActiveText: '#1e3a8a',
   },
 };
 
@@ -127,6 +132,9 @@ function TreeFlowInner({
           nodePathBg: tokens.nodePathBg,
           nodePathBorder: tokens.nodePathBorder,
           nodePathText: tokens.nodePathText,
+          nodeActiveBg: tokens.nodeActiveBg,
+          nodeActiveBorder: tokens.nodeActiveBorder,
+          nodeActiveText: tokens.nodeActiveText,
         }
       })),
     [layoutNodes, activeNodeId, activePathIds, tokens, handleDeleteRequest]

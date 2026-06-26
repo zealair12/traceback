@@ -104,9 +104,10 @@ export async function createMessageWithAutoReply(options: {
     }
   }
 
-  // All DB operations + lineage + assistant reply creation happen
-  // in a single transaction so we never end up with half-written data.
-  return prisma.$transaction(async (tx) => {
+  // Write the user message and read its lineage in ONE SHORT transaction, then
+  // call the LLM OUTSIDE any transaction. Holding a DB connection open for the
+  // (slow) model round-trip was the connection-pool-exhaustion risk under load.
+  const { userMessage, lineage } = await prisma.$transaction(async (tx) => {
     // 1. Create the user message node.
     const userMessage = await tx.message.create({
       data: {
@@ -165,7 +166,11 @@ export async function createMessageWithAutoReply(options: {
       ORDER BY depth ASC;
     `)) as LineageMessage[];
 
-    const llmMessages: LlmMessage[] = [
+    return { userMessage, lineage };
+  });
+
+  // 3. Build the pruned context for the model from the lineage we just read.
+  const llmMessages: LlmMessage[] = [
       {
         role: 'system',
         content:
@@ -189,38 +194,44 @@ export async function createMessageWithAutoReply(options: {
       })
     ];
 
-    // 4. Ask the chosen LLM provider for a reply, using only the pruned
-    //    context. If the caller named a provider/model, use those; otherwise
-    //    fall back to the app default. The conversation logic does not care
-    //    which backend answers.
-    const chosenProvider = getProvider(provider);
-    // Record exactly which backend and model were used, even when the request
-    // left them unset, so the UI can show "answered by X" on each tree node.
-    const usedModel = model ?? chosenProvider.defaultModel;
-    const assistantContent = await chosenProvider.complete(llmMessages, {
+  // 4. Ask the chosen LLM provider for a reply, using only the pruned context.
+  //    This runs OUTSIDE any transaction, so no DB connection is held during the
+  //    model round-trip. If the call fails, delete the user message we wrote so a
+  //    failed turn leaves no half-written trace (preserving the old all-or-nothing
+  //    behavior without pinning a connection for seconds).
+  const chosenProvider = getProvider(provider);
+  // Record exactly which backend and model were used, even when the request left
+  // them unset, so the UI can show "answered by X" on each tree node.
+  const usedModel = model ?? chosenProvider.defaultModel;
+  let assistantContent: string;
+  try {
+    assistantContent = await chosenProvider.complete(llmMessages, {
       model,
       temperature,
       maxTokens,
       apiKey
     });
+  } catch (err) {
+    await prisma.message.delete({ where: { id: userMessage.id } }).catch(() => {});
+    throw err;
+  }
 
-    // 5. Store assistant reply as a child of the user message.
-    const assistantMessage = await tx.message.create({
-      data: {
-        sessionId,
-        parentId: userMessage.id,
-        role: 'assistant',
-        content: assistantContent,
-        provider: chosenProvider.id,
-        model: usedModel,
-        depth: userMessage.depth + 1
-      }
-    });
-
-    return {
-      userMessage,
-      assistantMessage,
-      lineage
-    };
+  // 5. Store the assistant reply as a child of the user message.
+  const assistantMessage = await prisma.message.create({
+    data: {
+      sessionId,
+      parentId: userMessage.id,
+      role: 'assistant',
+      content: assistantContent,
+      provider: chosenProvider.id,
+      model: usedModel,
+      depth: userMessage.depth + 1
+    }
   });
+
+  return {
+    userMessage,
+    assistantMessage,
+    lineage
+  };
 }

@@ -201,9 +201,12 @@ export function MessageBubble({ message, onBranchFromMessage, onResendMessage, o
         >
           {normalizeLatex(message.content)}
         </ReactMarkdown>
-        {message.model && (
+        {/* Hide provenance for the built-in default (groq) so users don't see
+            which backend "Auto" uses. Show it only for a provider the user
+            explicitly chose with their own key. */}
+        {message.model && message.provider && message.provider !== 'groq' && (
           <div className="mt-1.5 text-[10px] text-gray-600">
-            {message.provider ? `${message.provider} · ${message.model}` : message.model}
+            {message.provider} · {message.model}
           </div>
         )}
       </div>

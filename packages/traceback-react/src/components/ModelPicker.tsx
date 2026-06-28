@@ -43,11 +43,11 @@ export function ModelPicker({
       >
         <option value="auto:auto">Auto</option>
         {providers
-          // Only list providers the user can actually use: the server's
-          // configured backend (Groq) or one they added a key for. Hide "local"
-          // (needs a local server that usually isn't running) and any
-          // unconfigured backend, so the menu isn't full of dead options.
-          .filter((p) => p.id !== 'local' && (p.configured || keyedProviders?.has(p.id)))
+          // Only list providers the USER added a key for. The built-in backend
+          // stays hidden behind "Auto" — users shouldn't see or pick it, or even
+          // know which provider answers by default. Add a key → that provider's
+          // models appear as options.
+          .filter((p) => keyedProviders?.has(p.id))
           .map((p) => {
             const label = providerLabel[p.id] ?? p.id;
             const models = p.suggestedModels ?? [];

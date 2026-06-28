@@ -160,7 +160,9 @@ export function ChatPanel({
               </div>
             )}
             {showBranchHint && (
-              <div className="max-w-2xl mx-auto mb-2 flex items-center justify-between gap-3 text-[11px] text-gray-400 bg-gray-500/10 rounded-md px-3 py-1.5">
+              /* Desktop only: "hover" is meaningless on touch, so mobile gets a
+                 pulse on the graph icon (NavHeader) instead. */
+              <div className="max-w-2xl mx-auto mb-2 hidden md:flex items-center justify-between gap-3 text-[11px] text-gray-400 bg-gray-500/10 rounded-md px-3 py-1.5">
                 <span>
                   Tip: hover any reply and click <span className="text-gray-200">⎇ Branch</span>, or select any text in a reply, to take the chat a new direction.
                 </span>

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { ChevronLeft, ChevronRight, PanelLeft, Ghost, GitBranch } from 'lucide-react';
 import type { ChatMessage } from '../types';
 import type { SiblingInfo } from '../lib/conversationTree';
@@ -32,6 +33,19 @@ export function NavHeader({
   incognito,
   onToggleIncognito
 }: NavHeaderProps) {
+  // First-run nudge toward the graph. Shown only where the tree starts hidden
+  // (mobile — the dot itself is md:hidden) and cleared once the user opens it.
+  const [pulseGraph, setPulseGraph] = useState(() => {
+    try { return localStorage.getItem('tb-seen-graph') !== 'yes'; } catch { return false; }
+  });
+  const handleTreeToggle = () => {
+    if (pulseGraph) {
+      setPulseGraph(false);
+      try { localStorage.setItem('tb-seen-graph', 'yes'); } catch { /* ignore */ }
+    }
+    onToggleTreePanel();
+  };
+
   // Show only user messages as breadcrumb items (Q-A pairs).
   // Clicking a pair navigates to the assistant's reply so both Q and A are visible.
   const pairs = threadPath.reduce<{ id: string; content: string; navigateToId: string }[]>(
@@ -120,15 +134,25 @@ export function NavHeader({
       )}
 
       <div className="flex items-center gap-1 ml-auto flex-shrink-0">
-        <button
-          type="button"
-          onClick={onToggleTreePanel}
-          className={`${iconButton} ${treePanelVisible ? 'text-gray-200 bg-gray-800' : ''}`}
-          title={treePanelVisible ? 'Hide tree' : 'Show tree'}
-          aria-label="Toggle tree panel"
-        >
-          <GitBranch size={15} />
-        </button>
+        <div className="relative">
+          <button
+            type="button"
+            onClick={handleTreeToggle}
+            className={`${iconButton} ${treePanelVisible ? 'text-gray-200 bg-gray-800' : ''}`}
+            title={treePanelVisible ? 'Hide tree' : 'Show tree'}
+            aria-label="Toggle tree panel"
+          >
+            <GitBranch size={15} />
+          </button>
+          {/* Mobile-only first-run pulse: the tree is hidden by default there,
+              so point new users at it. md:hidden keeps it off desktop. */}
+          {pulseGraph && !treePanelVisible && pairs.length > 0 && (
+            <span className="md:hidden pointer-events-none absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-400" />
+            </span>
+          )}
+        </div>
         <button
           type="button"
           onClick={onToggleIncognito}

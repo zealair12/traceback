@@ -9,7 +9,7 @@ import { resolveApiKey } from '../auth/apiKey.js';
 import { ownerWhere } from '../auth/owner.js';
 import { wrap } from './wrap.js';
 
-const GUEST_DAILY_LIMIT = Number(process.env.GUEST_DAILY_LIMIT ?? 20);
+const GUEST_DAILY_LIMIT = Number(process.env.GUEST_DAILY_LIMIT ?? 5);
 
 function attachmentsProblem(raw: unknown): string | null {
   if (raw === undefined) return null;

@@ -139,7 +139,7 @@ export function createApp() {
         res.json({ id: user.id, name: user.name, email: user.email, avatar: user.avatar, isGuest: false });
         return;
       }
-      const dailyLimit = Number(process.env.GUEST_DAILY_LIMIT ?? 20);
+      const dailyLimit = Number(process.env.GUEST_DAILY_LIMIT ?? 5);
       const today = new Date(); today.setHours(0, 0, 0, 0);
       const used = await prisma.message.count({
         where: {

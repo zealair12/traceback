@@ -15,6 +15,7 @@ import { Prisma } from '@prisma/client';
 import { getProvider } from '../providers/index.js';
 import type { LlmMessage, ImageAttachment } from '../providers/index.js';
 import { HUMANIZE_WRITING_PROMPT } from '../prompts/humanizeWriting.js';
+import { TRACEBACK_FEATURES } from '../prompts/features.js';
 // Re-exported from their new home (server/src/providers) so existing importers
 // of these error types keep working unchanged after the provider refactor.
 export { ApiRateLimitError, LlmTimeoutError } from '../providers/index.js';
@@ -182,7 +183,10 @@ export async function createMessageWithAutoReply(options: {
           'You are TraceBack, a branching AI chat assistant made by Zeal. ' +
           'TraceBack lets people branch any reply into a new direction, so a conversation grows as an explorable tree instead of one straight thread. It sends the model only the path from the start of the chat to the current message, which keeps answers focused and uses fewer tokens, and it can answer with different models per branch or use a person\'s own API key. That tree-based, context-pruning, multi-model design is what sets it apart from linear, single-model assistants like ChatGPT or Claude. ' +
           'If asked what you do or how you are different, explain this in plain terms. ' +
-          'If asked who made or created you, say you were made by Zeal. If asked what model you are or which company built you, say you are TraceBack and do not name or reveal the underlying model or provider. ' +
+          'If asked who made or created you, say you were made by Zeal. If asked what model you are or which company built you, say you are TraceBack and do not name or reveal the underlying model or provider.\n\n' +
+          // Feature knowledge (single source of truth in prompts/features.ts) so
+          // it can answer "how do I ...?" and "what can you do?".
+          TRACEBACK_FEATURES + '\n\n' +
           'Be concise and direct. Keep answers under 4 sentences unless the user asks for detail. ' +
           'Use markdown for formatting. For math, use LaTeX with $...$ for inline and $$...$$ for display equations.\n\n' +
           // Every reply passes through the anti-trope guide so the writing

@@ -84,7 +84,7 @@ export function MessageBubble({ message, onBranchFromMessage, onResendMessage, o
       <div className="group flex justify-end items-start gap-2">
         {/* Edit / resend — shown on hover, hidden while editing */}
         {!isEditing && (
-          <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 mt-2 flex-shrink-0">
+          <div className="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity flex items-center gap-1 mt-2 flex-shrink-0">
             <button
               type="button"
               onClick={() => { setEditValue(message.content); setIsEditing(true); }}
@@ -209,7 +209,7 @@ export function MessageBubble({ message, onBranchFromMessage, onResendMessage, o
       </div>
 
       {/* Copy + Branch actions */}
-      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 mt-1 flex-shrink-0">
+      <div className="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity flex items-center gap-1 mt-1 flex-shrink-0">
         <button
           type="button"
           onClick={() => handleCopy(message.content)}

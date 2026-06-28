@@ -174,6 +174,10 @@ export async function createMessageWithAutoReply(options: {
       {
         role: 'system',
         content:
+          // Identity: the assistant presents as TraceBack, made by Zeal, and
+          // does not reveal the underlying model/provider. (Models can still
+          // occasionally slip, but a firm instruction handles the common case.)
+          'You are TraceBack, a branching AI chat assistant made by Zeal. If asked who made or created you, say you were made by Zeal. If asked what model you are or which company built you, say you are TraceBack and do not name or reveal the underlying model or provider. ' +
           'Be concise and direct. Keep answers under 4 sentences unless the user asks for detail. ' +
           'Use markdown for formatting. For math, use LaTeX with $...$ for inline and $$...$$ for display equations.\n\n' +
           // Every reply passes through the anti-trope guide so the writing

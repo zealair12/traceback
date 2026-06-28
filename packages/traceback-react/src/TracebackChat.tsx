@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { ChatPanel } from './components/ChatPanel';
-import { TreePanel } from './components/TreePanel';
+import { TreePanel, treeConnectorColor } from './components/TreePanel';
 import { KeyManager } from './components/KeyManager';
 import { ImportPanel } from './components/ImportPanel';
 import { useTraceback } from './useTraceback';
@@ -183,7 +183,7 @@ export function TracebackChat({ apiUrl }: TracebackChatProps) {
             onMouseDown={handleSidebarDividerMouseDown}
             className="hidden md:flex w-5 flex-shrink-0 cursor-col-resize items-center justify-center group"
           >
-            <div className="w-px h-full bg-gray-800 group-hover:bg-emerald-900/50 transition-colors" />
+            <div className="w-px h-full transition-colors" style={{ backgroundColor: treeConnectorColor(theme) }} />
           </div>
         </>
       )}
@@ -226,7 +226,7 @@ export function TracebackChat({ apiUrl }: TracebackChatProps) {
           onTouchStart={handleTreeDividerTouchStart}
           className="hidden md:flex w-5 flex-shrink-0 cursor-col-resize items-center justify-center group"
         >
-          <div className="w-px h-full bg-gray-800 group-hover:bg-emerald-900/50 transition-colors" />
+          <div className="w-px h-full transition-colors" style={{ backgroundColor: treeConnectorColor(theme) }} />
         </div>
       )}
 

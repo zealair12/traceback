@@ -48,6 +48,12 @@ const themeTokens: Record<Theme, {
   },
 };
 
+// The color of the lines connecting nodes in the graph, per theme. Reused by
+// the panel dividers so they match the graph instead of a stray accent color.
+export function treeConnectorColor(theme: Theme): string {
+  return themeTokens[theme].edgeDefault;
+}
+
 interface TreePanelProps {
   nodes: Node[];
   edges: Edge[];
@@ -99,9 +105,17 @@ function TreeFlowInner({
 
   useEffect(() => {
     if (!activeNodeId || activeNodeId === prevActiveRef.current) return;
+    const isFirst = prevActiveRef.current === null;
     prevActiveRef.current = activeNodeId;
     const timer = setTimeout(() => {
-      reactFlow.fitView({ nodes: [{ id: activeNodeId }], duration: 400, padding: 1.5 });
+      // On first load (and each time the panel re-mounts, e.g. the mobile
+      // overlay opening) frame the WHOLE graph so it can never be off-screen.
+      // After that, zoom to the node you navigated to. Same fitView either way.
+      if (isFirst) {
+        reactFlow.fitView({ duration: 400, padding: 0.4 });
+      } else {
+        reactFlow.fitView({ nodes: [{ id: activeNodeId }], duration: 400, padding: 1.5 });
+      }
     }, 80);
     return () => clearTimeout(timer);
   }, [activeNodeId, reactFlow]);

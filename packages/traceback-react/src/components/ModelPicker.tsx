@@ -42,21 +42,22 @@ export function ModelPicker({
         className="appearance-none pl-2 pr-6 py-1 rounded-lg text-sm text-gray-400 hover:text-gray-100 bg-transparent hover:bg-gray-800/60 transition-colors cursor-pointer focus:outline-none max-w-[200px]"
       >
         <option value="auto:auto">Auto</option>
-        {providers.map((p) => {
-          const usable = p.configured || keyedProviders?.has(p.id);
-          const label = providerLabel[p.id] ?? p.id;
-          const models = p.suggestedModels ?? [];
-          if (models.length === 0) return null;
-          return models.map((model) => (
-            <option
-              key={`${p.id}:${model}`}
-              value={`${p.id}:${model}`}
-              disabled={!usable}
-            >
-              {label} · {model}
-            </option>
-          ));
-        })}
+        {providers
+          // Only list providers the user can actually use: the server's
+          // configured backend (Groq) or one they added a key for. Hide "local"
+          // (needs a local server that usually isn't running) and any
+          // unconfigured backend, so the menu isn't full of dead options.
+          .filter((p) => p.id !== 'local' && (p.configured || keyedProviders?.has(p.id)))
+          .map((p) => {
+            const label = providerLabel[p.id] ?? p.id;
+            const models = p.suggestedModels ?? [];
+            if (models.length === 0) return null;
+            return models.map((model) => (
+              <option key={`${p.id}:${model}`} value={`${p.id}:${model}`}>
+                {label} · {model}
+              </option>
+            ));
+          })}
       </select>
       <ChevronDown
         size={12}

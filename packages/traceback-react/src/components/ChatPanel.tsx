@@ -140,6 +140,7 @@ export function ChatPanel({
                   onBranchFromMessage={onBranchFromMessage}
                   onResendMessage={onResendMessage}
                   onEditMessage={onEditMessage}
+                  keyedProviders={keyedProviders}
                 />
               ))}
               {sending && (

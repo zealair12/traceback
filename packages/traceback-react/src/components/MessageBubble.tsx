@@ -14,6 +14,10 @@ interface MessageBubbleProps {
   onBranchFromMessage: (messageId: string, selectedText: string, action: 'dig' | 'ask') => void;
   onResendMessage: (messageId: string) => void;
   onEditMessage: (messageId: string, newContent: string) => void;
+  // Providers the user added their own key for. The model label is shown only
+  // for a backend the user explicitly chose, and hidden for the built-in
+  // default (whatever provider powers "Auto").
+  keyedProviders: Set<string>;
 }
 
 interface PopoverState {
@@ -23,7 +27,7 @@ interface PopoverState {
   text: string;
 }
 
-export function MessageBubble({ message, onBranchFromMessage, onResendMessage, onEditMessage }: MessageBubbleProps) {
+export function MessageBubble({ message, onBranchFromMessage, onResendMessage, onEditMessage, keyedProviders }: MessageBubbleProps) {
   const [popover, setPopover] = useState<PopoverState | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState('');
@@ -201,10 +205,10 @@ export function MessageBubble({ message, onBranchFromMessage, onResendMessage, o
         >
           {normalizeLatex(message.content)}
         </ReactMarkdown>
-        {/* Hide provenance for the built-in default (groq) so users don't see
-            which backend "Auto" uses. Show it only for a provider the user
-            explicitly chose with their own key. */}
-        {message.model && message.provider && message.provider !== 'groq' && (
+        {/* Show the model label only for a provider the user chose with their
+            own key; hide it for the built-in default so users never see which
+            backend powers "Auto" (works whatever that backend is). */}
+        {message.model && message.provider && keyedProviders.has(message.provider) && (
           <div className="mt-1.5 text-[10px] text-gray-600">
             {message.provider} · {message.model}
           </div>

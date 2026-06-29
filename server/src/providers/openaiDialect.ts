@@ -95,8 +95,14 @@ export const createOpenAIProvider = (): ChatProvider =>
     id: 'openai',
     defaultModel: process.env.OPENAI_MODEL ?? 'gpt-4o-mini',
     suggestedModels: ['gpt-4o-mini', 'gpt-4o', 'o4-mini'],
-    visionModels: ['gpt-4o-mini', 'gpt-4o'],
-    documentModels: ['gpt-4o-mini', 'gpt-4o'],
+    // Which model ids can see images / read documents. Defaults to OpenAI's,
+    // but overridable by env so an OpenAI-compatible router (OpenRouter, etc.)
+    // can name its own vision/document model ids and have attachments sent
+    // through instead of being stripped.
+    visionModels: (process.env.OPENAI_VISION_MODELS ?? 'gpt-4o-mini,gpt-4o')
+      .split(',').map((m) => m.trim()).filter(Boolean),
+    documentModels: (process.env.OPENAI_DOCUMENT_MODELS ?? 'gpt-4o-mini,gpt-4o')
+      .split(',').map((m) => m.trim()).filter(Boolean),
     apiKeyEnv: 'OPENAI_API_KEY',
     baseURLEnv: 'OPENAI_BASE_URL'
   });

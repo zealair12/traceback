@@ -8,6 +8,8 @@
 import express, { type Request, type Response, type NextFunction } from 'express';
 import cors from 'cors';
 import session from 'express-session';
+import connectPgSimple from 'connect-pg-simple';
+import pg from 'pg';
 import passport from 'passport';
 import './auth/google.js';
 
@@ -46,10 +48,17 @@ export function createApp() {
 
   // COOKIE_SECURE=true in Railway; leave unset for local http dev.
   const secureCookies = process.env.COOKIE_SECURE === 'true';
+
+  // Persist sessions in Postgres so they survive restarts/redeploys and work
+  // across instances. The default in-memory store dropped every session on
+  // each deploy, which logged users out and made their chats look "expired."
+  const PgSession = connectPgSimple(session);
+  const sessionPool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 3 });
   app.use(session({
+    store: new PgSession({ pool: sessionPool, createTableIfMissing: true }),
     secret: process.env.SESSION_SECRET ?? 'dev-secret',
     resave: false,
-    saveUninitialized: true,
+    saveUninitialized: false,
     cookie: {
       secure: secureCookies,
       sameSite: secureCookies ? 'none' : 'lax',

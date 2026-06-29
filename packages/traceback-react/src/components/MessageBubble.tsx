@@ -32,7 +32,17 @@ export function MessageBubble({ message, onBranchFromMessage, onResendMessage, o
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState('');
   const [copied, setCopied] = useState(false);
+  const [lightbox, setLightbox] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Open a non-image attachment (e.g. a PDF) in a new tab. data: URLs are often
+  // blocked there, so convert to a blob URL first.
+  const openFile = (dataUrl: string) => {
+    fetch(dataUrl)
+      .then((r) => r.blob())
+      .then((b) => window.open(URL.createObjectURL(b), '_blank'))
+      .catch(() => {});
+  };
 
   const showToolbar = useCallback(() => {
     const sel = window.getSelection();
@@ -117,16 +127,20 @@ export function MessageBubble({ message, onBranchFromMessage, onResendMessage, o
                     key={i}
                     src={att.dataUrl}
                     alt={`attached image ${i + 1}`}
-                    className="max-h-44 max-w-[240px] rounded-xl object-contain"
+                    onClick={() => setLightbox(att.dataUrl)}
+                    className="max-h-44 max-w-[240px] rounded-xl object-contain cursor-zoom-in"
                   />
                 ) : (
-                  <span
+                  <button
                     key={i}
-                    className="px-2.5 py-1.5 rounded-lg bg-black/20 text-[11px] text-gray-200 flex items-center gap-1.5"
+                    type="button"
+                    onClick={() => openFile(att.dataUrl)}
+                    className="px-2.5 py-1.5 rounded-lg bg-black/20 text-[11px] text-gray-200 flex items-center gap-1.5 hover:bg-black/30 transition-colors"
+                    title="Open file"
                   >
                     <FileText size={13} className="flex-shrink-0" />
                     <span className="truncate max-w-[160px]">{att.name ?? 'document.pdf'}</span>
-                  </span>
+                  </button>
                 )
               )}
             </div>
@@ -179,6 +193,14 @@ export function MessageBubble({ message, onBranchFromMessage, onResendMessage, o
             message.content
           )}
         </div>
+        {lightbox && (
+          <div
+            className="fixed inset-0 z-[200] bg-black/80 flex items-center justify-center p-4 cursor-zoom-out"
+            onClick={() => setLightbox(null)}
+          >
+            <img src={lightbox} alt="attachment" className="max-h-full max-w-full rounded-lg object-contain" />
+          </div>
+        )}
       </div>
     );
   }

@@ -99,6 +99,9 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
 
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // True once a guest hits the daily free-message limit, so the UI can show a
+  // sign-in call to action instead of a plain error.
+  const [guestLimitReached, setGuestLimitReached] = useState(false);
 
   // Incognito: creates a throwaway session that is deleted when toggled off.
   const [incognito, setIncognito] = useState(false);
@@ -355,6 +358,7 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
       });
       setAllMessages((prev) => [...prev, result.userMessage, result.assistantMessage]);
       setActiveNodeId(result.assistantMessage.id);
+      setGuestLimitReached(false);
       clearBranching();
       // Keep guest usage counter accurate after each send.
       refreshAuth();
@@ -378,7 +382,13 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
         }
       } catch (err: any) {
         console.error('Send failed:', err);
-        setError(friendlyError(err));
+        // The daily guest limit gets a sign-in CTA instead of an error string.
+        if (err?.response?.data?.guestLimitReached) {
+          setGuestLimitReached(true);
+          setError(null);
+        } else {
+          setError(friendlyError(err));
+        }
       } finally {
         setSending(false);
       }
@@ -547,6 +557,7 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
     branchingFromText,
     sending,
     error,
+    guestLimitReached,
     availableProviders,
     selectedProvider,
     selectedModel,

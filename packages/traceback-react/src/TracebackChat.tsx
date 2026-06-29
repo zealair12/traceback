@@ -201,6 +201,8 @@ export function TracebackChat({ apiUrl }: TracebackChatProps) {
           branchingFromText={tb.branchingFromText}
           sending={tb.sending}
           error={tb.error}
+          guestLimitReached={tb.guestLimitReached}
+          onSignIn={tb.handleSignIn}
           siblingInfo={tb.siblingInfo}
           onNavigateToParent={tb.handleNavigateToParent}
           onNavigateToSibling={tb.handleNavigateToSibling}

@@ -541,6 +541,35 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
     }
   }, [incognito, incognitoSessionId, activeSessionId, client]);
 
+  // Sign out: clear the signed-in user's data from view immediately (no refresh
+  // needed), then reload as a fresh guest so none of their chats remain visible.
+  const handleSignOut = useCallback(async () => {
+    try {
+      await client.signOut();
+    } catch (err) {
+      console.error('Sign out failed:', err);
+    }
+    setAllMessages([]);
+    setActiveNodeId(null);
+    setGuestLimitReached(false);
+    clearBranching();
+    refreshAuth();
+    try {
+      const s = await client.fetchSessions();
+      if (s.length === 0) {
+        const created = await client.createSession();
+        setSessions([created]);
+        setActiveSessionId(created.id);
+      } else {
+        setSessions(s);
+        setActiveSessionId(s[0].id);
+      }
+    } catch {
+      setSessions([]);
+      setActiveSessionId(null);
+    }
+  }, [client, clearBranching, refreshAuth]);
+
   return {
     // data
     sessions: sessions.filter((s) => s.id !== incognitoSessionId),
@@ -566,7 +595,7 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
     authState,
     // actions
     handleSignIn: () => client.signIn(),
-    handleSignOut: async () => { await client.signOut(); refreshAuth(); },
+    handleSignOut,
     setProviderKey,
     clearProviderKey,
     handleImportConversations,

@@ -123,7 +123,6 @@ export function ChatPanel({
         </svg>
         Continue with Google
       </button>
-      <p className="text-[10px] text-gray-600">Your chats stay saved to your account.</p>
     </div>
   );
 

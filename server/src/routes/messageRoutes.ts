@@ -113,6 +113,17 @@ export function registerMessageRoutes(app: Express) {
     '/messages/:id',
     wrap(async (req, res) => {
       const { id } = req.params;
+      // Authorization: only let the caller delete a message that lives in a
+      // session they own. Without this, anyone could prune another person's
+      // subtree by supplying its message id.
+      const owned = await prisma.message.findFirst({
+        where: { id, session: ownerWhere(req) },
+        select: { id: true }
+      });
+      if (!owned) {
+        res.status(404).json({ error: 'Message not found.' });
+        return;
+      }
       await prisma.$executeRaw`
         WITH RECURSIVE subtree AS (
           SELECT id FROM messages WHERE id = ${id}

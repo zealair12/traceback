@@ -51,17 +51,25 @@ export function TracebackChat({ apiUrl }: TracebackChatProps) {
   const isTreeDragging = useRef(false);
   const isSidebarDragging = useRef(false);
 
-  // Cmd/Ctrl+B toggles sidebar.
+  // Keyboard: Cmd/Ctrl+B toggles the sidebar; Escape backs out of whatever
+  // overlay is open so the flow never gets stuck (fullscreen tree, then the
+  // mobile tree overlay, then the mobile sidebar).
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'b') {
         e.preventDefault();
         setSidebarOpen((v) => !v);
+        return;
+      }
+      if (e.key === 'Escape') {
+        if (treeFullscreen) { setTreeFullscreen(false); return; }
+        if (treePanelVisible && isMobile()) { setTreePanelVisible(false); return; }
+        if (sidebarOpen && isMobile()) { setSidebarOpen(false); return; }
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, []);
+  }, [treeFullscreen, treePanelVisible, sidebarOpen]);
 
   const handleSidebarDividerMouseDown = useCallback(() => {
     isSidebarDragging.current = true;

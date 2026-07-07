@@ -407,11 +407,15 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
       setError(null);
       try {
         await send(activeSessionId, content, parentId, attachments);
-        // Auto-name the session from its first question.
+        // Give an untitled chat an LLM-generated title from its first message.
+        // Fire-and-forget so it never delays the reply; the server only writes a
+        // name while the chat is still untitled, so manual renames are retained.
         const current = sessions.find((s) => s.id === activeSessionId);
         if (current && isUntitledSessionName(current.name)) {
-          const updated = await client.updateSessionName(activeSessionId, summarizeTopic(content));
-          setSessions((prev) => prev.map((s) => (s.id === activeSessionId ? updated : s)));
+          client
+            .autoNameSession(activeSessionId)
+            .then((updated) => setSessions((prev) => prev.map((s) => (s.id === activeSessionId ? updated : s))))
+            .catch(() => {});
         }
       } catch (err: any) {
         console.error('Send failed:', err);

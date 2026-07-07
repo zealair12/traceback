@@ -149,6 +149,13 @@ export class TracebackClient {
     return data;
   }
 
+  // Ask the server to title an untitled chat from its first message (LLM-based).
+  // No-op server-side if the chat already has a name.
+  async autoNameSession(sessionId: string): Promise<SessionResponse> {
+    const { data } = await this.api.post<SessionResponse>(`/sessions/${sessionId}/autoname`, {});
+    return data;
+  }
+
   async fetchSessionMessages(sessionId: string): Promise<MessageResponse[]> {
     const { data } = await this.api.get<MessageResponse[]>(`/sessions/${sessionId}/messages`);
     return data;

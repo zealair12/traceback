@@ -57,6 +57,8 @@ export function Composer({
   const [pending, setPending] = useState<ImageAttachment[]>([]);
   const [micState, setMicState] = useState<'idle' | 'recording' | 'transcribing'>('idle');
   const [micError, setMicError] = useState<string | null>(null);
+  // Live (not-yet-final) speech, shown greyed while speaking, then committed.
+  const [interim, setInterim] = useState('');
 
   // Warn when the selected model can't process the pending attachments.
   const attachmentWarning = (() => {
@@ -122,31 +124,31 @@ export function Composer({
 
     rec.onresult = (e: any) => {
       let finals = '';
-      let interim = '';
+      let interimText = '';
       for (let i = 0; i < e.results.length; i++) {
-        if (e.results[i].isFinal) {
-          finals += e.results[i][0].transcript;
-        } else {
-          interim += e.results[i][0].transcript;
-        }
+        if (e.results[i].isFinal) finals += e.results[i][0].transcript;
+        else interimText += e.results[i][0].transcript;
       }
       finalTranscriptRef.current = finals;
+      // Committed (finalized) speech goes into the editable input; the live,
+      // not-yet-final part shows greyed alongside until it settles.
       const base = baseInputRef.current;
-      const speech = finals + interim;
-      setInput(base + (base.trim() && speech ? ' ' : '') + speech);
+      const f = finals.trim();
+      setInput(base + (base.trim() && f ? ' ' : '') + f);
+      setInterim(interimText.trim());
     };
 
     rec.onerror = (e: any) => {
       setMicError(e.error === 'not-allowed' ? 'Microphone access denied.' : `Recognition error: ${e.error}`);
+      setInterim('');
       setMicState('idle');
     };
 
     rec.onend = () => {
       const base = baseInputRef.current;
       const finals = finalTranscriptRef.current.trim();
-      if (finals) {
-        setInput(base + (base.trim() ? ' ' : '') + finals);
-      }
+      setInput(base + (base.trim() && finals ? ' ' : '') + finals);
+      setInterim('');
       setMicState('idle');
       inputRef.current?.focus();
     };
@@ -278,17 +280,33 @@ export function Composer({
             ))}
           </div>
         )}
-        <textarea
-          ref={inputRef}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          onPaste={handlePaste}
-          rows={input.includes('\n') ? 3 : 1}
-          placeholder={agentMode ? 'Give the agent a task…' : 'Ask…'}
-          disabled={sending}
-          className="block w-full resize-none bg-transparent text-sm text-gray-100 px-4 pt-3 pb-1 focus:outline-none disabled:opacity-50"
-        />
+        <div className="relative">
+          {/* Live speech preview: reserves the committed text's space (invisible)
+              so the not-yet-final words appear greyed right where they'll land. */}
+          {micState === 'recording' && interim && (
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 px-4 pt-3 pb-1 text-sm leading-[inherit] whitespace-pre-wrap break-words pointer-events-none select-none"
+            >
+              <span className="invisible">
+                {input}
+                {input && !input.endsWith(' ') ? ' ' : ''}
+              </span>
+              <span className="text-gray-500">{interim}</span>
+            </div>
+          )}
+          <textarea
+            ref={inputRef}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
+            rows={input.includes('\n') ? 3 : 1}
+            placeholder={agentMode ? 'Give the agent a task…' : 'Ask…'}
+            disabled={sending}
+            className="block w-full resize-none bg-transparent text-sm text-gray-100 px-4 pt-3 pb-1 focus:outline-none disabled:opacity-50"
+          />
+        </div>
         <div className="flex items-center px-2 pb-2 gap-2">
           {/* Agent toggle — blue when on, matching the app's accent. */}
           {agentAvailable && (

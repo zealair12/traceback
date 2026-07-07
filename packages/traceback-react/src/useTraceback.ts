@@ -288,12 +288,16 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
 
   const handleNewSession = useCallback(async () => {
     setError(null);
+    // Clear the view immediately so a new chat feels instant. The session is
+    // created in the background; sending is disabled (no active id) until it's
+    // ready, which takes a moment and avoids sending to a not-yet-real session.
+    setAllMessages([]);
+    setActiveNodeId(null);
+    setActiveSessionId(null);
     try {
       const session = await client.createSession();
       setSessions((prev) => [session, ...prev]);
       setActiveSessionId(session.id);
-      setAllMessages([]);
-      setActiveNodeId(null);
     } catch (err) {
       console.error('Failed to create session:', err);
     }
@@ -310,32 +314,41 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
 
   const handleRenameSession = useCallback(
     async (sessionId: string, name: string) => {
+      const trimmed = name.trim() || null;
+      const prevName = sessions.find((s) => s.id === sessionId)?.name ?? null;
+      // Optimistic: show the new name right away, then persist.
+      setSessions((prev) => prev.map((s) => (s.id === sessionId ? { ...s, name: trimmed } : s)));
       try {
-        const updated = await client.updateSessionName(sessionId, name.trim() || null);
+        const updated = await client.updateSessionName(sessionId, trimmed);
         setSessions((prev) => prev.map((s) => (s.id === sessionId ? updated : s)));
       } catch (err) {
+        // Revert to the previous name if the save fails.
+        setSessions((prev) => prev.map((s) => (s.id === sessionId ? { ...s, name: prevName } : s)));
         console.error('Failed to rename session:', err);
       }
     },
-    [client]
+    [client, sessions]
   );
 
   const handleDeleteSession = useCallback(
     async (sessionId: string) => {
+      const snapshot = sessions;
+      const remaining = sessions.filter((s) => s.id !== sessionId);
+      // Optimistic: drop it from the list immediately and move off it if active.
+      setSessions(remaining);
+      if (activeSessionId === sessionId) setActiveSessionId(remaining[0]?.id ?? null);
       try {
         await client.deleteSession(sessionId);
-        const remaining = sessions.filter((s) => s.id !== sessionId);
+        // If that was the last chat, start a fresh empty one.
         if (remaining.length === 0) {
-          const newSession = await client.createSession();
-          setSessions([newSession]);
-          setActiveSessionId(newSession.id);
-          setAllMessages([]);
-          setActiveNodeId(null);
-        } else {
-          setSessions(remaining);
-          if (activeSessionId === sessionId) setActiveSessionId(remaining[0].id);
+          const created = await client.createSession();
+          setSessions([created]);
+          setActiveSessionId(created.id);
         }
       } catch (err: any) {
+        // Restore on failure.
+        setSessions(snapshot);
+        if (activeSessionId === sessionId) setActiveSessionId(sessionId);
         setError(friendlyError(err));
       }
     },

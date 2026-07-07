@@ -14,4 +14,6 @@ export const TRACEBACK_FEATURES = `What TraceBack can do, and where to find it (
 - Import history: bring in exports from ChatGPT, Claude, or Gemini from the sidebar.
 - Incognito: a temporary chat that is deleted when you leave (top bar).
 - Attachments and voice: attach images or PDFs, or use the microphone for voice input, from the message box.
+- View an attachment: tap an attached image to see it full size, or tap a file to open it.
+- Up-to-date answers: replies can include current information from the web, with source links.
 - Sign in with Google to save your history and remove the daily message limit.`;

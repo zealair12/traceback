@@ -350,18 +350,51 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
         (attachments ?? []).some((a) => a.type === 'image'),
         (attachments ?? []).some((a) => a.type === 'file')
       );
-      const result: SendMessageResult = await client.sendMessage(sessionId, content, parentId, {
-        provider: choice.provider,
-        model: choice.model,
-        attachments,
-        apiKey: (choice.provider && keyStore.get(choice.provider)) || undefined
+      // Show the user's message immediately (optimistic) so it stays on screen
+      // while the model thinks, instead of vanishing until the reply lands.
+      const tempId = `temp-${Date.now()}`;
+      setAllMessages((prev) => {
+        const parentDepth = parentId ? prev.find((m) => m.id === parentId)?.depth ?? 0 : -1;
+        const optimistic = {
+          id: tempId,
+          sessionId,
+          parentId,
+          role: 'user',
+          content,
+          depth: parentDepth + 1,
+          attachments: attachments ?? null,
+          provider: null,
+          model: null,
+          branchLabel: null,
+          createdAt: new Date().toISOString()
+        } as unknown as MessageResponse;
+        return [...prev, optimistic];
       });
-      setAllMessages((prev) => [...prev, result.userMessage, result.assistantMessage]);
-      setActiveNodeId(result.assistantMessage.id);
-      setGuestLimitReached(false);
-      clearBranching();
-      // Keep guest usage counter accurate after each send.
-      refreshAuth();
+      setActiveNodeId(tempId);
+
+      try {
+        const result: SendMessageResult = await client.sendMessage(sessionId, content, parentId, {
+          provider: choice.provider,
+          model: choice.model,
+          attachments,
+          apiKey: (choice.provider && keyStore.get(choice.provider)) || undefined
+        });
+        // Swap the optimistic placeholder for the real, server-assigned messages.
+        setAllMessages((prev) => [
+          ...prev.filter((m) => m.id !== tempId),
+          result.userMessage,
+          result.assistantMessage
+        ]);
+        setActiveNodeId(result.assistantMessage.id);
+        setGuestLimitReached(false);
+        clearBranching();
+        // Keep guest usage counter accurate after each send.
+        refreshAuth();
+      } catch (err) {
+        // Roll back the optimistic message so a failed send leaves no ghost.
+        setAllMessages((prev) => prev.filter((m) => m.id !== tempId));
+        throw err;
+      }
     },
     [client, router, selectedProvider, selectedModel, clearBranching, refreshAuth]
   );

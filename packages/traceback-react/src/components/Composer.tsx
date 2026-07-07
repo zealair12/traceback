@@ -10,7 +10,7 @@
 
 import { useEffect, useRef, useState, type KeyboardEvent, type ClipboardEvent } from 'react';
 import type { ProviderInfo, ImageAttachment } from '@traceback/shared';
-import { ArrowUp, FileText, Mic, Paperclip, X } from 'lucide-react';
+import { ArrowUp, FileText, Mic, Paperclip, Sparkles, X } from 'lucide-react';
 import { ModelPicker } from './ModelPicker';
 
 interface ComposerProps {
@@ -26,6 +26,10 @@ interface ComposerProps {
   selectedModel: string | null;
   keyedProviders: Set<string>;
   onSelectModel: (providerId: string, model: string) => void;
+  // Agent mode: multi-step tasks. Shown only to signed-in users.
+  agentMode: boolean;
+  agentAvailable: boolean;
+  onToggleAgent: () => void;
 }
 
 // Looks like text we can read in the browser (code, notes, data files).
@@ -44,7 +48,10 @@ export function Composer({
   selectedProvider,
   selectedModel,
   keyedProviders,
-  onSelectModel
+  onSelectModel,
+  agentMode,
+  agentAvailable,
+  onToggleAgent
 }: ComposerProps) {
   const [input, setInput] = useState('');
   const [pending, setPending] = useState<ImageAttachment[]>([]);
@@ -278,11 +285,29 @@ export function Composer({
           onKeyDown={handleKeyDown}
           onPaste={handlePaste}
           rows={input.includes('\n') ? 3 : 1}
-          placeholder="Ask…"
+          placeholder={agentMode ? 'Give the agent a task…' : 'Ask…'}
           disabled={sending}
           className="block w-full resize-none bg-transparent text-sm text-gray-100 px-4 pt-3 pb-1 focus:outline-none disabled:opacity-50"
         />
         <div className="flex items-center px-2 pb-2 gap-2">
+          {/* Agent toggle — blue when on, matching the app's accent. */}
+          {agentAvailable && (
+            <button
+              type="button"
+              onClick={onToggleAgent}
+              disabled={sending}
+              className={`h-7 px-2.5 rounded-full flex items-center gap-1 text-[12px] font-medium transition-colors flex-shrink-0 disabled:opacity-40 ${
+                agentMode
+                  ? 'text-blue-400 bg-blue-400/10'
+                  : 'text-gray-400 hover:text-gray-100 hover:bg-gray-800'
+              }`}
+              title={agentMode ? 'Agent mode is on — works tasks step by step' : 'Turn on agent mode'}
+              aria-pressed={agentMode}
+            >
+              <Sparkles size={13} />
+              <span>Agent</span>
+            </button>
+          )}
           {/* min-w-0 so picker shrinks before buttons are pushed off-screen */}
           <div className="flex-1 min-w-0 overflow-hidden">
             <ModelPicker

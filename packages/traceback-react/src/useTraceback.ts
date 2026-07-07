@@ -102,6 +102,9 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
   // True once a guest hits the daily free-message limit, so the UI can show a
   // sign-in call to action instead of a plain error.
   const [guestLimitReached, setGuestLimitReached] = useState(false);
+  // Agent mode: when on, a message is run as a multi-step agent task instead of
+  // a single reply.
+  const [agentMode, setAgentMode] = useState(false);
 
   // Incognito: creates a throwaway session that is deleted when toggled off.
   const [incognito, setIncognito] = useState(false);
@@ -412,9 +415,61 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
     [client, router, selectedProvider, selectedModel, clearBranching, refreshAuth]
   );
 
+  // Agent mode: run the message as a multi-step task, persisting each step, then
+  // reload the session so the whole trace shows in the tree.
+  const runAgentTask = useCallback(
+    async (task: string) => {
+      if (!activeSessionId || sending) return;
+      const parentId = branchingFromMessageId ?? activeNodeId;
+      setSending(true);
+      setError(null);
+      const tempId = `temp-${Date.now()}`;
+      setAllMessages((prev) => {
+        const pd = parentId ? prev.find((m) => m.id === parentId)?.depth ?? 0 : -1;
+        return [
+          ...prev,
+          {
+            id: tempId,
+            sessionId: activeSessionId,
+            parentId,
+            role: 'user',
+            content: task,
+            depth: pd + 1,
+            attachments: null,
+            provider: null,
+            model: null,
+            branchLabel: null,
+            createdAt: new Date().toISOString()
+          } as unknown as MessageResponse
+        ];
+      });
+      setActiveNodeId(tempId);
+      try {
+        await client.runAgent(activeSessionId, parentId, task);
+        const msgs = await client.fetchSessionMessages(activeSessionId);
+        setAllMessages(msgs);
+        const deepest = msgs.length ? msgs.reduce((a, b) => (a.depth >= b.depth ? a : b)) : null;
+        setActiveNodeId(deepest ? deepest.id : null);
+        clearBranching();
+        refreshAuth();
+      } catch (err: any) {
+        setAllMessages((prev) => prev.filter((m) => m.id !== tempId));
+        setError(friendlyError(err));
+      } finally {
+        setSending(false);
+      }
+    },
+    [activeSessionId, sending, branchingFromMessageId, activeNodeId, client, clearBranching, refreshAuth]
+  );
+
   const handleSendMessage = useCallback(
     async (content: string, attachments?: ImageAttachment[]) => {
       if (!activeSessionId || sending) return;
+      // In agent mode, the message is a task for the multi-step agent.
+      if (agentMode) {
+        await runAgentTask(content);
+        return;
+      }
       const parentId = branchingFromMessageId ?? activeNodeId;
       setSending(true);
       setError(null);
@@ -443,7 +498,7 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
         setSending(false);
       }
     },
-    [activeSessionId, sending, branchingFromMessageId, activeNodeId, send, sessions, client]
+    [activeSessionId, sending, branchingFromMessageId, activeNodeId, send, sessions, client, agentMode, runAgentTask]
   );
 
   // Branching: "dig" sends a follow-up about the selected text immediately;
@@ -637,6 +692,10 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
     sending,
     error,
     guestLimitReached,
+    agentMode,
+    // Agent mode is a signed-in feature (each run is many model calls).
+    agentAvailable: !!authState && !authState.isGuest,
+    toggleAgentMode: () => setAgentMode((v) => !v),
     availableProviders,
     selectedProvider,
     selectedModel,

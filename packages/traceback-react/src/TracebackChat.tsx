@@ -226,6 +226,9 @@ export function TracebackChat({ apiUrl }: TracebackChatProps) {
           selectedModel={tb.selectedModel}
           keyedProviders={tb.keyedProviders}
           onSelectModel={tb.handleSelectModel}
+          agentMode={tb.agentMode}
+          agentAvailable={tb.agentAvailable}
+          onToggleAgent={tb.toggleAgentMode}
         />
       )}
 

@@ -114,6 +114,14 @@ export interface ImportResult {
   imported: Array<{ sessionId: string; name: string | null; messageCount: number }>;
 }
 
+/** Result of an agent run: the task node, the step nodes, and the final answer. */
+export interface AgentRunResult {
+  sessionId: string;
+  taskMessage: MessageResponse;
+  steps: MessageResponse[];
+  answer: string;
+}
+
 /**
  * The Traceback HTTP client: one object holding every call the server
  * understands. A class so embedders can extend or wrap it; the
@@ -153,6 +161,17 @@ export class TracebackClient {
   // No-op server-side if the chat already has a name.
   async autoNameSession(sessionId: string): Promise<SessionResponse> {
     const { data } = await this.api.post<SessionResponse>(`/sessions/${sessionId}/autoname`, {});
+    return data;
+  }
+
+  // Run agent mode: the model works the task step by step (search, reason,
+  // answer), persisting the task and each step into the session's tree.
+  async runAgent(sessionId: string, parentId: string | null, task: string): Promise<AgentRunResult> {
+    const { data } = await this.api.post<AgentRunResult>('/agent/run', {
+      session_id: sessionId,
+      parent_id: parentId,
+      task
+    });
     return data;
   }
 

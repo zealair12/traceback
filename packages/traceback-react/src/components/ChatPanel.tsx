@@ -36,6 +36,9 @@ interface ChatPanelProps {
   selectedModel: string | null;
   keyedProviders: Set<string>;
   onSelectModel: (providerId: string, model: string) => void;
+  agentMode: boolean;
+  agentAvailable: boolean;
+  onToggleAgent: () => void;
 }
 
 export function ChatPanel({
@@ -66,7 +69,10 @@ export function ChatPanel({
   selectedProvider,
   selectedModel,
   keyedProviders,
-  onSelectModel
+  onSelectModel,
+  agentMode,
+  agentAvailable,
+  onToggleAgent
 }: ChatPanelProps) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
@@ -102,6 +108,9 @@ export function ChatPanel({
       selectedModel={selectedModel}
       keyedProviders={keyedProviders}
       onSelectModel={onSelectModel}
+      agentMode={agentMode}
+      agentAvailable={agentAvailable}
+      onToggleAgent={onToggleAgent}
     />
   );
 

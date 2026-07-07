@@ -27,6 +27,7 @@ import { registerMessageRoutes } from './routes/messageRoutes.js';
 import { registerOpenAiProxy } from './routes/openaiProxy.js';
 import { registerImportRoutes } from './routes/importRoutes.js';
 import { registerTranscribeRoutes } from './routes/transcribeRoutes.js';
+import { registerAgentRoutes } from './routes/agentRoutes.js';
 import { wrap } from './routes/wrap.js';
 
 export function createApp() {
@@ -110,6 +111,7 @@ export function createApp() {
   // Session + message routes (scoped to the caller's account or guest cookie).
   registerSessionRoutes(app);
   registerMessageRoutes(app);
+  registerAgentRoutes(app);
 
   // OpenAI-compatible proxy + file imports + audio transcription.
   registerOpenAiProxy(app);

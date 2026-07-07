@@ -10,7 +10,7 @@
 
 import { useEffect, useRef, useState, type KeyboardEvent, type ClipboardEvent } from 'react';
 import type { ProviderInfo, ImageAttachment } from '@traceback/shared';
-import { ArrowUp, FileText, Mic, Paperclip, Sparkles, X } from 'lucide-react';
+import { ArrowUp, FileText, Mic, Paperclip, X } from 'lucide-react';
 import { ModelPicker } from './ModelPicker';
 
 interface ComposerProps {
@@ -296,7 +296,7 @@ export function Composer({
               type="button"
               onClick={onToggleAgent}
               disabled={sending}
-              className={`h-7 px-2.5 rounded-full flex items-center gap-1 text-[12px] font-medium transition-colors flex-shrink-0 disabled:opacity-40 ${
+              className={`h-7 px-3 rounded-full flex items-center text-[12px] font-medium transition-colors flex-shrink-0 disabled:opacity-40 ${
                 agentMode
                   ? 'text-blue-400 bg-blue-400/10'
                   : 'text-gray-400 hover:text-gray-100 hover:bg-gray-800'
@@ -304,8 +304,7 @@ export function Composer({
               title={agentMode ? 'Agent mode is on — works tasks step by step' : 'Turn on agent mode'}
               aria-pressed={agentMode}
             >
-              <Sparkles size={13} />
-              <span>Agent</span>
+              Agent
             </button>
           )}
           {/* min-w-0 so picker shrinks before buttons are pushed off-screen */}

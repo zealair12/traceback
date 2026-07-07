@@ -224,6 +224,10 @@ export function MessageBubble({ message, onBranchFromMessage, onResendMessage, o
         <ReactMarkdown
           remarkPlugins={[remarkGfm, remarkMath]}
           rehypePlugins={[rehypeKatex]}
+          components={{
+            // Open links in a new tab so a cited source never replaces the app.
+            a: (props) => <a {...props} target="_blank" rel="noopener noreferrer" />
+          }}
         >
           {normalizeLatex(message.content)}
         </ReactMarkdown>

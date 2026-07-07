@@ -35,7 +35,7 @@ export function ModelPicker({
   };
 
   return (
-    <div className="relative flex items-center">
+    <div className="relative inline-flex items-center max-w-full">
       <select
         value={value}
         onChange={handleChange}

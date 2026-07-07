@@ -16,6 +16,7 @@ import { ownerWhere } from '../auth/owner.js';
 import { wrap } from './wrap.js';
 import { runAgent, type AgentStep, type AgentTool } from '../agent/agentLoop.js';
 import { createWebSearchTool } from '../agent/webSearchTool.js';
+import { linkifyBareCitations } from '../services/messageService.js';
 
 const MAX_STEPS = 6;
 
@@ -31,8 +32,8 @@ const datetimeTool: AgentTool = {
 // How each recorded step is written into the tree as a node's content.
 function renderStep(step: AgentStep): string {
   if (step.type === 'tool_call') return `🔍 **${step.tool}** ${step.args ?? ''}`.trim();
-  if (step.type === 'tool_result') return step.content;
-  return step.content; // final answer
+  // Fix bare bracketed citations into real links in results and the answer.
+  return linkifyBareCitations(step.content);
 }
 
 export function registerAgentRoutes(app: Express) {

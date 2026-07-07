@@ -20,6 +20,20 @@ import { TRACEBACK_FEATURES } from '../prompts/features.js';
 // of these error types keep working unchanged after the provider refactor.
 export { ApiRateLimitError, LlmTimeoutError } from '../providers/index.js';
 
+// Deterministically turn bare bracketed citations like [example.com] into real
+// markdown links [example.com](https://example.com), so cited sources render as
+// clickable links instead of plain text. Models often ignore the "use real
+// links" instruction, so we fix it after the fact rather than hoping.
+// - Requires a domain shape (something.tld, optional /path), so prose like
+//   [e.g.] or [Fig. 2] is left alone.
+// - The negative lookahead skips anything already written as a markdown link.
+export function linkifyBareCitations(text: string): string {
+  return text.replace(
+    /\[([a-z0-9][a-z0-9.-]*\.[a-z]{2,}(?:\/[^\]\s]*)?)\](?!\()/gi,
+    (_match, domain) => `[${domain}](https://${domain})`
+  );
+}
+
 // Hard limit on how deep a conversation tree can go.
 // This is enforced at the application layer before we insert
 // a new message, using the parent's depth.
@@ -230,6 +244,9 @@ export async function createMessageWithAutoReply(options: {
     await prisma.message.delete({ where: { id: userMessage.id } }).catch(() => {});
     throw err;
   }
+
+  // Deterministically fix bare bracketed citations into real links before saving.
+  assistantContent = linkifyBareCitations(assistantContent);
 
   // 5. Store the assistant reply as a child of the user message.
   const assistantMessage = await prisma.message.create({

@@ -226,7 +226,9 @@ export function MessageBubble({ message, onBranchFromMessage, onResendMessage, o
           rehypePlugins={[rehypeKatex]}
           components={{
             // Open links in a new tab so a cited source never replaces the app.
-            a: (props) => <a {...props} target="_blank" rel="noopener noreferrer" />
+            // Drop react-markdown's internal `node` prop so it isn't rendered as
+            // a stray DOM attribute.
+            a: ({ node: _node, ...props }) => <a {...props} target="_blank" rel="noopener noreferrer" />
           }}
         >
           {normalizeLatex(message.content)}

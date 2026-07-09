@@ -192,6 +192,56 @@ export class TracebackClient {
     return data;
   }
 
+  // Run agent mode and stream each step live. onStep fires per step (tool call,
+  // result, final answer); onDone fires once with the persisted trace. Falls
+  // back to runAgent at the call site if the stream fails before any step.
+  async runAgentStream(
+    sessionId: string,
+    parentId: string | null,
+    task: string,
+    handlers: {
+      onStep: (step: { type: string; tool?: string; content: string }) => void;
+      onDone: (result: AgentRunResult) => void;
+    }
+  ): Promise<void> {
+    const res = await fetch(`${this.baseURL}/agent/stream`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ session_id: sessionId, parent_id: parentId, task })
+    });
+    if (!res.ok) {
+      let body: { error?: string; guestLimitReached?: boolean } = {};
+      try {
+        body = await res.json();
+      } catch {
+        /* ignore */
+      }
+      const err = new Error(body.error ?? 'Agent request failed') as Error & { response?: unknown };
+      err.response = { data: body, status: res.status };
+      throw err;
+    }
+    if (!res.body) throw new Error('Streaming is not supported here.');
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const blocks = buffer.split('\n\n');
+      buffer = blocks.pop() ?? '';
+      for (const block of blocks) {
+        const evt = parseSSEBlock(block);
+        if (!evt) continue;
+        if (evt.event === 'step') handlers.onStep(evt.data);
+        else if (evt.event === 'done') handlers.onDone(evt.data);
+        else if (evt.event === 'error') throw new Error((evt.data.error as string) ?? 'Agent error');
+      }
+    }
+  }
+
   // Send a message and stream the reply. onToken fires per chunk; onDone fires
   // once with the stored messages. Uses fetch because axios can't read a
   // streaming body in the browser. Throws on a non-2xx (e.g. guest limit), with

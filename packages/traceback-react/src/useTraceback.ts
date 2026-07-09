@@ -460,45 +460,81 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
     [client, router, selectedProvider, selectedModel, clearBranching, refreshAuth]
   );
 
-  // Agent mode: run the message as a multi-step task, persisting each step, then
-  // reload the session so the whole trace shows in the tree.
+  // Agent mode: stream each step live into a progress bubble, then reload the
+  // session so the persisted trace shows. Falls back to the non-streaming
+  // /agent/run if the stream fails before any step.
   const runAgentTask = useCallback(
     async (task: string) => {
       if (!activeSessionId || sending) return;
+      const sid = activeSessionId;
       const parentId = branchingFromMessageId ?? activeNodeId;
       setSending(true);
       setError(null);
-      const tempId = `temp-${Date.now()}`;
+
+      const tempUserId = `temp-u-${Date.now()}`;
+      const tempAsstId = `temp-a-${Date.now()}`;
       setAllMessages((prev) => {
         const pd = parentId ? prev.find((m) => m.id === parentId)?.depth ?? 0 : -1;
-        return [
-          ...prev,
-          {
-            id: tempId,
-            sessionId: activeSessionId,
-            parentId,
-            role: 'user',
-            content: task,
-            depth: pd + 1,
-            attachments: null,
-            provider: null,
-            model: null,
-            branchLabel: null,
-            createdAt: new Date().toISOString()
-          } as unknown as MessageResponse
-        ];
+        const mk = (id: string, role: 'user' | 'assistant', content: string, par: string | null, depth: number) =>
+          ({
+            id, sessionId: sid, parentId: par, role, content, depth,
+            attachments: null, provider: null, model: null, branchLabel: null, createdAt: new Date().toISOString()
+          } as unknown as MessageResponse);
+        return [...prev, mk(tempUserId, 'user', task, parentId, pd + 1), mk(tempAsstId, 'assistant', '', tempUserId, pd + 2)];
       });
-      setActiveNodeId(tempId);
-      try {
-        await client.runAgent(activeSessionId, parentId, task);
-        const msgs = await client.fetchSessionMessages(activeSessionId);
+      setActiveNodeId(tempAsstId);
+
+      const reload = async () => {
+        const msgs = await client.fetchSessionMessages(sid);
         setAllMessages(msgs);
         const deepest = msgs.length ? msgs.reduce((a, b) => (a.depth >= b.depth ? a : b)) : null;
         setActiveNodeId(deepest ? deepest.id : null);
         clearBranching();
         refreshAuth();
+      };
+      const cleanup = () => setAllMessages((prev) => prev.filter((m) => m.id !== tempUserId && m.id !== tempAsstId));
+
+      let gotStep = false;
+      let doneResult: unknown = null;
+      try {
+        try {
+          await client.runAgentStream(sid, parentId, task, {
+            onStep: (step) => {
+              gotStep = true;
+              // Accumulate the live trace in the progress bubble.
+              setAllMessages((prev) =>
+                prev.map((m) =>
+                  m.id === tempAsstId ? { ...m, content: (m.content ? m.content + '\n\n' : '') + step.content } : m
+                )
+              );
+            },
+            onDone: (result) => {
+              doneResult = result;
+            }
+          });
+        } catch (err: any) {
+          // Guest limit, or a partial stream: surface it (don't risk a duplicate).
+          if (err?.response?.data?.guestLimitReached || gotStep) {
+            cleanup();
+            setError(friendlyError(err));
+            return;
+          }
+          // Nothing streamed: fall back to the non-streaming agent run.
+          await client.runAgent(sid, parentId, task);
+          await reload();
+          return;
+        }
+        // Stream ended cleanly.
+        if (doneResult) await reload();
+        else if (!gotStep) {
+          await client.runAgent(sid, parentId, task);
+          await reload();
+        } else {
+          cleanup();
+          setError('The agent response ended unexpectedly. Please try again.');
+        }
       } catch (err: any) {
-        setAllMessages((prev) => prev.filter((m) => m.id !== tempId));
+        cleanup();
         setError(friendlyError(err));
       } finally {
         setSending(false);

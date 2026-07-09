@@ -3,9 +3,14 @@ import type { ChatMessage } from '../types';
 import type { ProviderInfo, ImageAttachment } from '@traceback/shared';
 import type { SiblingInfo } from '../lib/conversationTree';
 import { MessageBubble } from './MessageBubble';
+import { AgentTrace } from './AgentTrace';
 import { NavHeader } from './NavHeader';
 import { Composer } from './Composer';
 import { BrandIcon } from './BrandIcon';
+
+// Is this an agent trace step (a tool call/result), as opposed to a real reply?
+const isAgentTraceStep = (m: ChatMessage) =>
+  m.provider === 'agent' && (m.branchLabel === 'tool_call' || m.branchLabel === 'tool_result');
 
 interface ChatPanelProps {
   threadPath: ChatMessage[];
@@ -96,6 +101,21 @@ export function ChatPanel({
 
   const isEmpty = threadPath.length === 0 && !sending;
 
+  // Group consecutive agent trace steps (tool calls/results) into one collapsible
+  // AgentTrace; everything else (including the agent's final answer) stays a bubble.
+  type RenderItem = { kind: 'trace'; steps: ChatMessage[]; key: string } | { kind: 'msg'; message: ChatMessage };
+  const renderItems: RenderItem[] = [];
+  let traceBuf: ChatMessage[] = [];
+  for (const m of threadPath) {
+    if (isAgentTraceStep(m)) {
+      traceBuf.push(m);
+    } else {
+      if (traceBuf.length) { renderItems.push({ kind: 'trace', steps: traceBuf, key: `trace-${traceBuf[0].id}` }); traceBuf = []; }
+      renderItems.push({ kind: 'msg', message: m });
+    }
+  }
+  if (traceBuf.length) renderItems.push({ kind: 'trace', steps: traceBuf, key: `trace-${traceBuf[0].id}` });
+
   const composer = (
     <Composer
       sending={sending}
@@ -168,16 +188,20 @@ export function ChatPanel({
         <>
           <div ref={scrollRef} className="flex-1 h-0 overflow-y-auto">
             <div className="max-w-2xl mx-auto px-4 pt-4 pb-2 space-y-5">
-              {threadPath.map((message) => (
-                <MessageBubble
-                  key={message.id}
-                  message={message}
-                  onBranchFromMessage={onBranchFromMessage}
-                  onResendMessage={onResendMessage}
-                  onEditMessage={onEditMessage}
-                  keyedProviders={keyedProviders}
-                />
-              ))}
+              {renderItems.map((item) =>
+                item.kind === 'trace' ? (
+                  <AgentTrace key={item.key} steps={item.steps} />
+                ) : (
+                  <MessageBubble
+                    key={item.message.id}
+                    message={item.message}
+                    onBranchFromMessage={onBranchFromMessage}
+                    onResendMessage={onResendMessage}
+                    onEditMessage={onEditMessage}
+                    keyedProviders={keyedProviders}
+                  />
+                )
+              )}
               {sending && (
                 <div className="flex items-start gap-3">
                   <div className="w-7 h-7 rounded-full bg-gray-800 flex items-center justify-center text-blue-400 mt-1 flex-shrink-0">

@@ -7,5 +7,5 @@ import type { MessageResponse } from '@traceback/shared';
 // can never drift apart.
 export type ChatMessage = Pick<
   MessageResponse,
-  'id' | 'role' | 'content' | 'provider' | 'model' | 'attachments'
+  'id' | 'role' | 'content' | 'provider' | 'model' | 'attachments' | 'branchLabel'
 >;

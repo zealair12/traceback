@@ -47,7 +47,8 @@ export class ConversationTree {
         content: current.content,
         provider: current.provider,
         model: current.model,
-        attachments: current.attachments
+        attachments: current.attachments,
+        branchLabel: current.branchLabel
       });
       current = current.parentId ? byId.get(current.parentId) : undefined;
     }

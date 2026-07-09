@@ -23,9 +23,15 @@ export function stripMarkdown(text: string): string {
  * LLMs often output \(...\) and \[...\] instead of $...$ and $$...$$.
  */
 export function normalizeLatex(text: string): string {
-  return text
-    .replace(/\\\[/g, '$$')
-    .replace(/\\\]/g, '$$')
-    .replace(/\\\(/g, '$')
-    .replace(/\\\)/g, '$');
+  return (
+    text
+      // Escape currency dollar signs (a $ immediately before a digit) FIRST, so
+      // remark-math doesn't read "$917 ... $1,025" as inline math. Running this
+      // before the delimiter conversion below means it never touches real math.
+      .replace(/\$(?=\d)/g, () => '\\$')
+      .replace(/\\\[/g, '$$')
+      .replace(/\\\]/g, '$$')
+      .replace(/\\\(/g, '$')
+      .replace(/\\\)/g, '$')
+  );
 }

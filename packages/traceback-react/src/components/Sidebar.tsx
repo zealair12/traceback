@@ -1,6 +1,6 @@
 import type { SessionResponse, AuthMeResponse } from '@traceback/shared';
 import { useState } from 'react';
-import { Settings, FolderDown, KeyRound, Trash2, LogOut } from 'lucide-react';
+import { Settings, FolderDown, KeyRound, Trash2, LogOut, Pencil } from 'lucide-react';
 import { BrandIcon } from './BrandIcon';
 
 type Theme = 'dark' | 'blue' | 'light';
@@ -133,7 +133,7 @@ export function Sidebar({
                         className="text-[11px] text-gray-500 hover:text-gray-200 px-1.5 py-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
                         title="Rename"
                       >
-                        ✎
+                        <Pencil size={12} />
                       </button>
                       <button
                         type="button"

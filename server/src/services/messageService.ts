@@ -94,8 +94,11 @@ export async function createMessageWithAutoReply(options: {
   // Optional images attached to the user's message. Stored with the message
   // and shown to image-capable models alongside the text.
   attachments?: ImageAttachment[];
+  // Optional token callback. When provided and the chosen provider supports
+  // streaming, the reply is streamed chunk by chunk through this callback.
+  onToken?: (chunk: string) => void;
 }): Promise<CreatedMessagePair> {
-  const { sessionId, parentId, content, provider, model, temperature, maxTokens, apiKey, attachments } = options;
+  const { sessionId, parentId, content, provider, model, temperature, maxTokens, apiKey, attachments, onToken } = options;
 
   // Fetch parent (if any) to derive the new depth and to validate
   // that we are not creating an orphaned node.
@@ -232,14 +235,15 @@ export async function createMessageWithAutoReply(options: {
   // Record exactly which backend and model were used, even when the request left
   // them unset, so the UI can show "answered by X" on each tree node.
   const usedModel = model ?? chosenProvider.defaultModel;
+  const completionOptions = { model, temperature, maxTokens, apiKey };
   let assistantContent: string;
   try {
-    assistantContent = await chosenProvider.complete(llmMessages, {
-      model,
-      temperature,
-      maxTokens,
-      apiKey
-    });
+    // Stream when the caller wants tokens and the provider supports it; else the
+    // normal one-shot completion.
+    assistantContent =
+      onToken && chosenProvider.completeStream
+        ? await chosenProvider.completeStream(llmMessages, completionOptions, onToken)
+        : await chosenProvider.complete(llmMessages, completionOptions);
   } catch (err) {
     await prisma.message.delete({ where: { id: userMessage.id } }).catch(() => {});
     throw err;

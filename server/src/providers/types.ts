@@ -67,6 +67,14 @@ export interface ChatProvider {
   isConfigured(): boolean;
   // Take the pruned conversation and return the model's reply as plain text.
   complete(messages: LlmMessage[], options?: CompletionOptions): Promise<string>;
+  // Optional streaming variant: calls onToken for each chunk as it arrives and
+  // resolves with the full text. Providers that don't implement it fall back to
+  // complete() at the call site.
+  completeStream?(
+    messages: LlmMessage[],
+    options: CompletionOptions | undefined,
+    onToken: (chunk: string) => void
+  ): Promise<string>;
 }
 
 // A plain summary of one provider, safe to send to a frontend so it can build a

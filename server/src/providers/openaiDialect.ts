@@ -9,7 +9,7 @@
 
 import OpenAI from 'openai';
 import { BaseChatProvider, type ProviderTraits, type ProviderRequest } from './base.js';
-import type { ChatProvider } from './types.js';
+import type { ChatProvider, CompletionOptions, LlmMessage } from './types.js';
 import { toOpenAiDialectMessages } from './imageContent.js';
 
 interface DialectTraits extends ProviderTraits {
@@ -45,6 +45,47 @@ export class OpenAIDialectProvider extends BaseChatProvider {
       ...(options?.maxTokens !== undefined ? { max_tokens: options.maxTokens } : {})
     });
     return completion.choices?.[0]?.message?.content ?? 'The model did not return any content.';
+  }
+
+  // Streaming variant: emit each token as it arrives, return the full text.
+  // Streaming and automatic retry don't mix cleanly, so this path does not
+  // retry — a failed stream surfaces to the caller (which falls back).
+  async completeStream(
+    messages: LlmMessage[],
+    options: CompletionOptions | undefined,
+    onToken: (chunk: string) => void
+  ): Promise<string> {
+    if (messages.length === 0) {
+      const t = 'No prior context was provided.';
+      onToken(t);
+      return t;
+    }
+    const req = this.buildRequest(messages, options);
+    const client = new OpenAI({
+      apiKey: req.apiKey ?? 'not-needed',
+      baseURL:
+        (this.dialect.baseURLEnv ? process.env[this.dialect.baseURLEnv] : undefined) ??
+        this.dialect.defaultBaseURL,
+      timeout: req.timeoutMs
+    });
+    const stream = await client.chat.completions.create({
+      model: req.model,
+      messages: toOpenAiDialectMessages(req.messages, {
+        supportsFiles: this.dialect.supportsFiles !== false
+      }) as never,
+      stream: true,
+      ...(req.options?.temperature !== undefined ? { temperature: req.options.temperature } : {}),
+      ...(req.options?.maxTokens !== undefined ? { max_tokens: req.options.maxTokens } : {})
+    });
+    let full = '';
+    for await (const chunk of stream) {
+      const delta = chunk.choices?.[0]?.delta?.content;
+      if (delta) {
+        full += delta;
+        onToken(delta);
+      }
+    }
+    return full || 'The model did not return any content.';
   }
 }
 

@@ -14,7 +14,6 @@ import {
   createTracebackClient,
   type SessionResponse,
   type MessageResponse,
-  type SendMessageResult,
   type ProviderInfo,
   type ImportedConversation,
   type ImageAttachment,
@@ -358,7 +357,10 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
     [client, sessions, activeSessionId]
   );
 
-  // Shared core of "send a message": route it, send it, place the reply.
+  // Shared core of "send a message": route it, STREAM the reply live, and place
+  // the final messages. Falls back to the non-streaming endpoint if streaming
+  // fails before producing anything, so a streaming hiccup can never block or
+  // duplicate a send.
   const send = useCallback(
     async (sessionId: string, content: string, parentId: string | null, attachments?: ImageAttachment[]) => {
       const choice = router.resolve(
@@ -366,50 +368,90 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
         (attachments ?? []).some((a) => a.type === 'image'),
         (attachments ?? []).some((a) => a.type === 'file')
       );
-      // Show the user's message immediately (optimistic) so it stays on screen
-      // while the model thinks, instead of vanishing until the reply lands.
-      const tempId = `temp-${Date.now()}`;
-      setAllMessages((prev) => {
-        const parentDepth = parentId ? prev.find((m) => m.id === parentId)?.depth ?? 0 : -1;
-        const optimistic = {
-          id: tempId,
-          sessionId,
-          parentId,
-          role: 'user',
-          content,
-          depth: parentDepth + 1,
-          attachments: attachments ?? null,
-          provider: null,
-          model: null,
-          branchLabel: null,
-          createdAt: new Date().toISOString()
-        } as unknown as MessageResponse;
-        return [...prev, optimistic];
-      });
-      setActiveNodeId(tempId);
+      const opts = {
+        provider: choice.provider,
+        model: choice.model,
+        attachments,
+        apiKey: (choice.provider && keyStore.get(choice.provider)) || undefined
+      };
 
-      try {
-        const result: SendMessageResult = await client.sendMessage(sessionId, content, parentId, {
-          provider: choice.provider,
-          model: choice.model,
-          attachments,
-          apiKey: (choice.provider && keyStore.get(choice.provider)) || undefined
-        });
-        // Swap the optimistic placeholder for the real, server-assigned messages.
+      // Optimistic user bubble + an empty assistant bubble that tokens flow into.
+      const tempUserId = `temp-u-${Date.now()}`;
+      const tempAsstId = `temp-a-${Date.now()}`;
+      setAllMessages((prev) => {
+        const pd = parentId ? prev.find((m) => m.id === parentId)?.depth ?? 0 : -1;
+        const mk = (id: string, role: 'user' | 'assistant', c: string, par: string | null, depth: number) =>
+          ({
+            id, sessionId, parentId: par, role, content: c, depth,
+            attachments: role === 'user' ? attachments ?? null : null,
+            provider: null, model: null, branchLabel: null, createdAt: new Date().toISOString()
+          } as unknown as MessageResponse);
+        return [...prev, mk(tempUserId, 'user', content, parentId, pd + 1), mk(tempAsstId, 'assistant', '', tempUserId, pd + 2)];
+      });
+      setActiveNodeId(tempAsstId);
+
+      const finish = (result: { userMessage: MessageResponse; assistantMessage: MessageResponse }) => {
         setAllMessages((prev) => [
-          ...prev.filter((m) => m.id !== tempId),
+          ...prev.filter((m) => m.id !== tempUserId && m.id !== tempAsstId),
           result.userMessage,
           result.assistantMessage
         ]);
         setActiveNodeId(result.assistantMessage.id);
         setGuestLimitReached(false);
         clearBranching();
-        // Keep guest usage counter accurate after each send.
         refreshAuth();
-      } catch (err) {
-        // Roll back the optimistic message so a failed send leaves no ghost.
-        setAllMessages((prev) => prev.filter((m) => m.id !== tempId));
-        throw err;
+      };
+      const cleanup = () =>
+        setAllMessages((prev) => prev.filter((m) => m.id !== tempUserId && m.id !== tempAsstId));
+      const fallback = async () => {
+        const result = await client.sendMessage(sessionId, content, parentId, opts);
+        finish(result);
+      };
+
+      let gotToken = false;
+      let done = false;
+      try {
+        await client.sendMessageStream(sessionId, content, parentId, opts, {
+          onToken: (chunk) => {
+            gotToken = true;
+            setAllMessages((prev) =>
+              prev.map((m) => (m.id === tempAsstId ? { ...m, content: m.content + chunk } : m))
+            );
+          },
+          onDone: (result) => {
+            done = true;
+            finish(result);
+          }
+        });
+      } catch (err: any) {
+        if (done) return;
+        // Guest limit, or a partial stream (tokens already arrived): surface it —
+        // never fall back after tokens, to avoid a duplicate reply.
+        if (err?.response?.data?.guestLimitReached || gotToken) {
+          cleanup();
+          throw err;
+        }
+        // Nothing streamed yet: safe to retry via the non-streaming path.
+        try {
+          await fallback();
+        } catch (err2) {
+          cleanup();
+          throw err2;
+        }
+        return;
+      }
+      // Stream closed cleanly but never delivered a final message and no tokens:
+      // fall back so the user still gets a reply.
+      if (!done && !gotToken) {
+        try {
+          await fallback();
+        } catch (err) {
+          cleanup();
+          throw err;
+        }
+      } else if (!done) {
+        cleanup();
+        throw new Error('The response ended unexpectedly. Please try again.');
       }
     },
     [client, router, selectedProvider, selectedModel, clearBranching, refreshAuth]

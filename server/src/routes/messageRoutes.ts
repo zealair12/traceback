@@ -109,6 +109,85 @@ export function registerMessageRoutes(app: Express) {
     })
   );
 
+  // Streaming variant of /message/send: same validation, but the reply is
+  // streamed to the client token by token over Server-Sent Events. The client
+  // falls back to /message/send if this fails, so it is safe to add.
+  app.post(
+    '/message/stream',
+    wrap(async (req, res) => {
+      const {
+        session_id: sessionId,
+        parent_id: parentIdRaw,
+        content,
+        provider: providerRaw,
+        model: modelRaw,
+        attachments: attachmentsRaw
+      } = req.body ?? {};
+
+      if (!sessionId || typeof sessionId !== 'string') {
+        res.status(400).json({ error: 'session_id is required and must be a string.' });
+        return;
+      }
+      if (!content && (!Array.isArray(attachmentsRaw) || attachmentsRaw.length === 0)) {
+        res.status(400).json({ error: 'Please type a message or attach a file.' });
+        return;
+      }
+      if (content !== undefined && typeof content !== 'string') {
+        res.status(400).json({ error: 'content must be a string.' });
+        return;
+      }
+      const problem = attachmentsProblem(attachmentsRaw);
+      if (problem) { res.status(400).json({ error: problem }); return; }
+
+      const session = await prisma.session.findFirst({ where: { id: sessionId, ...ownerWhere(req) } });
+      if (!session) {
+        res.status(404).json({ error: 'This chat session no longer exists. Please start a new chat.' });
+        return;
+      }
+
+      if (!req.isAuthenticated()) {
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        const used = await prisma.message.count({
+          where: { role: 'user', createdAt: { gte: today }, session: { guestId: req.session.guestId } }
+        });
+        if (used >= GUEST_DAILY_LIMIT) {
+          res.status(429).json({
+            error: `You've used your ${GUEST_DAILY_LIMIT} free messages for today. Sign in to continue without limits.`,
+            guestLimitReached: true
+          });
+          return;
+        }
+      }
+
+      // From here on we stream; errors are reported as SSE events, not HTTP codes.
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+      res.setHeader('X-Accel-Buffering', 'no'); // don't let a proxy buffer the stream
+      (res as unknown as { flushHeaders?: () => void }).flushHeaders?.();
+      const emit = (event: string, data: unknown) =>
+        res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+
+      try {
+        const result = await createMessageWithAutoReply({
+          sessionId,
+          parentId: parentIdRaw ? String(parentIdRaw) : null,
+          content: content ?? '',
+          provider: typeof providerRaw === 'string' && providerRaw ? providerRaw : undefined,
+          model: typeof modelRaw === 'string' && modelRaw ? modelRaw : undefined,
+          apiKey: resolveApiKey(req),
+          attachments: attachmentsRaw === undefined ? undefined : attachmentsRaw,
+          onToken: (chunk) => emit('token', { chunk })
+        });
+        emit('done', { userMessage: result.userMessage, assistantMessage: result.assistantMessage });
+        res.end();
+      } catch (err) {
+        emit('error', { error: err instanceof Error ? err.message : 'Something went wrong' });
+        res.end();
+      }
+    })
+  );
+
   app.delete(
     '/messages/:id',
     wrap(async (req, res) => {

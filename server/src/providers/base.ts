@@ -60,10 +60,10 @@ export abstract class BaseChatProvider implements ChatProvider {
     return this.keyOptional || Boolean(process.env[this.apiKeyEnv]);
   }
 
-  // The template every completion follows; subclasses only do the wire call.
-  async complete(messages: LlmMessage[], options?: CompletionOptions): Promise<string> {
-    if (messages.length === 0) return 'No prior context was provided.';
-
+  // Resolve a call into a ready-to-send request: pick the key, model, and time
+  // budget, and strip attachments the chosen model can't handle. Shared by both
+  // the normal and streaming paths.
+  protected buildRequest(messages: LlmMessage[], options?: CompletionOptions): ProviderRequest {
     // A caller-supplied key (bring-your-own-key) wins over the server env key.
     const apiKey = options?.apiKey ?? process.env[this.apiKeyEnv];
     if (!apiKey && !this.keyOptional) {
@@ -95,10 +95,14 @@ export abstract class BaseChatProvider implements ChatProvider {
       };
     });
 
-    return callWithRetry<string>(
-      () => this.performRequest({ messages: preparedMessages, model, apiKey, timeoutMs, options }),
-      { timeoutMs, label: this.id }
-    );
+    return { messages: preparedMessages, model, apiKey, timeoutMs, options };
+  }
+
+  // The template every completion follows; subclasses only do the wire call.
+  async complete(messages: LlmMessage[], options?: CompletionOptions): Promise<string> {
+    if (messages.length === 0) return 'No prior context was provided.';
+    const req = this.buildRequest(messages, options);
+    return callWithRetry<string>(() => this.performRequest(req), { timeoutMs: req.timeoutMs, label: this.id });
   }
 
   protected abstract performRequest(request: ProviderRequest): Promise<string>;

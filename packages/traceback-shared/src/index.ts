@@ -127,13 +127,30 @@ export interface AgentRunResult {
  * understands. A class so embedders can extend or wrap it; the
  * createTracebackClient factory below is the conventional way to make one.
  */
+// Parse one Server-Sent-Events block ("event: X\ndata: {json}") into its parts.
+// Exported so it can be unit-tested without a live stream.
+export function parseSSEBlock(block: string): { event: string; data: any } | null {
+  const event = /^event: (.*)$/m.exec(block)?.[1];
+  const data = /^data: (.*)$/m.exec(block)?.[1];
+  if (!event || data === undefined) return null;
+  try {
+    return { event, data: JSON.parse(data) };
+  } catch {
+    return null;
+  }
+}
+
 export class TracebackClient {
   readonly api: AxiosInstance;
+  // Stored for the streaming endpoint, which uses fetch (axios can't stream a
+  // response body in the browser).
+  private readonly baseURL: string;
 
   constructor(baseURL: string, options?: { axiosInstance?: AxiosInstance }) {
+    this.baseURL = baseURL.replace(/\/$/, '');
     this.api =
       options?.axiosInstance ??
-      axios.create({ baseURL: baseURL.replace(/\/$/, ''), withCredentials: true });
+      axios.create({ baseURL: this.baseURL, withCredentials: true });
   }
 
   // The user's key (if any) travels in a header -- never the URL or body --
@@ -173,6 +190,65 @@ export class TracebackClient {
       task
     });
     return data;
+  }
+
+  // Send a message and stream the reply. onToken fires per chunk; onDone fires
+  // once with the stored messages. Uses fetch because axios can't read a
+  // streaming body in the browser. Throws on a non-2xx (e.g. guest limit), with
+  // the JSON error attached as `.response.data` so callers can branch on it.
+  async sendMessageStream(
+    sessionId: string,
+    content: string,
+    parentId: string | null,
+    opts: { provider?: string; model?: string; attachments?: ImageAttachment[]; apiKey?: string },
+    handlers: {
+      onToken: (chunk: string) => void;
+      onDone: (result: { userMessage: MessageResponse; assistantMessage: MessageResponse }) => void;
+    }
+  ): Promise<void> {
+    const res = await fetch(`${this.baseURL}/message/stream`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'content-type': 'application/json', ...(opts.apiKey ? { 'x-provider-key': opts.apiKey } : {}) },
+      body: JSON.stringify({
+        session_id: sessionId,
+        parent_id: parentId,
+        content,
+        provider: opts.provider,
+        model: opts.model,
+        attachments: opts.attachments
+      })
+    });
+    if (!res.ok) {
+      let body: { error?: string; guestLimitReached?: boolean } = {};
+      try {
+        body = await res.json();
+      } catch {
+        /* ignore */
+      }
+      const err = new Error(body.error ?? 'Stream request failed') as Error & { response?: unknown };
+      err.response = { data: body, status: res.status };
+      throw err;
+    }
+    if (!res.body) throw new Error('Streaming is not supported here.');
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const blocks = buffer.split('\n\n');
+      buffer = blocks.pop() ?? '';
+      for (const block of blocks) {
+        const evt = parseSSEBlock(block);
+        if (!evt) continue;
+        if (evt.event === 'token') handlers.onToken(evt.data.chunk as string);
+        else if (evt.event === 'done') handlers.onDone(evt.data);
+        else if (evt.event === 'error') throw new Error((evt.data.error as string) ?? 'Stream error');
+      }
+    }
   }
 
   async fetchSessionMessages(sessionId: string): Promise<MessageResponse[]> {

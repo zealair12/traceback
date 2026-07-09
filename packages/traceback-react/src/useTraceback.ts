@@ -289,6 +289,9 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
   );
 
   const handleNewSession = useCallback(async () => {
+    // If the current chat is already empty, don't pile up another empty one —
+    // "New Chat" simply does nothing (no warning needed).
+    if (activeSessionId && allMessages.length === 0) return;
     setError(null);
     // Clear the view immediately so a new chat feels instant. The session is
     // created in the background; sending is disabled (no active id) until it's
@@ -303,7 +306,7 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
     } catch (err) {
       console.error('Failed to create session:', err);
     }
-  }, [client]);
+  }, [client, activeSessionId, allMessages.length]);
 
   const handleSelectSession = useCallback(
     (sessionId: string) => {

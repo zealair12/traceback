@@ -156,7 +156,7 @@ export function NavHeader({
         <button
           type="button"
           onClick={onToggleIncognito}
-          className={`${iconButton} ${incognito ? 'text-blue-400 bg-blue-400/10' : ''}`}
+          className={`${iconButton} ${incognito ? 'text-gray-200 bg-gray-800' : ''}`}
           title={incognito ? 'Incognito on — session deleted on exit' : 'Incognito mode'}
           aria-label="Toggle incognito mode"
         >

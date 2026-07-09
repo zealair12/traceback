@@ -34,6 +34,24 @@ export function linkifyBareCitations(text: string): string {
   );
 }
 
+// Fetch the pruned root-to-node lineage for a message as plain conversation
+// turns (role + text). Used by agent mode so the agent sees the branch's
+// context, not just the latest task in isolation.
+export async function fetchLineageMessages(
+  messageId: string
+): Promise<Array<{ role: 'user' | 'assistant' | 'system'; content: string }>> {
+  const rows = await prisma.$queryRaw<Array<{ role: string; content: string; depth: number }>>(Prisma.sql`
+    WITH RECURSIVE message_tree AS (
+      SELECT m.id, m.parent_id, m.role, m.content, m.depth FROM messages m WHERE m.id = ${messageId}
+      UNION ALL
+      SELECT p.id, p.parent_id, p.role, p.content, p.depth
+      FROM messages p INNER JOIN message_tree mt ON p.id = mt.parent_id
+    )
+    SELECT role, content, depth FROM message_tree ORDER BY depth ASC;
+  `);
+  return rows.map((r) => ({ role: r.role as 'user' | 'assistant' | 'system', content: r.content }));
+}
+
 // Hard limit on how deep a conversation tree can go.
 // This is enforced at the application layer before we insert
 // a new message, using the parent's depth.

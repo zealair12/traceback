@@ -16,7 +16,7 @@ import { ownerWhere } from '../auth/owner.js';
 import { wrap } from './wrap.js';
 import { runAgent, type AgentStep, type AgentTool } from '../agent/agentLoop.js';
 import { createWebSearchTool } from '../agent/webSearchTool.js';
-import { linkifyBareCitations } from '../services/messageService.js';
+import { linkifyBareCitations, fetchLineageMessages } from '../services/messageService.js';
 
 const MAX_STEPS = 6;
 
@@ -31,7 +31,7 @@ const datetimeTool: AgentTool = {
 
 // How each recorded step is written into the tree as a node's content.
 function renderStep(step: AgentStep): string {
-  if (step.type === 'tool_call') return `🔍 **${step.tool}** ${step.args ?? ''}`.trim();
+  if (step.type === 'tool_call') return `**${step.tool}** ${step.args ?? ''}`.trim();
   // Fix bare bracketed citations into real links in results and the answer.
   return linkifyBareCitations(step.content);
 }
@@ -92,7 +92,10 @@ export function registerAgentRoutes(app: Express) {
         data: { sessionId, parentId, role: 'user', content: task, depth }
       });
 
-      // 2. Run the loop (capped). Tools are built on OpenRouter, no extra keys.
+      // 2. Run the loop (capped). Give it the branch's prior context so it works
+      //    the task in context (e.g. "san jose" as the departure for earlier
+      //    flight talk), not in isolation. Tools use OpenRouter, no extra keys.
+      const history = parentId ? await fetchLineageMessages(parentId) : [];
       const tools = [createWebSearchTool({ apiKey, baseURL, model }), datetimeTool];
       const { answer, steps } = await runAgent({
         task,
@@ -100,7 +103,8 @@ export function registerAgentRoutes(app: Express) {
         apiKey,
         baseURL,
         model,
-        maxSteps: MAX_STEPS
+        maxSteps: MAX_STEPS,
+        history
       });
 
       // 3. Persist each step as a chained assistant node under the task, so the

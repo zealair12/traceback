@@ -38,6 +38,9 @@ export interface RunAgentOptions {
   apiKey: string;
   baseURL?: string;
   model: string;
+  // Prior conversation turns (the branch's root-to-node context) so the agent
+  // works the task in context, not in isolation.
+  history?: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>;
   // Hard cap on model turns, so the loop can never run forever.
   maxSteps?: number;
   // Called as each step happens, so a caller can stream progress (later: write
@@ -54,7 +57,7 @@ const AGENT_SYSTEM =
 export async function runAgent(
   opts: RunAgentOptions
 ): Promise<{ answer: string; steps: AgentStep[] }> {
-  const { task, tools, apiKey, baseURL, model, maxSteps = 8, onStep } = opts;
+  const { task, tools, apiKey, baseURL, model, maxSteps = 8, onStep, history = [] } = opts;
   const client = new OpenAI({ apiKey, baseURL });
   const toolByName = new Map(tools.map((t) => [t.name, t]));
 
@@ -66,6 +69,8 @@ export async function runAgent(
 
   const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
     { role: 'system', content: AGENT_SYSTEM },
+    // Prior branch context comes first, then the task as the latest turn.
+    ...history.map((h) => ({ role: h.role, content: h.content } as OpenAI.Chat.ChatCompletionMessageParam)),
     { role: 'user', content: task }
   ];
   const steps: AgentStep[] = [];

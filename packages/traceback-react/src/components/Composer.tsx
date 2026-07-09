@@ -10,7 +10,7 @@
 
 import { useEffect, useRef, useState, type KeyboardEvent, type ClipboardEvent } from 'react';
 import type { ProviderInfo, ImageAttachment } from '@traceback/shared';
-import { ArrowUp, FileText, Mic, Paperclip, X } from 'lucide-react';
+import { ArrowUp, Bot, FileText, Mic, Paperclip, X } from 'lucide-react';
 import { ModelPicker } from './ModelPicker';
 
 interface ComposerProps {
@@ -308,21 +308,22 @@ export function Composer({
           />
         </div>
         <div className="flex items-center px-2 pb-2 gap-2">
-          {/* Agent toggle — blue when on, matching the app's accent. */}
+          {/* Agent toggle — robot icon, blue when on (a toggle by feel). */}
           {agentAvailable && (
             <button
               type="button"
               onClick={onToggleAgent}
               disabled={sending}
-              className={`h-7 px-3 rounded-full flex items-center text-[12px] font-medium transition-colors flex-shrink-0 disabled:opacity-40 ${
+              className={`h-7 w-7 rounded-full flex items-center justify-center transition-colors flex-shrink-0 disabled:opacity-40 ${
                 agentMode
                   ? 'text-blue-400 bg-blue-400/10'
                   : 'text-gray-400 hover:text-gray-100 hover:bg-gray-800'
               }`}
-              title={agentMode ? 'Agent mode is on — works tasks step by step' : 'Turn on agent mode'}
+              title={agentMode ? 'Agent mode is on' : 'Agent mode'}
               aria-pressed={agentMode}
+              aria-label="Toggle agent mode"
             >
-              Agent
+              <Bot size={15} />
             </button>
           )}
           {/* min-w-0 so picker shrinks before buttons are pushed off-screen */}

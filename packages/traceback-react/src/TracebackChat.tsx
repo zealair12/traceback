@@ -28,6 +28,23 @@ export function TracebackChat({ apiUrl }: TracebackChatProps) {
   // Tree panel visible — hidden by default on mobile; toggled via NavHeader button.
   const [treePanelVisible, setTreePanelVisible] = useState(() => !isMobile());
 
+  // Track viewport width so layout (and inline widths) recompute on rotation.
+  const [viewportW, setViewportW] = useState(() => window.innerWidth);
+  useEffect(() => {
+    const onResize = () => {
+      setViewportW(window.innerWidth);
+      // Back on a wide screen: drop the mobile full-screen tree so the normal
+      // side-by-side layout returns cleanly after a rotate.
+      if (window.innerWidth >= 768) setTreeFullscreen(false);
+    };
+    window.addEventListener('resize', onResize);
+    window.addEventListener('orientationchange', onResize);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      window.removeEventListener('orientationchange', onResize);
+    };
+  }, []);
+
   type Theme = 'dark' | 'blue' | 'light';
   const [theme, setTheme] = useState<Theme>(
     () => (localStorage.getItem('tb-theme') as Theme | null) ?? 'dark'
@@ -268,9 +285,10 @@ export function TracebackChat({ apiUrl }: TracebackChatProps) {
                 if (window.innerWidth < 768) setTreePanelVisible(false);
               }}
               onDeleteSubtree={tb.handleDeleteSubtree}
-              width={treeFullscreen ? window.innerWidth : window.innerWidth < 768 ? window.innerWidth : treePanelWidth}
+              width={treeFullscreen ? viewportW : viewportW < 768 ? viewportW : treePanelWidth}
               isFullscreen={treeFullscreen}
               onToggleFullscreen={() => setTreeFullscreen((f) => !f)}
+              onClose={() => { setTreePanelVisible(false); setTreeFullscreen(false); }}
               theme={theme}
             />
           </div>

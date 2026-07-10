@@ -10,7 +10,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import Dagre from '@dagrejs/dagre';
-import { Maximize2, Minimize2 } from 'lucide-react';
+import { Maximize2, Minimize2, X } from 'lucide-react';
 import { TreeNode } from './TreeNode';
 
 const nodeTypes = { custom: TreeNode };
@@ -64,6 +64,8 @@ interface TreePanelProps {
   width: number;
   isFullscreen: boolean;
   onToggleFullscreen: () => void;
+  // Close the panel entirely (used by the mobile full-screen overlay).
+  onClose: () => void;
   theme: Theme;
 }
 
@@ -261,6 +263,7 @@ export function TreePanel({
   width,
   isFullscreen,
   onToggleFullscreen,
+  onClose,
   theme
 }: TreePanelProps) {
   const tokens = themeTokens[theme];
@@ -280,6 +283,17 @@ export function TreePanel({
       style={{ width: isFullscreen ? '100%' : width }}
     >
       <div className="flex-1 h-0 relative">
+        {/* Close the tree — always available so the mobile full-screen overlay
+            is never a trap (the dim backdrop sits behind it and can't be tapped). */}
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute top-2.5 left-2.5 z-10 h-8 w-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-100 bg-gray-900/60 hover:bg-gray-800/80 backdrop-blur-md border border-gray-800/80 transition-colors md:hidden"
+          title="Close the tree"
+          aria-label="Close the tree"
+        >
+          <X size={16} />
+        </button>
         <button
           type="button"
           onClick={onToggleFullscreen}

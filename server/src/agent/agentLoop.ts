@@ -43,9 +43,11 @@ export interface RunAgentOptions {
   history?: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>;
   // Hard cap on model turns, so the loop can never run forever.
   maxSteps?: number;
-  // Called as each step happens, so a caller can stream progress (later: write
-  // each step to the tree as a branch).
+  // Called as each tool step happens, so a caller can stream the trace.
   onStep?: (step: AgentStep) => void;
+  // Called with each chunk of the FINAL answer as it streams, so the answer
+  // types out live instead of appearing all at once.
+  onToken?: (chunk: string) => void;
 }
 
 const AGENT_SYSTEM =
@@ -57,7 +59,7 @@ const AGENT_SYSTEM =
 export async function runAgent(
   opts: RunAgentOptions
 ): Promise<{ answer: string; steps: AgentStep[] }> {
-  const { task, tools, apiKey, baseURL, model, maxSteps = 8, onStep, history = [] } = opts;
+  const { task, tools, apiKey, baseURL, model, maxSteps = 8, onStep, onToken, history = [] } = opts;
   const client = new OpenAI({ apiKey, baseURL });
   const toolByName = new Map(tools.map((t) => [t.name, t]));
 
@@ -80,33 +82,54 @@ export async function runAgent(
   };
 
   for (let i = 0; i < maxSteps; i++) {
-    const res = await client.chat.completions.create({
+    // Stream the turn so we can (a) emit the final answer token-by-token and
+    // (b) still detect tool calls, which arrive as deltas we reassemble.
+    const stream = await client.chat.completions.create({
       model,
       messages,
       tools: openaiTools,
-      tool_choice: 'auto'
+      tool_choice: 'auto',
+      stream: true
     });
-    const msg = res.choices[0]?.message;
-    if (!msg) break;
+    let content = '';
+    const toolAcc: Array<{ id: string; name: string; args: string }> = [];
+    for await (const chunk of stream) {
+      const delta = chunk.choices?.[0]?.delta;
+      if (delta?.content) {
+        content += delta.content;
+        onToken?.(delta.content);
+      }
+      for (const tc of delta?.tool_calls ?? []) {
+        const idx = tc.index ?? 0;
+        const acc = (toolAcc[idx] ??= { id: '', name: '', args: '' });
+        if (tc.id) acc.id = tc.id;
+        if (tc.function?.name) acc.name = tc.function.name;
+        if (tc.function?.arguments) acc.args += tc.function.arguments;
+      }
+    }
+    const toolCalls = toolAcc.filter(Boolean);
 
-    // No tool requested → this is the final answer.
-    if (!msg.tool_calls || msg.tool_calls.length === 0) {
-      const answer = msg.content ?? '';
-      record({ type: 'final', content: answer });
-      return { answer, steps };
+    // No tool requested → the streamed content IS the final answer. Record it for
+    // persistence, but don't fire onStep (it was already streamed via onToken).
+    if (toolCalls.length === 0) {
+      steps.push({ type: 'final', content });
+      return { answer: content, steps };
     }
 
     // Otherwise run each requested tool and feed the results back.
-    messages.push({ role: 'assistant', content: msg.content ?? '', tool_calls: msg.tool_calls });
-    for (const call of msg.tool_calls) {
-      const name = call.function.name;
-      const argsRaw = call.function.arguments || '{}';
-      record({ type: 'tool_call', tool: name, args: argsRaw, content: `Calling ${name}` });
+    messages.push({
+      role: 'assistant',
+      content: content || null,
+      tool_calls: toolCalls.map((t) => ({ id: t.id, type: 'function' as const, function: { name: t.name, arguments: t.args } }))
+    });
+    for (const t of toolCalls) {
+      const argsRaw = t.args || '{}';
+      record({ type: 'tool_call', tool: t.name, args: argsRaw, content: `Calling ${t.name}` });
 
-      const tool = toolByName.get(name);
+      const tool = toolByName.get(t.name);
       let result: string;
       if (!tool) {
-        result = `Unknown tool: ${name}`;
+        result = `Unknown tool: ${t.name}`;
       } else {
         try {
           result = await tool.run(JSON.parse(argsRaw));
@@ -114,12 +137,13 @@ export async function runAgent(
           result = `Tool error: ${err instanceof Error ? err.message : 'failed'}`;
         }
       }
-      record({ type: 'tool_result', tool: name, content: result });
-      messages.push({ role: 'tool', tool_call_id: call.id, content: result });
+      record({ type: 'tool_result', tool: t.name, content: result });
+      messages.push({ role: 'tool', tool_call_id: t.id, content: result });
     }
   }
 
   const fallback = 'Reached the step limit before finishing the task.';
-  record({ type: 'final', content: fallback });
+  onToken?.(fallback);
+  steps.push({ type: 'final', content: fallback });
   return { answer: fallback, steps };
 }

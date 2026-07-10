@@ -201,6 +201,7 @@ export class TracebackClient {
     task: string,
     handlers: {
       onStep: (step: { type: string; tool?: string; content: string }) => void;
+      onToken: (chunk: string) => void;
       onDone: (result: AgentRunResult) => void;
     }
   ): Promise<void> {
@@ -236,6 +237,7 @@ export class TracebackClient {
         const evt = parseSSEBlock(block);
         if (!evt) continue;
         if (evt.event === 'step') handlers.onStep(evt.data);
+        else if (evt.event === 'token') handlers.onToken(evt.data.chunk as string);
         else if (evt.event === 'done') handlers.onDone(evt.data);
         else if (evt.event === 'error') throw new Error((evt.data.error as string) ?? 'Agent error');
       }

@@ -177,7 +177,8 @@ export function registerAgentRoutes(app: Express) {
           model: setup.model,
           maxSteps: MAX_STEPS,
           history: setup.history,
-          onStep: (step) => emit('step', { type: step.type, tool: step.tool, content: renderStep(step) })
+          onStep: (step) => emit('step', { type: step.type, tool: step.tool, content: renderStep(step) }),
+          onToken: (chunk) => emit('token', { chunk })
         });
         const created = await persistSteps(setup, steps);
         emit('done', { sessionId: setup.sessionId, taskMessage: setup.taskNode, steps: created, answer });

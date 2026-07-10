@@ -508,6 +508,13 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
                 )
               );
             },
+            onToken: (chunk) => {
+              gotStep = true; // something streamed — don't fall back / duplicate
+              // Stream the final answer into the progress bubble live.
+              setAllMessages((prev) =>
+                prev.map((m) => (m.id === tempAsstId ? { ...m, content: m.content + chunk } : m))
+              );
+            },
             onDone: (result) => {
               doneResult = result;
             }

@@ -225,7 +225,7 @@ export async function createMessageWithAutoReply(options: {
           'Use the following ONLY to answer questions about what you can do or how to do something. Never bring it up unprompted:\n' +
           TRACEBACK_FEATURES + '\n\n' +
           'Be concise and direct. Keep answers under 4 sentences unless the user asks for detail. ' +
-          'Use markdown for formatting. For math, use LaTeX with $...$ for inline and $$...$$ for display equations.\n\n' +
+          'Use markdown for formatting. For math, use LaTeX with $...$ for inline and $$...$$ for display equations. Never put math or LaTeX inside code spans or code blocks (backticks) — write formulas as LaTeX, not as code.\n\n' +
           // Every reply passes through the anti-trope guide so the writing
           // reads like a person, whichever provider answers.
           HUMANIZE_WRITING_PROMPT

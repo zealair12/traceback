@@ -21,6 +21,31 @@ export interface SiblingInfo {
   total: number;
 }
 
+// A short graph-node label. Agent steps get a humanized label (e.g. "Search:
+// flights…", "Result", or the answer preview) instead of raw tool JSON.
+function nodeLabel(m: MessageResponse): string {
+  if (m.provider === 'agent') {
+    if (m.branchLabel === 'tool_call') {
+      const match = /^\*\*(\w+)\*\*\s*([\s\S]*)$/.exec(m.content);
+      const tool = match?.[1] ?? 'tool';
+      if (tool === 'web_search') {
+        try {
+          const q = JSON.parse((match?.[2] ?? '').trim()).query;
+          if (q) return `Search: ${q}`;
+        } catch {
+          /* fall through */
+        }
+        return 'Web search';
+      }
+      return tool.replace(/_/g, ' ');
+    }
+    if (m.branchLabel === 'tool_result') return 'Result';
+    // final answer node
+    return stripMarkdown(m.content);
+  }
+  return stripMarkdown(m.content);
+}
+
 export class ConversationTree {
   // The linear path root -> active message (what the chat panel shows; it
   // mirrors the pruned context the server sends to the model).
@@ -55,27 +80,30 @@ export class ConversationTree {
     this.threadPath = path;
     this.activePathIds = new Set(path.map((m) => m.id));
 
-    // Questions only, linked to their nearest question ancestor (assistant
-    // replies in between are skipped so the tree reads question-to-question).
-    const userMessages = messages.filter((m) => m.role === 'user');
-    const userIds = new Set(userMessages.map((m) => m.id));
-    const userParent = new Map<string, string | null>();
-    for (const m of userMessages) {
+    // Graph nodes: user questions AND agent steps (so an agent run shows its
+    // work — search, result, answer — as a visible chain). Ordinary assistant
+    // chat replies are still skipped, so a normal conversation reads
+    // question-to-question.
+    const isNode = (m: MessageResponse) => m.role === 'user' || m.provider === 'agent';
+    const nodeMessages = messages.filter(isNode);
+    const nodeIds = new Set(nodeMessages.map((m) => m.id));
+    const nodeParent = new Map<string, string | null>();
+    for (const m of nodeMessages) {
       let cur = m.parentId;
       while (cur) {
-        if (userIds.has(cur)) break;
+        if (nodeIds.has(cur)) break;
         cur = byId.get(cur)?.parentId ?? null;
       }
-      userParent.set(m.id, cur);
+      nodeParent.set(m.id, cur);
     }
     const childCount = new Map<string, number>();
-    for (const m of userMessages) {
-      const p = userParent.get(m.id);
+    for (const m of nodeMessages) {
+      const p = nodeParent.get(m.id);
       if (p) childCount.set(p, (childCount.get(p) ?? 0) + 1);
     }
 
-    this.nodes = userMessages.map((m) => {
-      const t = stripMarkdown(m.content);
+    this.nodes = nodeMessages.map((m) => {
+      const t = nodeLabel(m);
       const time = new Date(m.createdAt).toLocaleTimeString([], {
         hour: '2-digit',
         minute: '2-digit'
@@ -92,11 +120,11 @@ export class ConversationTree {
         position: { x: 0, y: 0 }
       };
     });
-    this.edges = userMessages
-      .filter((m) => userParent.get(m.id))
+    this.edges = nodeMessages
+      .filter((m) => nodeParent.get(m.id))
       .map((m) => ({
-        id: `e-${userParent.get(m.id)}-${m.id}`,
-        source: userParent.get(m.id)!,
+        id: `e-${nodeParent.get(m.id)}-${m.id}`,
+        source: nodeParent.get(m.id)!,
         target: m.id
       }));
 

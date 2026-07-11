@@ -498,21 +498,29 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
       let doneResult: unknown = null;
       try {
         try {
+          // While the agent works, show a short humanized status (not the raw
+          // tool JSON); the persisted trace card + graph nodes carry the detail.
+          let answerStarted = false;
+          const statusFor = (step: { type: string; tool?: string }) => {
+            if (step.type !== 'tool_call') return 'Reading results…';
+            if (step.tool === 'web_search') return 'Searching the web…';
+            if (step.tool === 'current_datetime') return 'Checking the date…';
+            return `Using ${step.tool ?? 'a tool'}…`;
+          };
           await client.runAgentStream(sid, parentId, task, {
             onStep: (step) => {
               gotStep = true;
-              // Accumulate the live trace in the progress bubble.
-              setAllMessages((prev) =>
-                prev.map((m) =>
-                  m.id === tempAsstId ? { ...m, content: (m.content ? m.content + '\n\n' : '') + step.content } : m
-                )
-              );
+              if (answerStarted) return; // once the answer streams, ignore step noise
+              const status = statusFor(step);
+              setAllMessages((prev) => prev.map((m) => (m.id === tempAsstId ? { ...m, content: status } : m)));
             },
             onToken: (chunk) => {
               gotStep = true; // something streamed — don't fall back / duplicate
-              // Stream the final answer into the progress bubble live.
+              const first = !answerStarted;
+              answerStarted = true;
+              // First token clears the status; then the answer streams in.
               setAllMessages((prev) =>
-                prev.map((m) => (m.id === tempAsstId ? { ...m, content: m.content + chunk } : m))
+                prev.map((m) => (m.id === tempAsstId ? { ...m, content: (first ? '' : m.content) + chunk } : m))
               );
             },
             onDone: (result) => {

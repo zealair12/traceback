@@ -202,14 +202,18 @@ export function ChatPanel({
                   />
                 )
               )}
-              {sending && (
-                <div className="flex items-start gap-3">
-                  <div className="w-7 h-7 rounded-full bg-gray-800 flex items-center justify-center text-blue-400 mt-1 flex-shrink-0">
-                    <BrandIcon size={15} />
+              {/* "Thinking…" only until a streaming assistant bubble exists — the
+                  optimistic reply bubble becomes the live indicator, so we don't
+                  show a second empty avatar next to it. */}
+              {sending &&
+                (threadPath.length === 0 || threadPath[threadPath.length - 1].role !== 'assistant') && (
+                  <div className="flex items-start gap-3">
+                    <div className="w-7 h-7 rounded-full bg-gray-800 flex items-center justify-center text-blue-400 mt-1 flex-shrink-0">
+                      <BrandIcon size={15} />
+                    </div>
+                    <div className="text-sm text-gray-500 animate-pulse">Thinking…</div>
                   </div>
-                  <div className="text-sm text-gray-500 animate-pulse">Thinking…</div>
-                </div>
-              )}
+                )}
             </div>
           </div>
 

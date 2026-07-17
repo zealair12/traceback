@@ -125,6 +125,16 @@ export function LaptopDemo() {
 
       setBeat(progress < 0.24 ? 0 : progress < 0.46 ? 1 : progress < 0.7 ? 2 : 3);
 
+      // Scrolled back to the very top after playing some steps: reset to the
+      // linear starter so the demo replays cleanly instead of showing a
+      // half-finished conversation under a "linear thread" caption.
+      if (progress < 0.02 && firedRef.current.size > 0) {
+        firedRef.current = new Set();
+        mock.reset();
+        setDemoKey((k) => k + 1);
+        return;
+      }
+
       // Fire each scripted step once, only when the engine is idle so a fast
       // scroll can't drop a message mid-stream. The steps chain: a coy dodge, the
       // user pushing back (answered by a sharper model), then a branch off the

@@ -174,6 +174,7 @@ export function Sidebar({
           <button
             type="button"
             onClick={onSignIn}
+            data-tb-signin
             className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-white text-[#3c4043] text-[12px] font-medium hover:bg-gray-50 transition-colors border border-gray-200"
           >
             {/* Google "G" logo — required by Google's OAuth branding guidelines */}

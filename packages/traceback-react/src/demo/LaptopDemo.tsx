@@ -106,8 +106,8 @@ function LaptopFrame({ width, children }: { width: number; children: React.React
   );
 }
 
-export function LaptopDemo() {
-  const mock = useMemo(() => new MockTracebackClient(), []);
+export function LaptopDemo({ authUrl }: { authUrl?: string }) {
+  const mock = useMemo(() => new MockTracebackClient(authUrl ?? ''), [authUrl]);
   const engineRef = useRef<UseTracebackReturn | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const firedRef = useRef<Set<number>>(new Set());
@@ -190,7 +190,15 @@ export function LaptopDemo() {
   }, [demoKey]);
 
   return (
-    <div style={{ background: '#07070a', color: '#e5e7eb', fontFamily: 'Inter, system-ui, sans-serif' }}>
+    <div className="tb-demo-root" style={{ background: '#07070a', color: '#e5e7eb', fontFamily: 'Inter, system-ui, sans-serif' }}>
+      {/* Make the in-laptop "Sign in with Google" the only clickable, pulsing
+          element on the page: the rest of the app is pointer-events:none, and
+          this re-enables just that button. */}
+      <style>{`
+        .tb-demo-root [data-tb-signin]{ pointer-events:auto !important; animation: tb-pulse 1.8s ease-in-out infinite; }
+        @keyframes tb-pulse{ 0%,100%{ box-shadow:0 0 0 0 rgba(59,130,246,0.6);} 50%{ box-shadow:0 0 0 14px rgba(59,130,246,0);} }
+      `}</style>
+
       {/* Brand lockup at the very top of the page */}
       <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, padding: '52px 24px 20px' }}>
         <span style={{ color: '#3b82f6', display: 'inline-flex' }}><BrandIcon size={46} /></span>

@@ -19,7 +19,7 @@ function App() {
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
 
-  if (hash === '#demo') return <LaptopDemo />;
+  if (hash === '#demo') return <LaptopDemo authUrl={`${API_BASE}/auth/google`} />;
   return <TracebackChat apiUrl={API_BASE} />;
 }
 

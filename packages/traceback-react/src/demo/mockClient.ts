@@ -79,11 +79,15 @@ export class MockTracebackClient extends TracebackClient {
   private msgs: MessageResponse[] = seed();
   private replyIndex = 0;
   private counter = 0;
+  // Where the pulsing "Sign in with Google" button sends the visitor: the real
+  // backend's Google auth. Empty means no-op (safe default).
+  private authUrl: string;
 
-  constructor() {
+  constructor(authUrl = '') {
     // A dummy base URL: the parent constructor builds an axios instance we never
     // actually call, because every method below is overridden.
     super('https://demo.local');
+    this.authUrl = authUrl;
   }
 
   // Restore the starter tree so the scroll animation can replay from the top.
@@ -191,5 +195,8 @@ export class MockTracebackClient extends TracebackClient {
     return { text: '', provider: 'demo', model: 'demo' };
   }
   async signOut(): Promise<void> {}
-  signIn(): void {}
+  // The demo's one real action: start Google sign-in on the live backend.
+  signIn(): void {
+    if (this.authUrl) window.location.href = this.authUrl;
+  }
 }

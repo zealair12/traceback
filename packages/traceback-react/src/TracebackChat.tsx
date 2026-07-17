@@ -4,14 +4,39 @@ import { ChatPanel } from './components/ChatPanel';
 import { TreePanel, treeConnectorColor } from './components/TreePanel';
 import { KeyManager } from './components/KeyManager';
 import { ImportPanel } from './components/ImportPanel';
-import { useTraceback } from './useTraceback';
+import { useTraceback, type UseTracebackReturn } from './useTraceback';
+import type { TracebackClient } from '@traceback/shared';
 
 export interface TracebackChatProps {
-  apiUrl: string;
+  apiUrl?: string;
+  // Optional injected client (e.g. a demo/mock client). Overrides apiUrl.
+  client?: TracebackClient;
+  // Fires with the live engine handle on every render, so a parent (like the
+  // landing-page scroll demo) can drive real actions -- send a message, branch
+  // a reply -- from outside. Left unset for the normal app.
+  onEngineReady?: (tb: UseTracebackReturn) => void;
+  // Optional: which node to focus on first load (the demo sets this per step).
+  initialActiveNodeId?: string;
+  // Optional: force the color theme from outside (the landing demo cycles it in
+  // rhythm with the sign-in pulse). Does not touch the user's saved preference.
+  themeOverride?: 'dark' | 'blue' | 'light';
+  // When true (the real app), the app requires sign-in: anyone not signed in is
+  // sent to the landing (the single entry point). The demo leaves this unset.
+  requireAuth?: boolean;
 }
 
-export function TracebackChat({ apiUrl }: TracebackChatProps) {
-  const tb = useTraceback({ apiUrl });
+export function TracebackChat({ apiUrl, client, onEngineReady, initialActiveNodeId, themeOverride, requireAuth }: TracebackChatProps) {
+  const tb = useTraceback({ apiUrl, client, initialActiveNodeId });
+  // Hand the latest engine actions to a parent driver when one is attached.
+  useEffect(() => { onEngineReady?.(tb); });
+
+  // Sign-in required: once auth resolves and the visitor is not signed in, send
+  // them to the landing (the homepage at '/') so it is the single way in.
+  useEffect(() => {
+    if (requireAuth && tb.authState && tb.authState.isGuest) {
+      window.location.href = '/';
+    }
+  }, [requireAuth, tb.authState]);
 
   const [treePanelWidth, setTreePanelWidth] = useState(360);
   const [treeFullscreen, setTreeFullscreen] = useState(false);
@@ -47,8 +72,13 @@ export function TracebackChat({ apiUrl }: TracebackChatProps) {
 
   type Theme = 'dark' | 'blue' | 'light';
   const [theme, setTheme] = useState<Theme>(
-    () => (localStorage.getItem('tb-theme') as Theme | null) ?? 'dark'
+    () => themeOverride ?? (localStorage.getItem('tb-theme') as Theme | null) ?? 'dark'
   );
+  // When the parent drives the theme (the landing demo), follow it. This sets
+  // state only -- it never writes localStorage, so the user's real choice is kept.
+  useEffect(() => {
+    if (themeOverride) setTheme(themeOverride);
+  }, [themeOverride]);
 
   const handleSetTheme = useCallback((t: Theme) => {
     setTheme(t);
@@ -161,6 +191,16 @@ export function TracebackChat({ apiUrl }: TracebackChatProps) {
     document.addEventListener('touchmove', onTouchMove, { passive: false });
     document.addEventListener('touchend', onTouchEnd);
   }, []);
+
+  // While auth is resolving, or a guest is being redirected to the landing, show
+  // a calm holder instead of flashing the full app.
+  if (requireAuth && (!tb.authState || tb.authState.isGuest)) {
+    return (
+      <div className="h-full w-full flex items-center justify-center bg-background text-gray-500" data-theme={theme}>
+        <span className="text-sm">Loading…</span>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full w-full overflow-hidden bg-background text-gray-100 flex" data-theme={theme}>

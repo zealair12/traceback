@@ -40,7 +40,7 @@ const themeTokens: Record<Theme, {
     nodeActiveBg: '#10243f', nodeActiveBorder: '#3b82f6', nodeActiveText: '#dbeafe',
   },
   light: {
-    canvasBg: '#f0f2f5', dots: '#dde0e8', edgeDefault: '#d4d4d4', edgeActive: '#3b82f6',
+    canvasBg: '#f0f2f5', dots: '#dde0e8', edgeDefault: '#d4d4d4', edgeActive: '#111111',
     controlBg: '#e8ecf0', controlBorder: '#d1d5db', confirmBg: 'rgba(240,242,245,0.96)',
     nodeBg: '#e5e5e5', nodeBorder: '#d4d4d4', nodeText: '#a3a3a3',
     nodePathBg: '#d4d4d4', nodePathBorder: '#a3a3a3', nodePathText: '#525252',
@@ -101,6 +101,7 @@ function TreeFlowInner({
 }) {
   const reactFlow = useReactFlow();
   const prevActiveRef = useRef<string | null>(null);
+  const prevIdsRef = useRef<string>('');
 
   // Confirmation popup: position + which node is pending
   const [confirm, setConfirm] = useState<{ x: number; y: number; nodeId: string } | null>(null);
@@ -108,19 +109,24 @@ function TreeFlowInner({
   useEffect(() => {
     if (!activeNodeId || activeNodeId === prevActiveRef.current) return;
     const isFirst = prevActiveRef.current === null;
+    // Did the set of nodes change (a branch was added OR removed), or is this
+    // plain navigation between existing nodes? Any change to the tree -- growing
+    // a branch, reverting to an earlier one, or the post-stream placeholder->real
+    // swap -- re-frames the WHOLE graph so the current tree is fully in frame.
+    // Only pure navigation (same nodes, different active) zooms to the node.
+    const idsKey = layoutNodes.map((n) => n.id).sort().join(',');
+    const treeChanged = idsKey !== prevIdsRef.current;
     prevActiveRef.current = activeNodeId;
+    prevIdsRef.current = idsKey;
     const timer = setTimeout(() => {
-      // On first load (and each time the panel re-mounts, e.g. the mobile
-      // overlay opening) frame the WHOLE graph so it can never be off-screen.
-      // After that, zoom to the node you navigated to. Same fitView either way.
-      if (isFirst) {
-        reactFlow.fitView({ duration: 400, padding: 0.4 });
+      if (isFirst || treeChanged) {
+        reactFlow.fitView({ duration: 500, padding: 0.35 });
       } else {
         reactFlow.fitView({ nodes: [{ id: activeNodeId }], duration: 400, padding: 1.5 });
       }
     }, 80);
     return () => clearTimeout(timer);
-  }, [activeNodeId, reactFlow]);
+  }, [activeNodeId, layoutNodes, reactFlow]);
 
   useEffect(() => {
     const close = () => setConfirm(null);

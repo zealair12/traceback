@@ -23,6 +23,10 @@ export { KeyStore, keyStore } from './lib/keyStore.js';
 export { ImportPanel } from './components/ImportPanel.js';
 // The Traceback mark (branching-tree glyph), for embedders to reuse.
 export { BrandIcon } from './components/BrandIcon.js';
+// Landing-page proof of concept: the real app on a scroll-driven laptop, fed by
+// a scripted no-network client. Also the reference for injecting a custom client.
+export { LaptopDemo } from './demo/LaptopDemo.js';
+export { MockTracebackClient } from './demo/mockClient.js';
 
 // Re-export the HTTP client + types so headless users have everything from one
 // import.

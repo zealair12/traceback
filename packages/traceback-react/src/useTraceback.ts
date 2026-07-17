@@ -12,6 +12,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   createTracebackClient,
+  type TracebackClient,
   type SessionResponse,
   type MessageResponse,
   type ProviderInfo,
@@ -26,7 +27,16 @@ import { isUntitledSessionName, summarizeTopic } from './lib/naming';
 
 export interface UseTracebackOptions {
   // Base URL of the Traceback server (e.g. "http://localhost:4000").
-  apiUrl: string;
+  apiUrl?: string;
+  // Optional pre-built client. When provided it is used verbatim instead of
+  // building one from apiUrl -- this is the seam the landing-page demo uses to
+  // inject a scripted, no-network MockTracebackClient so the real UI runs on
+  // canned data. Any embedder can pass a wrapped/extended client the same way.
+  client?: TracebackClient;
+  // Optional: which node to focus when messages first load (otherwise the
+  // deepest node). The landing demo sets this per scroll step so the right
+  // branch is shown. Normal app leaves it unset.
+  initialActiveNodeId?: string;
 }
 
 function friendlyError(err: any): string {
@@ -61,32 +71,31 @@ function friendlyError(err: any): string {
   return raw;
 }
 
-// A starter conversation seeded for brand-new visitors so they land in a real,
-// continuable chat (saved to their account/guest history) instead of a blank
-// screen. It is a relatable dad joke that gets explained, with one extra branch
-// (a mom joke) so the tree shows a real fork. Written in the neutral import
-// shape; the server gives every message a real id on first load.
+// Guest onboarding seed is RETIRED (commented out). Sign-in is now required and
+// the landing demo already shows a worked example, so new users get a fresh empty
+// chat instead of a canned conversation. The backdated timestamps below existed
+// only to keep the seed off the old guest 5-message daily limit, which is gone.
 //
-// Backdated timestamps on purpose: the guest daily limit counts user messages
-// created today, so a "now" timestamp would make the seed spend the visitor's
-// free quota before they ask anything. A past date keeps the seed off the count.
-const seedTime = (i: number) => new Date(Date.UTC(2024, 0, 1, 12, 0, i)).toISOString();
-const SEED_CONVERSATION = {
-  name: 'Dad jokes',
-  messages: [
-    { id: 's1', parentId: null, role: 'user' as const, content: 'Tell me a dad joke', createdAt: seedTime(0) },
-    { id: 's2', parentId: 's1', role: 'assistant' as const, content: "Why don't eggs tell jokes? They would crack each other up.", createdAt: seedTime(1) },
-    { id: 's3', parentId: 's2', role: 'user' as const, content: 'Explain it', createdAt: seedTime(2) },
-    { id: 's4', parentId: 's3', role: 'assistant' as const, content: 'It plays on the phrase "crack up". An egg can literally crack, and to crack up also means to burst out laughing. Both meanings land at the same time, which is what makes it a pun.', createdAt: seedTime(3) },
-    // A second branch off the first joke, so the tree shows a real fork.
-    { id: 's5', parentId: 's2', role: 'user' as const, content: 'How about a mom joke', createdAt: seedTime(4) },
-    { id: 's6', parentId: 's5', role: 'assistant' as const, content: 'What did the mom broom say to the baby broom? It is past your sweep time.', createdAt: seedTime(5) }
-  ]
-};
+// const seedTime = (i: number) => new Date(Date.UTC(2024, 0, 1, 12, 0, i)).toISOString();
+// const SEED_CONVERSATION = {
+//   name: 'Dad jokes',
+//   messages: [
+//     { id: 's1', parentId: null, role: 'user' as const, content: 'Tell me a dad joke', createdAt: seedTime(0) },
+//     { id: 's2', parentId: 's1', role: 'assistant' as const, content: "Why don't eggs tell jokes? They would crack each other up.", createdAt: seedTime(1) },
+//     { id: 's3', parentId: 's2', role: 'user' as const, content: 'Explain it', createdAt: seedTime(2) },
+//     { id: 's4', parentId: 's3', role: 'assistant' as const, content: 'It plays on the phrase "crack up"...', createdAt: seedTime(3) },
+//     { id: 's5', parentId: 's2', role: 'user' as const, content: 'How about a mom joke', createdAt: seedTime(4) },
+//     { id: 's6', parentId: 's5', role: 'assistant' as const, content: 'What did the mom broom say to the baby broom? It is past your sweep time.', createdAt: seedTime(5) }
+//   ]
+// };
 
-export function useTraceback({ apiUrl }: UseTracebackOptions) {
-  // One HTTP client per server address. Rebuilt only if the address changes.
-  const client = useMemo(() => createTracebackClient(apiUrl), [apiUrl]);
+export function useTraceback({ apiUrl, client: injectedClient, initialActiveNodeId }: UseTracebackOptions) {
+  // One HTTP client per server address, unless an embedder injects its own.
+  // Rebuilt only if the injected client or address changes.
+  const client = useMemo(
+    () => injectedClient ?? createTracebackClient(apiUrl ?? ''),
+    [injectedClient, apiUrl]
+  );
 
   const [sessions, setSessions] = useState<SessionResponse[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
@@ -151,19 +160,7 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
       .fetchSessions()
       .then(async (s) => {
         if (s.length === 0) {
-          // Brand-new visitor: seed a real, continuable starter conversation so
-          // they land in a worked example instead of a blank screen.
-          try {
-            await client.importConversations([SEED_CONVERSATION]);
-            const seeded = await client.fetchSessions();
-            if (seeded.length > 0) {
-              setSessions(seeded);
-              setActiveSessionId(seeded[0].id);
-              return;
-            }
-          } catch (err) {
-            console.error('Failed to seed starter conversation:', err);
-          }
+          // New user: a fresh, empty chat (the guest seed is retired).
           const newSession = await client.createSession();
           setSessions([newSession]);
           setActiveSessionId(newSession.id);
@@ -210,13 +207,17 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
       .fetchSessionMessages(activeSessionId)
       .then((msgs) => {
         setAllMessages(msgs);
+        const preferred =
+          initialActiveNodeId && msgs.some((m) => m.id === initialActiveNodeId)
+            ? initialActiveNodeId
+            : null;
         const deepest = msgs.length
           ? msgs.reduce((a, b) => (a.depth >= b.depth ? a : b))
           : null;
-        setActiveNodeId(deepest ? deepest.id : null);
+        setActiveNodeId(preferred ?? (deepest ? deepest.id : null));
       })
       .catch((err) => console.error('Failed to load messages:', err));
-  }, [client, activeSessionId]);
+  }, [client, activeSessionId, initialActiveNodeId]);
 
   // All tree math lives in one plain class.
   const tree = useMemo(
@@ -742,34 +743,16 @@ export function useTraceback({ apiUrl }: UseTracebackOptions) {
     }
   }, [incognito, incognitoSessionId, activeSessionId, client]);
 
-  // Sign out: clear the signed-in user's data from view immediately (no refresh
-  // needed), then reload as a fresh guest so none of their chats remain visible.
+  // Sign out, then return to the homepage (the landing at '/') so it stays the
+  // single entry point.
   const handleSignOut = useCallback(async () => {
     try {
       await client.signOut();
     } catch (err) {
       console.error('Sign out failed:', err);
     }
-    setAllMessages([]);
-    setActiveNodeId(null);
-    setGuestLimitReached(false);
-    clearBranching();
-    refreshAuth();
-    try {
-      const s = await client.fetchSessions();
-      if (s.length === 0) {
-        const created = await client.createSession();
-        setSessions([created]);
-        setActiveSessionId(created.id);
-      } else {
-        setSessions(s);
-        setActiveSessionId(s[0].id);
-      }
-    } catch {
-      setSessions([]);
-      setActiveSessionId(null);
-    }
-  }, [client, clearBranching, refreshAuth]);
+    window.location.href = '/';
+  }, [client]);
 
   return {
     // data

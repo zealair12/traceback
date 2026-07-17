@@ -111,9 +111,9 @@ export function LaptopDemo({ authUrl }: { authUrl?: string }) {
   const stepRef = useRef(0);
 
   const [beat, setBeat] = useState(0);
-  const [demoKey, setDemoKey] = useState(0);
-  // The node to focus for the current step; the app remounts with it so the
-  // shown branch matches the scroll position (in both directions).
+  // The node to focus for the current step. Changing it re-runs the app's real
+  // message-load (via the hook), so the shown branch tracks the scroll position
+  // in both directions -- no remount needed.
   const [stepActiveId, setStepActiveId] = useState('d1');
   const [laptopW, setLaptopW] = useState(820);
 
@@ -148,9 +148,10 @@ export function LaptopDemo({ authUrl }: { authUrl?: string }) {
   }, []);
 
   // Scroll position maps to a step. Whenever the step changes -- scrolling DOWN
-  // or UP -- we rebuild the conversation to that step's exact state and remount
-  // the app on it, so the shown branch always matches where you are in the
-  // scroll. This is what makes scrolling back up revert to the earlier branch.
+  // or UP -- rebuild the conversation to that step's exact state and reload the
+  // app IN PLACE (changing the focused node re-runs the real message-load), so
+  // the shown branch always matches the scroll: it reverts on the way up and
+  // advances on the way down.
   useEffect(() => {
     const onScroll = () => {
       const el = scrollRef.current;
@@ -163,7 +164,6 @@ export function LaptopDemo({ authUrl }: { authUrl?: string }) {
       if (step !== stepRef.current) {
         stepRef.current = step;
         setStepActiveId(mock.buildTo(step));
-        setDemoKey((k) => k + 1);
       }
     };
     window.addEventListener('scroll', onScroll, { passive: true });
@@ -218,7 +218,7 @@ export function LaptopDemo({ authUrl }: { authUrl?: string }) {
 
           <div style={{ zIndex: 2 }}>
             <LaptopFrame width={laptopW}>
-              <TracebackChat key={demoKey} client={mock} initialActiveNodeId={stepActiveId} />
+              <TracebackChat client={mock} initialActiveNodeId={stepActiveId} />
             </LaptopFrame>
           </div>
         </div>

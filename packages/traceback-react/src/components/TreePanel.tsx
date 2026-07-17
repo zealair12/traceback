@@ -101,7 +101,7 @@ function TreeFlowInner({
 }) {
   const reactFlow = useReactFlow();
   const prevActiveRef = useRef<string | null>(null);
-  const seenIdsRef = useRef<Set<string>>(new Set());
+  const prevIdsRef = useRef<string>('');
 
   // Confirmation popup: position + which node is pending
   const [confirm, setConfirm] = useState<{ x: number; y: number; nodeId: string } | null>(null);
@@ -109,17 +109,17 @@ function TreeFlowInner({
   useEffect(() => {
     if (!activeNodeId || activeNodeId === prevActiveRef.current) return;
     const isFirst = prevActiveRef.current === null;
-    // Was the newly-active node just created (a branch / new message), or an
-    // existing node we navigated to? A freshly created node -- INCLUDING the real
-    // node that replaces an optimistic streaming placeholder -- re-frames the
-    // WHOLE graph. Navigating to an existing node zooms to it. Checking the id
-    // SET (not the node count) is what stops the post-stream placeholder->real
-    // swap from being mistaken for navigation and zooming in.
-    const isNewNode = !seenIdsRef.current.has(activeNodeId);
+    // Did the set of nodes change (a branch was added OR removed), or is this
+    // plain navigation between existing nodes? Any change to the tree -- growing
+    // a branch, reverting to an earlier one, or the post-stream placeholder->real
+    // swap -- re-frames the WHOLE graph so the current tree is fully in frame.
+    // Only pure navigation (same nodes, different active) zooms to the node.
+    const idsKey = layoutNodes.map((n) => n.id).sort().join(',');
+    const treeChanged = idsKey !== prevIdsRef.current;
     prevActiveRef.current = activeNodeId;
-    seenIdsRef.current = new Set(layoutNodes.map((n) => n.id));
+    prevIdsRef.current = idsKey;
     const timer = setTimeout(() => {
-      if (isFirst || isNewNode) {
+      if (isFirst || treeChanged) {
         reactFlow.fitView({ duration: 500, padding: 0.35 });
       } else {
         reactFlow.fitView({ nodes: [{ id: activeNodeId }], duration: 400, padding: 1.5 });

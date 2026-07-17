@@ -211,9 +211,10 @@ export function LaptopDemo({ authUrl }: { authUrl?: string }) {
     color: scheme.logo,
     fontFamily: 'Inter, system-ui, sans-serif',
     transition: 'background-color 2.5s ease, color 2.5s ease',
-    '--tb-si-bg': scheme.signinBg,
-    '--tb-si-fg': scheme.signinFg,
-    '--tb-si-glow': scheme.signinGlow
+    // Sign-in stays a constant green so it stands out against every mode.
+    '--tb-si-bg': '#16a34a',
+    '--tb-si-fg': '#ffffff',
+    '--tb-si-glow': 'rgba(34,197,94,0.55)'
   } as CSSProperties;
 
   return (
@@ -223,7 +224,7 @@ export function LaptopDemo({ authUrl }: { authUrl?: string }) {
           cards, logo and in-frame app only change color, in the same rhythm. */}
       <style>{`
         .tb-demo-root [data-theme], .tb-demo-root [data-theme] *{
-          transition: background-color 2.5s ease, border-color 2.5s ease, color 2.5s ease, fill 2.5s ease, stroke 2.5s ease;
+          transition: background-color 2.5s ease, border-color 2.5s ease, fill 2.5s ease, stroke 2.5s ease, color 0s linear 1.25s;
         }
         .tb-demo-root [data-tb-signin]{
           pointer-events:auto !important; cursor:pointer !important;
@@ -244,8 +245,8 @@ export function LaptopDemo({ authUrl }: { authUrl?: string }) {
       <div ref={scrollRef} style={{ position: 'relative', height: `${(STEPS + 1) * 100}vh` }}>
         <div style={{ position: 'sticky', top: 0, height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', overflow: 'hidden' }}>
           <header style={{ display: 'flex', alignItems: 'center', gap: 18, paddingTop: 'clamp(20px, 4vh, 52px)', paddingBottom: 6, flexShrink: 0 }}>
-            <span style={{ color: scheme.logoIcon, display: 'inline-flex', transform: 'translateY(3px)', transition: 'color 2.5s ease' }}><BrandIcon size={70} /></span>
-            <span style={{ fontSize: 'clamp(42px, 7vw, 84px)', fontWeight: 400, letterSpacing: 8, lineHeight: 1, color: scheme.logo, transition: 'color 2.5s ease' }}>traceback</span>
+            <span style={{ color: scheme.logoIcon, display: 'inline-flex', transform: 'translateY(3px)', transition: 'color 0s linear 1.25s' }}><BrandIcon size={70} /></span>
+            <span style={{ fontSize: 'clamp(42px, 7vw, 84px)', fontWeight: 400, letterSpacing: 8, lineHeight: 1, color: scheme.logo, transition: 'color 0s linear 1.25s' }}>traceback</span>
           </header>
           <div style={{ position: 'relative', flex: 1, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {BEATS.map((b, i) => (
@@ -265,8 +266,8 @@ export function LaptopDemo({ authUrl }: { authUrl?: string }) {
                 transition: 'opacity .5s ease, transform .5s ease, background-color 2.5s ease, border-color 2.5s ease'
               }}
             >
-              <div style={{ fontSize: 13, fontWeight: 500, color: scheme.cardTitle, marginBottom: 4, transition: 'color 2.5s ease' }}>{b.title}</div>
-              <div style={{ fontSize: 13.5, color: scheme.cardBody, lineHeight: 1.5, transition: 'color 2.5s ease' }}>{b.body}</div>
+              <div style={{ fontSize: 13, fontWeight: 500, color: scheme.cardTitle, marginBottom: 4, transition: 'color 0s linear 1.25s' }}>{b.title}</div>
+              <div style={{ fontSize: 13.5, color: scheme.cardBody, lineHeight: 1.5, transition: 'color 0s linear 1.25s' }}>{b.body}</div>
             </div>
           ))}
 

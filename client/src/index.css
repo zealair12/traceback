@@ -12,7 +12,7 @@
 @import "@traceback/react/styles.css";
 
 /*
- * Custom design tokens for TraceBack.
+ * Custom design tokens for traceback.
  * Tailwind v4 uses @theme instead of tailwind.config.js.
  * These become utility classes like `bg-background`, `bg-sidebar`, etc.
  */

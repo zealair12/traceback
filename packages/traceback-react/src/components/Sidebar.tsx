@@ -54,7 +54,7 @@ export function Sidebar({
     <aside className="relative w-full h-full bg-sidebar text-gray-100 flex flex-col flex-shrink-0">
       <div className="px-4 py-4">
         <h1 className="flex items-center gap-2">
-          <BrandIcon size={22} className="text-blue-400" />
+          <BrandIcon size={22} className="text-blue-400 translate-y-px" />
           <span style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 300, fontSize: '1.25rem', letterSpacing: '0.18em' }}>
             traceback
           </span>

@@ -113,6 +113,21 @@ export function registerOpenAiProxy(app: Express) {
       // rejection happens before we create a session. Never stored or logged.
       const apiKey = resolveApiKey(req);
 
+      // Protect the server's credits: only spend the server key for a signed-in
+      // user. An anonymous caller must bring their own key -- which is the
+      // normal path for OpenAI-compatible apps anyway (Authorization: Bearer).
+      // Without this, anyone could drain the balance on any model they name.
+      if (!apiKey && !req.isAuthenticated()) {
+        res.status(401).json({
+          error: {
+            message:
+              'This endpoint requires your own API key (Authorization: Bearer <key>) or a signed-in session.',
+            type: 'invalid_request_error'
+          }
+        });
+        return;
+      }
+
       const sessionId = typeof sessionIdRaw === 'string' && sessionIdRaw ? sessionIdRaw : null;
       const parentId = typeof parentIdRaw === 'string' && parentIdRaw ? parentIdRaw : null;
 

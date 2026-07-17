@@ -36,6 +36,19 @@ export function registerTranscribeRoutes(app: Express) {
       // The caller's own key (bring-your-own-key) wins over server env keys,
       // exactly like chat requests.
       const userKey = resolveApiKey(req);
+
+      // Whisper transcription is paid. Don't let an anonymous caller spend the
+      // server key on it. The live mic uses the browser's free Web Speech API,
+      // so guests can still dictate; server-side transcription of audio files
+      // (and the fallback path) needs a signed-in session or the caller's key.
+      if (!userKey && !req.isAuthenticated()) {
+        res.status(401).json({
+          error:
+            'Sign in or provide your own API key to transcribe audio. (Live dictation via the mic is free and needs neither.)'
+        });
+        return;
+      }
+
       const groqKey = userKey ?? process.env.GROQ_API_KEY;
       const openaiKey = userKey ?? process.env.OPENAI_API_KEY;
 

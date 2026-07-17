@@ -24,18 +24,17 @@ const APP_H = Math.round((1180 * 494) / 836); // ~697
 const STEPS = 4;
 
 interface Beat {
-  title: string;
   body: string;
   side: 'left' | 'right';
   top: number;
 }
-// Cards flank the laptop (two per side) so the active one always sits beside the
-// screen, never above or below it.
+// Terminal-style cards flank the laptop (two per side) so the active one always
+// sits beside the screen.
 const BEATS: Beat[] = [
-  { title: 'Your whole chat', body: 'Every question and answer stays as a map, so nothing gets buried in scroll.', side: 'left', top: 210 },
-  { title: 'Chase tangents', body: 'Wander off or joke around, then jump straight back. The thread holds your place.', side: 'right', top: 210 },
-  { title: 'Only what matters', body: "Only the branch you're on gets sent to the model, so long chats stay cheap.", side: 'right', top: 430 },
-  { title: 'Branch anywhere', body: 'Take any reply a new direction. The old one stays right where it was.', side: 'left', top: 430 }
+  { body: 'Your whole conversation is saved as a tree, so nothing gets lost in scroll.', side: 'left', top: 210 },
+  { body: 'Take any reply in a new direction without starting a new chat.', side: 'right', top: 210 },
+  { body: 'Only your current path goes to the model, not the whole tree, so long chats stay fast.', side: 'right', top: 430 },
+  { body: 'Keep several answers side by side and compare them instead of asking again.', side: 'left', top: 430 }
 ];
 
 // One rhythm, three modes. Each beat recolors EVERYTHING to a mode -- the app's
@@ -255,23 +254,26 @@ export function LaptopDemo({ authUrl }: { authUrl?: string }) {
                 position: 'absolute',
                 [b.side]: 'max(16px, 4vw)',
                 top: b.top,
-                width: 224,
-                background: scheme.cardBg,
-                border: `1px solid ${scheme.cardBorder}`,
-                borderRadius: 14,
-                padding: '14px 16px',
+                width: 236,
+                background: '#0e1117',
+                border: '1px solid #262b36',
+                borderRadius: 10,
                 overflow: 'hidden',
                 opacity: beat === i ? 1 : 0.32,
                 transform: beat === i ? 'translateY(0)' : `translateY(${b.side === 'left' ? '-' : ''}6px)`,
-                transition: 'opacity .5s ease, transform .5s ease, background-color 2.5s ease, border-color 2.5s ease'
+                transition: 'opacity .5s ease, transform .5s ease'
               }}
             >
-              {/* Faint branch mark so the cards read less flat; angled per side. */}
-              <span aria-hidden="true" style={{ position: 'absolute', top: -14, right: -12, opacity: 0.12, color: scheme.cardTitle, transform: `rotate(${b.side === 'left' ? -14 : 14}deg)`, transition: 'color 2.5s ease' }}><BrandIcon size={62} /></span>
-              <div style={{ position: 'relative', zIndex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 500, color: scheme.cardTitle, marginBottom: 4, transition: 'color 2.5s ease' }}>{b.title}</div>
-                <div style={{ fontSize: 13.5, color: scheme.cardBody, lineHeight: 1.5, transition: 'color 2.5s ease' }}>{b.body}</div>
+              {/* Terminal chrome: traffic lights left, the traceback mark right. */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 10px', borderBottom: '1px solid #1b1f27' }}>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#ff5f56' }} />
+                  <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#ffbd2e' }} />
+                  <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#27c93f' }} />
+                </div>
+                <span aria-hidden="true" style={{ color: '#6ea8fe', display: 'inline-flex' }}><BrandIcon size={15} /></span>
               </div>
+              <div style={{ padding: '11px 13px 13px', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', fontSize: 12.5, lineHeight: 1.55, color: '#c9d1d9' }}>{b.body}</div>
             </div>
           ))}
 

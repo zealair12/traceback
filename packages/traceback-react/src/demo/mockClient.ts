@@ -52,7 +52,7 @@ function node(
 function seed(): MessageResponse[] {
   return [
     node('d0', null, 'user', 'If people on the basketball court call me washed, what does this mean?', 0),
-    node('d1', 'd0', 'assistant', "It means your game fell off. Slow first step, no hops, settling for jumpers you used to dunk, getting cooked by kids half your age. Honestly at this point you might be better off keeping stats and bringing the orange slices.", 1, 'groq', 'llama-3.3-70b')
+    node('d1', 'd0', 'assistant', 'It means people think you have gotten worse at basketball. You used to be good, and now you are not. Too slow to keep up, missing shots you used to make, struggling against younger players. Honestly they might think you should sit out and just watch.', 1, 'groq', 'llama-3.3-70b')
   ];
 }
 
@@ -66,11 +66,11 @@ interface ScriptedReply {
 }
 const REPLIES: ScriptedReply[] = [
   // 1) Backs off and answers plainly after the user calls it out.
-  { content: "lol my bad. Short version: it just means people think your best days on the court are behind you. Usually it's only trash talk.", provider: 'groq', model: 'llama-3.3-70b' },
+  { content: 'Sorry. It just means people think your best days of playing are behind you. It is usually a light insult, not a serious one.', provider: 'groq', model: 'llama-3.3-70b' },
   // 2) The sharper take, from a stronger model.
-  { content: "Depends who says it. From a teammate it's a joke. From a stranger it can sting. Mostly it's just banter though.", provider: 'anthropic', model: 'claude-3-5-sonnet' },
+  { content: 'It depends who says it. From a friend it is usually a joke. From a stranger it can feel more like a real insult.', provider: 'anthropic', model: 'claude-3-5-sonnet' },
   // 3) The gullible branch off the original question.
-  { content: "Nah, nothing to do with showers. Washed is only about your game slipping, not your hygiene.", provider: 'groq', model: 'llama-3.3-70b' }
+  { content: 'No, it has nothing to do with showers. It only refers to your basketball ability, not how clean you are.', provider: 'groq', model: 'llama-3.3-70b' }
 ];
 
 const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));

@@ -40,7 +40,7 @@ const themeTokens: Record<Theme, {
     nodeActiveBg: '#10243f', nodeActiveBorder: '#3b82f6', nodeActiveText: '#dbeafe',
   },
   light: {
-    canvasBg: '#f0f2f5', dots: '#dde0e8', edgeDefault: '#d4d4d4', edgeActive: '#3b82f6',
+    canvasBg: '#f0f2f5', dots: '#dde0e8', edgeDefault: '#d4d4d4', edgeActive: '#111111',
     controlBg: '#e8ecf0', controlBorder: '#d1d5db', confirmBg: 'rgba(240,242,245,0.96)',
     nodeBg: '#e5e5e5', nodeBorder: '#d4d4d4', nodeText: '#a3a3a3',
     nodePathBg: '#d4d4d4', nodePathBorder: '#a3a3a3', nodePathText: '#525252',

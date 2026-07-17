@@ -33,7 +33,7 @@ interface Beat {
 const BEATS: Beat[] = [
   { body: 'Your whole conversation is saved as a tree, so nothing gets lost in scroll.', side: 'left', top: 210 },
   { body: 'Take any reply in a new direction without starting a new chat.', side: 'right', top: 210 },
-  { body: 'Only your current path goes to the model, not the whole tree, so the context stays small even as the chat grows.', side: 'right', top: 430 },
+  { body: 'The model only reads the branch you are on, not every unrelated tangent, so it stays focused on what matters.', side: 'right', top: 430 },
   { body: 'Keep several answers side by side and compare them instead of asking again.', side: 'left', top: 430 }
 ];
 

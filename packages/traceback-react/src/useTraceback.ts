@@ -71,28 +71,23 @@ function friendlyError(err: any): string {
   return raw;
 }
 
-// A starter conversation seeded for brand-new visitors so they land in a real,
-// continuable chat (saved to their account/guest history) instead of a blank
-// screen. It is a relatable dad joke that gets explained, with one extra branch
-// (a mom joke) so the tree shows a real fork. Written in the neutral import
-// shape; the server gives every message a real id on first load.
+// Guest onboarding seed is RETIRED (commented out). Sign-in is now required and
+// the landing demo already shows a worked example, so new users get a fresh empty
+// chat instead of a canned conversation. The backdated timestamps below existed
+// only to keep the seed off the old guest 5-message daily limit, which is gone.
 //
-// Backdated timestamps on purpose: the guest daily limit counts user messages
-// created today, so a "now" timestamp would make the seed spend the visitor's
-// free quota before they ask anything. A past date keeps the seed off the count.
-const seedTime = (i: number) => new Date(Date.UTC(2024, 0, 1, 12, 0, i)).toISOString();
-const SEED_CONVERSATION = {
-  name: 'Dad jokes',
-  messages: [
-    { id: 's1', parentId: null, role: 'user' as const, content: 'Tell me a dad joke', createdAt: seedTime(0) },
-    { id: 's2', parentId: 's1', role: 'assistant' as const, content: "Why don't eggs tell jokes? They would crack each other up.", createdAt: seedTime(1) },
-    { id: 's3', parentId: 's2', role: 'user' as const, content: 'Explain it', createdAt: seedTime(2) },
-    { id: 's4', parentId: 's3', role: 'assistant' as const, content: 'It plays on the phrase "crack up". An egg can literally crack, and to crack up also means to burst out laughing. Both meanings land at the same time, which is what makes it a pun.', createdAt: seedTime(3) },
-    // A second branch off the first joke, so the tree shows a real fork.
-    { id: 's5', parentId: 's2', role: 'user' as const, content: 'How about a mom joke', createdAt: seedTime(4) },
-    { id: 's6', parentId: 's5', role: 'assistant' as const, content: 'What did the mom broom say to the baby broom? It is past your sweep time.', createdAt: seedTime(5) }
-  ]
-};
+// const seedTime = (i: number) => new Date(Date.UTC(2024, 0, 1, 12, 0, i)).toISOString();
+// const SEED_CONVERSATION = {
+//   name: 'Dad jokes',
+//   messages: [
+//     { id: 's1', parentId: null, role: 'user' as const, content: 'Tell me a dad joke', createdAt: seedTime(0) },
+//     { id: 's2', parentId: 's1', role: 'assistant' as const, content: "Why don't eggs tell jokes? They would crack each other up.", createdAt: seedTime(1) },
+//     { id: 's3', parentId: 's2', role: 'user' as const, content: 'Explain it', createdAt: seedTime(2) },
+//     { id: 's4', parentId: 's3', role: 'assistant' as const, content: 'It plays on the phrase "crack up"...', createdAt: seedTime(3) },
+//     { id: 's5', parentId: 's2', role: 'user' as const, content: 'How about a mom joke', createdAt: seedTime(4) },
+//     { id: 's6', parentId: 's5', role: 'assistant' as const, content: 'What did the mom broom say to the baby broom? It is past your sweep time.', createdAt: seedTime(5) }
+//   ]
+// };
 
 export function useTraceback({ apiUrl, client: injectedClient, initialActiveNodeId }: UseTracebackOptions) {
   // One HTTP client per server address, unless an embedder injects its own.
@@ -165,19 +160,7 @@ export function useTraceback({ apiUrl, client: injectedClient, initialActiveNode
       .fetchSessions()
       .then(async (s) => {
         if (s.length === 0) {
-          // Brand-new visitor: seed a real, continuable starter conversation so
-          // they land in a worked example instead of a blank screen.
-          try {
-            await client.importConversations([SEED_CONVERSATION]);
-            const seeded = await client.fetchSessions();
-            if (seeded.length > 0) {
-              setSessions(seeded);
-              setActiveSessionId(seeded[0].id);
-              return;
-            }
-          } catch (err) {
-            console.error('Failed to seed starter conversation:', err);
-          }
+          // New user: a fresh, empty chat (the guest seed is retired).
           const newSession = await client.createSession();
           setSessions([newSession]);
           setActiveSessionId(newSession.id);

@@ -150,16 +150,14 @@ export function createApp() {
         res.json({ id: user.id, name: user.name, email: user.email, avatar: user.avatar, isGuest: false });
         return;
       }
-      const dailyLimit = Number(process.env.GUEST_DAILY_LIMIT ?? 5);
-      const today = new Date(); today.setHours(0, 0, 0, 0);
-      const used = await prisma.message.count({
-        where: {
-          role: 'user',
-          createdAt: { gte: today },
-          session: { guestId: req.session.guestId }
-        }
-      });
-      res.json({ isGuest: true, dailyLimit, messagesUsedToday: used });
+      // Guest message counting is retired (sign-in is required). Left commented so
+      // no per-request DB count runs for anonymous visitors (which could hang).
+      // const dailyLimit = Number(process.env.GUEST_DAILY_LIMIT ?? 5);
+      // const today = new Date(); today.setHours(0, 0, 0, 0);
+      // const used = await prisma.message.count({
+      //   where: { role: 'user', createdAt: { gte: today }, session: { guestId: req.session.guestId } }
+      // });
+      res.json({ isGuest: true, dailyLimit: 0, messagesUsedToday: 0 });
     })
   );
 

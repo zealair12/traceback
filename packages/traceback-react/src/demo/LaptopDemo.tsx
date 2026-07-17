@@ -177,8 +177,12 @@ export function LaptopDemo({ authUrl }: { authUrl?: string }) {
           element on the page: the rest of the app is pointer-events:none, and
           this re-enables just that button. */}
       <style>{`
-        .tb-demo-root [data-tb-signin]{ pointer-events:auto !important; animation: tb-pulse 1.8s ease-in-out infinite; }
-        @keyframes tb-pulse{ 0%,100%{ box-shadow:0 0 0 0 rgba(59,130,246,0.6);} 50%{ box-shadow:0 0 0 14px rgba(59,130,246,0);} }
+        .tb-demo-root [data-tb-signin]{ pointer-events:auto !important; cursor:pointer !important; animation: tb-pulse 1.6s ease-in-out infinite; }
+        .tb-demo-root [data-tb-signin] *{ cursor:pointer !important; }
+        @keyframes tb-pulse{
+          0%,100%{ transform: scale(1); box-shadow: 0 0 0 0 rgba(255,255,255,0); }
+          50%{ transform: scale(1.05); box-shadow: 0 0 20px 3px rgba(255,255,255,0.28); }
+        }
       `}</style>
 
       {/* Brand lockup at the very top of the page */}

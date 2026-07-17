@@ -143,7 +143,7 @@ export function LaptopDemo({ authUrl }: { authUrl?: string }) {
   const scheme = SCHEMES[phase];
 
   useEffect(() => {
-    const id = window.setInterval(() => setPhase((p) => (p + 1) % SCHEMES.length), 2500);
+    const id = window.setInterval(() => setPhase((p) => (p + 1) % SCHEMES.length), 5000);
     return () => window.clearInterval(id);
   }, []);
 
@@ -210,7 +210,7 @@ export function LaptopDemo({ authUrl }: { authUrl?: string }) {
     background: scheme.pageBg,
     color: scheme.logo,
     fontFamily: 'Inter, system-ui, sans-serif',
-    transition: 'background-color 1.8s ease, color 1.8s ease',
+    transition: 'background-color 2.5s ease, color 2.5s ease',
     '--tb-si-bg': scheme.signinBg,
     '--tb-si-fg': scheme.signinFg,
     '--tb-si-glow': scheme.signinGlow
@@ -222,11 +222,14 @@ export function LaptopDemo({ authUrl }: { authUrl?: string }) {
           It pulses in SIZE and takes its colors from the current mode; the page,
           cards, logo and in-frame app only change color, in the same rhythm. */}
       <style>{`
+        .tb-demo-root [data-theme], .tb-demo-root [data-theme] *{
+          transition: background-color 2.5s ease, border-color 2.5s ease, color 2.5s ease, fill 2.5s ease, stroke 2.5s ease;
+        }
         .tb-demo-root [data-tb-signin]{
           pointer-events:auto !important; cursor:pointer !important;
           background: var(--tb-si-bg) !important; color: var(--tb-si-fg) !important;
-          transition: background-color 1.8s ease, color 1.8s ease, transform .6s ease, box-shadow .8s ease;
-          animation: tb-pulse 2.5s ease-in-out infinite;
+          transition: background-color 2.5s ease, color 2.5s ease, transform .6s ease, box-shadow .8s ease;
+          animation: tb-pulse 5s ease-in-out infinite;
         }
         .tb-demo-root [data-tb-signin] *{ cursor:pointer !important; }
         @keyframes tb-pulse{
@@ -241,8 +244,8 @@ export function LaptopDemo({ authUrl }: { authUrl?: string }) {
       <div ref={scrollRef} style={{ position: 'relative', height: `${(STEPS + 1) * 100}vh` }}>
         <div style={{ position: 'sticky', top: 0, height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', overflow: 'hidden' }}>
           <header style={{ display: 'flex', alignItems: 'center', gap: 18, paddingTop: 'clamp(20px, 4vh, 52px)', paddingBottom: 6, flexShrink: 0 }}>
-            <span style={{ color: scheme.logoIcon, display: 'inline-flex', transform: 'translateY(3px)', transition: 'color 1.8s ease' }}><BrandIcon size={70} /></span>
-            <span style={{ fontSize: 'clamp(42px, 7vw, 84px)', fontWeight: 400, letterSpacing: 8, lineHeight: 1, color: scheme.logo, transition: 'color 1.8s ease' }}>traceback</span>
+            <span style={{ color: scheme.logoIcon, display: 'inline-flex', transform: 'translateY(3px)', transition: 'color 2.5s ease' }}><BrandIcon size={70} /></span>
+            <span style={{ fontSize: 'clamp(42px, 7vw, 84px)', fontWeight: 400, letterSpacing: 8, lineHeight: 1, color: scheme.logo, transition: 'color 2.5s ease' }}>traceback</span>
           </header>
           <div style={{ position: 'relative', flex: 1, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {BEATS.map((b, i) => (
@@ -259,11 +262,11 @@ export function LaptopDemo({ authUrl }: { authUrl?: string }) {
                 padding: '14px 16px',
                 opacity: beat === i ? 1 : 0.32,
                 transform: beat === i ? 'translateY(0)' : `translateY(${b.side === 'left' ? '-' : ''}6px)`,
-                transition: 'opacity .5s ease, transform .5s ease, background-color 1.8s ease, border-color 1.8s ease'
+                transition: 'opacity .5s ease, transform .5s ease, background-color 2.5s ease, border-color 2.5s ease'
               }}
             >
-              <div style={{ fontSize: 13, fontWeight: 500, color: scheme.cardTitle, marginBottom: 4, transition: 'color 1.8s ease' }}>{b.title}</div>
-              <div style={{ fontSize: 13.5, color: scheme.cardBody, lineHeight: 1.5, transition: 'color 1.8s ease' }}>{b.body}</div>
+              <div style={{ fontSize: 13, fontWeight: 500, color: scheme.cardTitle, marginBottom: 4, transition: 'color 2.5s ease' }}>{b.title}</div>
+              <div style={{ fontSize: 13.5, color: scheme.cardBody, lineHeight: 1.5, transition: 'color 2.5s ease' }}>{b.body}</div>
             </div>
           ))}
 

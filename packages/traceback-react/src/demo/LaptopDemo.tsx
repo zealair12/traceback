@@ -91,8 +91,9 @@ function LaptopFrame({ width, children }: { width: number; children: React.React
         {/* base deck: sits directly under the lid; the lid is drawn on top of
             the join, so from the front there is no visible hinge gap */}
         <rect x="44" y="570" width="912" height="26" rx="11" fill="url(#tb-deck)" />
-        {/* the dark opening dent (finger notch) on the front edge, centered */}
-        <rect x="450" y="573" width="100" height="7" rx="3.5" fill="#141519" />
+        {/* the dark opening dent (finger notch): a wide, shallow U -- square top
+            corners, only the bottom two rounded */}
+        <path d="M440 573 L560 573 L560 576 Q560 582 554 582 L446 582 Q440 582 440 576 Z" fill="#141519" />
         {/* rubber feet: short cylinders, so thin rectangles from the front,
             sitting directly under the base deck */}
         <rect x="98" y="597" width="64" height="7" rx="1.5" fill="#16171b" />

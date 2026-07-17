@@ -40,8 +40,8 @@ const BEATS: Beat[] = [
 // asset. We control the screen-cutout coordinates, so the live app overlays it
 // perfectly (no eyeballing insets on a photo). Swap in a photo later if you want
 // full photorealism.
-const VB = { w: 1000, h: 660 };
-const SCREEN = { x: 82, y: 52, w: 836, h: 500 };
+const VB = { w: 1000, h: 620 };
+const SCREEN = { x: 82, y: 52, w: 836, h: 494 };
 
 function LaptopFrame({ width, children }: { width: number; children: React.ReactNode }) {
   const H = (width * VB.h) / VB.w;
@@ -65,16 +65,16 @@ function LaptopFrame({ width, children }: { width: number; children: React.React
             <stop offset="1" stopColor="#a7abb0" />
           </linearGradient>
         </defs>
-        {/* base deck (slightly wider than the lid) */}
-        <rect x="26" y="586" width="948" height="38" rx="13" fill="url(#tb-deck)" />
+        {/* thin base deck (front lip), slightly wider than the lid */}
+        <rect x="44" y="577" width="912" height="20" rx="9" fill="url(#tb-deck)" />
         {/* front thumb scoop */}
-        <rect x="456" y="586" width="88" height="8" rx="4" fill="#b0b4b9" />
-        {/* hinge seam */}
-        <rect x="70" y="576" width="860" height="7" fill="#8b8f94" />
+        <rect x="460" y="577" width="80" height="6" rx="3" fill="#b0b4b9" />
+        {/* hinge seam (thin, narrower than the lid) */}
+        <rect x="96" y="571" width="808" height="5" fill="#7f8388" />
         {/* lid (aluminum) */}
-        <rect x="56" y="16" width="888" height="564" rx="26" fill="url(#tb-alu)" />
+        <rect x="56" y="16" width="888" height="556" rx="26" fill="url(#tb-alu)" />
         {/* screen bezel */}
-        <rect x="70" y="30" width="860" height="536" rx="15" fill="#0b0b0d" />
+        <rect x="70" y="30" width="860" height="528" rx="15" fill="#0b0b0d" />
         {/* camera notch */}
         <rect x="468" y="34" width="64" height="9" rx="4.5" fill="#0b0b0d" />
         <circle cx="500" cy="38.5" r="2.1" fill="#1b1b20" />
@@ -187,17 +187,6 @@ export function LaptopDemo() {
 
   return (
     <div style={{ background: '#07070a', color: '#e5e7eb', fontFamily: 'Inter, system-ui, sans-serif' }}>
-      <header style={{ textAlign: 'center', padding: '72px 24px 8px' }}>
-        <div style={{ fontSize: 13, letterSpacing: 2, textTransform: 'uppercase', color: '#60a5fa' }}>TraceBack</div>
-        <h1 style={{ fontSize: 'clamp(28px, 5vw, 46px)', fontWeight: 500, margin: '14px 0 10px', color: '#f8fafc' }}>
-          Conversations that branch, not scroll.
-        </h1>
-        <p style={{ maxWidth: 520, margin: '0 auto', color: '#94a3b8', fontSize: 17, lineHeight: 1.6 }}>
-          Scroll to watch a real chat fork into a tree — and send only the path that matters to the model.
-        </p>
-        <div style={{ marginTop: 26, color: '#475569', fontSize: 13 }}>↓ scroll</div>
-      </header>
-
       {/* Pinned section: the laptop steps through beats while this scrolls past. */}
       <div ref={scrollRef} style={{ position: 'relative', height: `${(STEPS + 1) * 100}vh` }}>
         <div style={{ position: 'sticky', top: 0, height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>

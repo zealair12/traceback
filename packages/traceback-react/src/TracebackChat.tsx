@@ -4,14 +4,23 @@ import { ChatPanel } from './components/ChatPanel';
 import { TreePanel, treeConnectorColor } from './components/TreePanel';
 import { KeyManager } from './components/KeyManager';
 import { ImportPanel } from './components/ImportPanel';
-import { useTraceback } from './useTraceback';
+import { useTraceback, type UseTracebackReturn } from './useTraceback';
+import type { TracebackClient } from '@traceback/shared';
 
 export interface TracebackChatProps {
-  apiUrl: string;
+  apiUrl?: string;
+  // Optional injected client (e.g. a demo/mock client). Overrides apiUrl.
+  client?: TracebackClient;
+  // Fires with the live engine handle on every render, so a parent (like the
+  // landing-page scroll demo) can drive real actions -- send a message, branch
+  // a reply -- from outside. Left unset for the normal app.
+  onEngineReady?: (tb: UseTracebackReturn) => void;
 }
 
-export function TracebackChat({ apiUrl }: TracebackChatProps) {
-  const tb = useTraceback({ apiUrl });
+export function TracebackChat({ apiUrl, client, onEngineReady }: TracebackChatProps) {
+  const tb = useTraceback({ apiUrl, client });
+  // Hand the latest engine actions to a parent driver when one is attached.
+  useEffect(() => { onEngineReady?.(tb); });
 
   const [treePanelWidth, setTreePanelWidth] = useState(360);
   const [treeFullscreen, setTreeFullscreen] = useState(false);

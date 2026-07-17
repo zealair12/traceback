@@ -12,6 +12,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   createTracebackClient,
+  type TracebackClient,
   type SessionResponse,
   type MessageResponse,
   type ProviderInfo,
@@ -26,7 +27,12 @@ import { isUntitledSessionName, summarizeTopic } from './lib/naming';
 
 export interface UseTracebackOptions {
   // Base URL of the Traceback server (e.g. "http://localhost:4000").
-  apiUrl: string;
+  apiUrl?: string;
+  // Optional pre-built client. When provided it is used verbatim instead of
+  // building one from apiUrl -- this is the seam the landing-page demo uses to
+  // inject a scripted, no-network MockTracebackClient so the real UI runs on
+  // canned data. Any embedder can pass a wrapped/extended client the same way.
+  client?: TracebackClient;
 }
 
 function friendlyError(err: any): string {
@@ -84,9 +90,13 @@ const SEED_CONVERSATION = {
   ]
 };
 
-export function useTraceback({ apiUrl }: UseTracebackOptions) {
-  // One HTTP client per server address. Rebuilt only if the address changes.
-  const client = useMemo(() => createTracebackClient(apiUrl), [apiUrl]);
+export function useTraceback({ apiUrl, client: injectedClient }: UseTracebackOptions) {
+  // One HTTP client per server address, unless an embedder injects its own.
+  // Rebuilt only if the injected client or address changes.
+  const client = useMemo(
+    () => injectedClient ?? createTracebackClient(apiUrl ?? ''),
+    [injectedClient, apiUrl]
+  );
 
   const [sessions, setSessions] = useState<SessionResponse[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);

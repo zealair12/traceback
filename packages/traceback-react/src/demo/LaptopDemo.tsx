@@ -41,6 +41,27 @@ export function LaptopDemo() {
   const [demoKey, setDemoKey] = useState(0);
   const [scale, setScale] = useState(0.76);
 
+  // The standalone app locks the page (html, body, #root are height:100% /
+  // overflow:hidden so the chat fills the viewport). This demo needs the PAGE to
+  // scroll, so unlock those three while it is mounted and restore them on exit.
+  useEffect(() => {
+    const html = document.documentElement;
+    const body = document.body;
+    const root = document.getElementById('root');
+    const targets = [html, body, root].filter(Boolean) as HTMLElement[];
+    const saved = targets.map((el) => ({ el, overflow: el.style.overflow, height: el.style.height }));
+    targets.forEach((el) => {
+      el.style.overflow = el === root ? 'visible' : 'auto';
+      el.style.height = 'auto';
+    });
+    return () => {
+      saved.forEach((s) => {
+        s.el.style.overflow = s.overflow;
+        s.el.style.height = s.height;
+      });
+    };
+  }, []);
+
   // Fit the screen to the viewport (leave room for the side cards on desktop).
   useEffect(() => {
     const fit = () => {

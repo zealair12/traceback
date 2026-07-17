@@ -127,6 +127,38 @@
   overflow-y: hidden;
 }
 
+/* ── Slim, theme-aware scrollbars ─────────────────────────────────
+ * Instead of the browser's stark default bar standing out beside the panels,
+ * the thumb takes the active theme's neutral tone (dark / blue-navy / light)
+ * and rides a transparent track, with a transparent inset border so the
+ * visible thumb is slim and sits *inside* the panel's frame, not outside it.
+ * `--color-gray-700` is remapped per theme in the host stylesheet, so this
+ * follows dark, blue, and light automatically. */
+* {
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: var(--color-gray-700) transparent; /* thumb, track */
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: var(--color-gray-700);
+  border-radius: 999px;
+  border: 3px solid transparent; /* transparent inset → slim, framed thumb */
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-gray-600);
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 /* React Flow controls — follow the active theme via CSS custom properties */
 .react-flow__controls-button {
   background: var(--color-gray-800) !important;

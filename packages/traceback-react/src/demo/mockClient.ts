@@ -126,7 +126,7 @@ export class MockTracebackClient extends TracebackClient {
   }
 
   private session(): SessionResponse {
-    return { id: SESSION_ID, name: 'Dad jokes', createdAt: stamp(0), updatedAt: stamp(9) };
+    return { id: SESSION_ID, name: 'Am I washed?', createdAt: stamp(0), updatedAt: stamp(9) };
   }
 
   // Add a user turn and its scripted assistant reply under the given parent.

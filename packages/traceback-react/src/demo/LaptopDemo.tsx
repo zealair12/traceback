@@ -36,40 +36,37 @@ const BEATS: Beat[] = [
   { title: 'Branch any reply', body: 'Fork a tangent off any earlier point. Your main thread stays exactly where it was.', side: 'left', top: 430 }
 ];
 
-// A straight-on MacBook, hand-built so the live app renders crisply inside it.
-function Laptop({ screenW, screenH, children }: { screenW: number; screenH: number; children: React.ReactNode }) {
-  const bezelSide = 11;
-  const bezelTop = 20;
-  const lidPad = 12;
-  const lidW = screenW + bezelSide * 2 + lidPad * 2;
-  const baseW = lidW * 1.06;
+// The real MacBook photo as the device frame. The live app is overlaid onto the
+// screen rectangle (cover-scaled + clipped), so it looks like the app is running
+// on an actual Mac. Save the provided image to client/public/macbook.png; until
+// it exists, a plain dark frame stands in so the demo still works.
+const FRAME_SRC = '/macbook.png';
+const IMG_ASPECT = 731 / 487; // width / height of the provided photo
+// The display (wallpaper) rectangle as a % of the photo. Tuned by eye; easy to
+// nudge once the file is committed and I can measure it precisely.
+const SCREEN = { topPct: 6.6, leftPct: 12.6, widthPct: 74.8, heightPct: 72.4 };
+
+function LaptopFrame({ width, children }: { width: number; children: React.ReactNode }) {
+  const [imgOk, setImgOk] = useState(true);
+  const imgH = width / IMG_ASPECT;
+  const screenW = (width * SCREEN.widthPct) / 100;
+  const screenH = (imgH * SCREEN.heightPct) / 100;
+  // Cover-scale the app so it fills the screen with no letterbox, then clip.
+  const appScale = Math.max(screenW / APP_W, screenH / APP_H);
+  const appW = APP_W * appScale;
+  const appH = APP_H * appScale;
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', filter: 'drop-shadow(0 30px 40px rgba(0,0,0,0.55))' }}>
-      {/* Screen lid: aluminum body */}
-      <div
-        style={{
-          padding: lidPad,
-          borderRadius: 22,
-          background: 'linear-gradient(150deg,#dfe2e6 0%,#c2c6cb 45%,#aeb2b7 100%)',
-          border: '1px solid #9fa3a8'
-        }}
-      >
-        {/* Dark bezel with the camera notch */}
-        <div style={{ position: 'relative', padding: `${bezelTop}px ${bezelSide}px ${bezelSide}px`, borderRadius: 13, background: '#0a0a0c' }}>
-          <div style={{ position: 'absolute', top: 6, left: '50%', transform: 'translateX(-50%)', width: 118, height: 9, borderRadius: 6, background: '#0a0a0c', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#15151a', boxShadow: '0 0 0 1px #1e1e24' }} />
-          </div>
-          {/* The live screen */}
-          <div style={{ width: screenW, height: screenH, borderRadius: 5, overflow: 'hidden', background: '#0d0d0d' }}>{children}</div>
+    <div style={{ position: 'relative', width, filter: 'drop-shadow(0 34px 46px rgba(0,0,0,0.55))' }}>
+      {imgOk ? (
+        <img src={FRAME_SRC} alt="MacBook" onError={() => setImgOk(false)} draggable={false} style={{ width: '100%', display: 'block', userSelect: 'none' }} />
+      ) : (
+        <div style={{ width, height: imgH, borderRadius: 18, background: '#1b1b1d', border: '1px solid #2a2a2e' }} />
+      )}
+      {/* Live screen overlay, clipped to the display rectangle */}
+      <div style={{ position: 'absolute', top: `${SCREEN.topPct}%`, left: `${SCREEN.leftPct}%`, width: `${SCREEN.widthPct}%`, height: `${SCREEN.heightPct}%`, overflow: 'hidden', background: '#0d0d0d' }}>
+        <div style={{ position: 'absolute', top: (screenH - appH) / 2, left: (screenW - appW) / 2, width: APP_W, height: APP_H, transform: `scale(${appScale})`, transformOrigin: 'top left', pointerEvents: 'none' }}>
+          {children}
         </div>
-      </div>
-      {/* A thin flat seam (the hinge) so the lid and deck read as one unit,
-          not two stacked bars. */}
-      <div style={{ width: lidW, height: 4, background: '#8b8f94' }} />
-      {/* Base deck: one clean piece, slightly wider than the lid, with a single
-          centered thumb scoop at the front. */}
-      <div style={{ position: 'relative', width: baseW, height: 12, background: 'linear-gradient(180deg,#e4e7ea 0%,#c3c7cc 55%,#a9adb2 100%)', borderRadius: '0 0 11px 11px', boxShadow: 'inset 0 1px 0 #eef0f2' }}>
-        <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: baseW * 0.12, height: 5, background: '#b6babf', borderRadius: '0 0 6px 6px' }} />
       </div>
     </div>
   );
@@ -83,7 +80,7 @@ export function LaptopDemo() {
 
   const [beat, setBeat] = useState(0);
   const [demoKey, setDemoKey] = useState(0);
-  const [scale, setScale] = useState(0.72);
+  const [laptopW, setLaptopW] = useState(820);
 
   // The standalone app locks the page (html, body, #root are height:100% /
   // overflow:hidden so the chat fills the viewport). This demo needs the PAGE to
@@ -94,8 +91,9 @@ export function LaptopDemo() {
     const root = document.getElementById('root');
     const targets = [html, body, root].filter(Boolean) as HTMLElement[];
     const saved = targets.map((el) => ({ el, overflow: el.style.overflow, height: el.style.height }));
+    // overflow:visible (not auto) so no ancestor breaks position:sticky.
     targets.forEach((el) => {
-      el.style.overflow = el === root ? 'visible' : 'auto';
+      el.style.overflow = 'visible';
       el.style.height = 'auto';
     });
     return () => {
@@ -106,12 +104,9 @@ export function LaptopDemo() {
     };
   }, []);
 
-  // Fit the screen to the viewport (leave room for the side cards + base overhang).
+  // Size the laptop to the viewport (leave room for the side cards).
   useEffect(() => {
-    const fit = () => {
-      const avail = Math.min(900, Math.max(300, window.innerWidth - 120));
-      setScale(avail / APP_W);
-    };
+    const fit = () => setLaptopW(Math.min(920, Math.max(320, window.innerWidth - 140)));
     fit();
     window.addEventListener('resize', fit);
     return () => window.removeEventListener('resize', fit);
@@ -167,9 +162,6 @@ export function LaptopDemo() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const screenW = APP_W * scale;
-  const screenH = APP_H * scale;
-
   return (
     <div style={{ background: '#07070a', color: '#e5e7eb', fontFamily: 'Inter, system-ui, sans-serif' }}>
       <header style={{ textAlign: 'center', padding: '72px 24px 8px' }}>
@@ -209,11 +201,9 @@ export function LaptopDemo() {
           ))}
 
           <div style={{ zIndex: 2 }}>
-            <Laptop screenW={screenW} screenH={screenH}>
-              <div style={{ width: APP_W, height: APP_H, transform: `scale(${scale})`, transformOrigin: 'top left', pointerEvents: 'none' }}>
-                <TracebackChat key={demoKey} client={mock} onEngineReady={(tb) => { engineRef.current = tb; }} />
-              </div>
-            </Laptop>
+            <LaptopFrame width={laptopW}>
+              <TracebackChat key={demoKey} client={mock} onEngineReady={(tb) => { engineRef.current = tb; }} />
+            </LaptopFrame>
           </div>
         </div>
       </div>

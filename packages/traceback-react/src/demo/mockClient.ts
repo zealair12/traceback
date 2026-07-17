@@ -27,7 +27,9 @@ function node(
   parentId: string | null,
   role: 'user' | 'assistant',
   content: string,
-  depth: number
+  depth: number,
+  provider: string | null = null,
+  model: string | null = null
 ): MessageResponse {
   return {
     id,
@@ -38,33 +40,37 @@ function node(
     depth,
     branchLabel: null,
     attachments: null,
-    provider: role === 'assistant' ? 'demo' : null,
-    model: role === 'assistant' ? 'traceback' : null,
+    provider: role === 'assistant' ? provider : null,
+    model: role === 'assistant' ? model : null,
     createdAt: stamp(depth)
   };
 }
 
-// The starter tree: one dad joke, then a follow-up that explains it. Linear.
-// The scroll demo later branches a SECOND reply off the joke, forking the tree.
+// The starter tree: just the joke. Linear. The scroll demo then plays out a
+// short, funny exchange -- a coy dodge, the user pushing back, and a real answer
+// from a sharper model -- before branching a tangent off the original joke.
 function seed(): MessageResponse[] {
   return [
     node('d0', null, 'user', 'Tell me a dad joke', 0),
-    node('d1', 'd0', 'assistant', "Why don't eggs tell jokes? They'd crack each other up.", 1),
-    node('d2', 'd1', 'user', 'Explain it', 2),
-    node(
-      'd3',
-      'd2',
-      'assistant',
-      'It is a pun on "crack up": an egg can literally crack, and to crack up means to burst out laughing. Both meanings land at once, which is what makes it a pun.',
-      3
-    )
+    node('d1', 'd0', 'assistant', "Why don't eggs tell jokes? They'd crack each other up.", 1, 'groq', 'llama-3.3-70b')
   ];
 }
 
-// Canned assistant replies, picked in order as the demo sends messages.
-const REPLIES = [
-  'Here is a different take: dad jokes lean on puns because the surprise comes from a word meaning two things at once. Same setup, brand-new punchline.',
-  'Good branch to explore. Notice how this stays a separate line of thought -- your original thread is untouched, so you can compare both answers side by side.'
+// Canned assistant replies, in the order the demo triggers them. Each carries
+// the model that "answered" it, so the provenance badge visibly changes when the
+// demo switches to a sharper model for the real answer.
+interface ScriptedReply {
+  content: string;
+  provider: string;
+  model: string;
+}
+const REPLIES: ScriptedReply[] = [
+  // 1) The coy dodge (fast model).
+  { content: "Ha — you smiled though 😏. Do I really have to explain my own joke?", provider: 'groq', model: 'llama-3.3-70b' },
+  // 2) The real answer, after the user pushes back -- from a sharper model.
+  { content: 'My bad 😅 — okay, for real: it is a pun on "crack up." An egg can literally crack, and to crack up means to burst out laughing. Both meanings fire at once, and that is the joke.', provider: 'anthropic', model: 'claude-3-5-sonnet' },
+  // 3) A deeper dig, branched off the original joke.
+  { content: 'Going deeper: "crack" is the hinge of the pun. Physically an egg cracks; idiomatically people crack up. It works because both senses are active in the same breath.', provider: 'groq', model: 'llama-3.3-70b' }
 ];
 
 const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
@@ -97,9 +103,10 @@ export class MockTracebackClient extends TracebackClient {
     const userDepth = (parent?.depth ?? -1) + 1;
     this.counter += 1;
     const user = node(`u${this.counter}`, parentId, 'user', content, userDepth);
-    const replyText = REPLIES[this.replyIndex % REPLIES.length];
+    const reply: ScriptedReply =
+      REPLIES[this.replyIndex] ?? { content: 'Here is another angle on that.', provider: 'groq', model: 'llama-3.3-70b' };
     this.replyIndex += 1;
-    const asst = node(`a${this.counter}`, user.id, 'assistant', replyText, userDepth + 1);
+    const asst = node(`a${this.counter}`, user.id, 'assistant', reply.content, userDepth + 1, reply.provider, reply.model);
     this.msgs.push(user, asst);
     return { user, asst };
   }

@@ -19,7 +19,7 @@ import { MockTracebackClient } from './mockClient';
 const APP_W = 1180;
 const APP_H = 740;
 // Each step gets roughly one viewport of scroll; +1 viewport of lead-in room.
-const STEPS = 3;
+const STEPS = 4;
 
 interface Beat {
   title: string;
@@ -29,8 +29,9 @@ interface Beat {
 }
 const BEATS: Beat[] = [
   { title: 'One linear thread', body: 'Ask a question, get an answer — a normal chat, top to bottom.', side: 'left', top: 96 },
-  { title: 'Branch any reply', body: 'Fork a new line of thought. The tree splits; your original thread stays intact.', side: 'right', top: 150 },
-  { title: 'Only the path is sent', body: 'The model receives just the active branch — not the whole tree. That is the token saving.', side: 'right', top: 380 }
+  { title: 'Ask follow-ups', body: 'Keep the conversation going in the same thread… though it can play a little coy 😏.', side: 'right', top: 130 },
+  { title: 'Any model, per message', body: 'A reply falls flat? Switch to a sharper model and ask again — the badge shows exactly who answered.', side: 'right', top: 340 },
+  { title: 'Branch any reply', body: 'Fork a tangent off any earlier point. Your main thread stays exactly where it was.', side: 'left', top: 360 }
 ];
 
 // A straight-on MacBook, hand-built so the live app renders crisply inside it.
@@ -122,20 +123,23 @@ export function LaptopDemo() {
       const total = rect.height - window.innerHeight;
       const progress = Math.max(0, Math.min(1, -rect.top / (total || 1)));
 
-      setBeat(progress < 0.28 ? 0 : progress < 0.6 ? 1 : 2);
+      setBeat(progress < 0.24 ? 0 : progress < 0.46 ? 1 : progress < 0.7 ? 2 : 3);
 
-      // Fire each branch once, only when the engine is idle so a fast scroll
-      // can't drop a message mid-stream.
+      // Fire each scripted step once, only when the engine is idle so a fast
+      // scroll can't drop a message mid-stream. The steps chain: a coy dodge, the
+      // user pushing back (answered by a sharper model), then a branch off the
+      // original joke to show the tree fork.
       const tb = engineRef.current;
       if (!tb) return;
-      const fire = (threshold: number, parentId: string, text: string) => {
+      const act = (threshold: number, run: (e: UseTracebackReturn) => void) => {
         if (progress >= threshold && !firedRef.current.has(threshold) && !tb.sending && tb.allMessages.length > 0) {
           firedRef.current.add(threshold);
-          tb.handleBranchFromMessage(parentId, text, 'dig');
+          run(tb);
         }
       };
-      fire(0.32, 'd1', 'crack each other up');
-      fire(0.64, 'd1', "eggs don't tell jokes");
+      act(0.24, (e) => e.handleSendMessage('Explain it'));
+      act(0.46, (e) => e.handleSendMessage('yo — answer the question man 🤣'));
+      act(0.7, (e) => e.handleBranchFromMessage('d1', 'crack each other up', 'dig'));
     };
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();

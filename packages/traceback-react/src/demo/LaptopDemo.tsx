@@ -93,21 +93,22 @@ function LaptopFrame({ width, children }: { width: number; children: React.React
         <rect x="44" y="570" width="912" height="26" rx="11" fill="url(#tb-deck)" />
         {/* the dark opening dent (finger notch) on the front edge, centered */}
         <rect x="450" y="573" width="100" height="7" rx="3.5" fill="#141519" />
-        {/* rubber feet, peeking from the front elevation */}
-        <ellipse cx="185" cy="593" rx="24" ry="4.5" fill="#16171b" />
-        <ellipse cx="815" cy="593" rx="24" ry="4.5" fill="#16171b" />
-        {/* lid (dark grey / space-gray) with a subtle rim; drawn on top so it
-            covers the lid/deck join (no visible seam from the front) */}
-        <rect x="56" y="16" width="888" height="556" rx="26" fill="url(#tb-alu)" stroke="#54555b" strokeWidth="1" />
-        {/* black bezel: thin at the sides and bottom, taller at the top edge */}
-        <rect x="62" y="22" width="876" height="544" rx="16" fill="#0a0a0c" />
+        {/* rubber feet: short cylinders, so thin rectangles from the front */}
+        <rect x="161" y="590" width="48" height="7" rx="1.5" fill="#16171b" />
+        <rect x="791" y="590" width="48" height="7" rx="1.5" fill="#16171b" />
+        {/* lid: rounded top corners only; the bottom corners are square because
+            that edge sits into the keyboard deck and is not visible */}
+        <path d="M56 42 Q56 16 82 16 L918 16 Q944 16 944 42 L944 572 L56 572 Z" fill="url(#tb-alu)" stroke="#54555b" strokeWidth="1" />
+        {/* black bezel: thin at the sides and bottom, taller at the top edge;
+            bottom corners square like the lid */}
+        <path d="M62 38 Q62 22 78 22 L922 22 Q938 22 938 38 L938 566 L62 566 Z" fill="#0a0a0c" />
         {/* webcam + a lit green indicator (camera on), centered in the top edge */}
         <circle cx="497" cy="38" r="3.4" fill="#111116" stroke="#2a2a30" strokeWidth="0.8" />
         <circle cx="497" cy="38" r="1.2" fill="#2c2c34" />
         <circle cx="509" cy="38" r="3" fill="#34d058" opacity="0.28" />
         <circle cx="509" cy="38" r="1.7" fill="#40df66" />
-        {/* screen cutout: the app overlays exactly here */}
-        <rect x={SCREEN.x} y={SCREEN.y} width={SCREEN.w} height={SCREEN.h} rx="5" fill="#0d0d0d" />
+        {/* screen cutout (rounded top, square bottom): the app overlays here */}
+        <path d={`M${SCREEN.x} ${SCREEN.y + 5} Q${SCREEN.x} ${SCREEN.y} ${SCREEN.x + 5} ${SCREEN.y} L${SCREEN.x + SCREEN.w - 5} ${SCREEN.y} Q${SCREEN.x + SCREEN.w} ${SCREEN.y} ${SCREEN.x + SCREEN.w} ${SCREEN.y + 5} L${SCREEN.x + SCREEN.w} ${SCREEN.y + SCREEN.h} L${SCREEN.x} ${SCREEN.y + SCREEN.h} Z`} fill="#0d0d0d" />
       </svg>
       {/* Live screen overlay, clipped to the cutout */}
       <div
@@ -119,17 +120,11 @@ function LaptopFrame({ width, children }: { width: number; children: React.React
           height: `${(SCREEN.h / VB.h) * 100}%`,
           overflow: 'hidden',
           background: '#0d0d0d',
-          borderRadius: 4
+          borderRadius: '4px 4px 0 0'
         }}
       >
         <div style={{ position: 'absolute', top: (sh - appH) / 2, left: (sw - appW) / 2, width: APP_W, height: APP_H, transform: `scale(${appScale})`, transformOrigin: 'top left', pointerEvents: 'none' }}>
           {children}
-        </div>
-        {/* macOS window controls, top-left */}
-        <div style={{ position: 'absolute', top: 9, left: 11, display: 'flex', gap: 6, zIndex: 3, pointerEvents: 'none' }}>
-          <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#ff5f56' }} />
-          <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#febc2e' }} />
-          <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#28c840' }} />
         </div>
       </div>
     </div>

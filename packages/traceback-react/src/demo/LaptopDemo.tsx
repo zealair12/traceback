@@ -19,7 +19,7 @@ import { MockTracebackClient } from './mockClient';
 // height is chosen so the app's aspect ratio matches the SVG screen cutout
 // (836:494), so it fills the screen edge-to-edge with nothing clipped.
 const APP_W = 1180;
-const APP_H = Math.round((1180 * 508) / 860); // matches the screen-cutout aspect
+const APP_H = Math.round((1180 * 502) / 860); // matches the screen-cutout aspect
 // Each step gets roughly one viewport of scroll; +1 viewport of lead-in room.
 const STEPS = 4;
 
@@ -64,7 +64,7 @@ const SCHEMES: Scheme[] = [
 // perfectly (no eyeballing insets on a photo). Swap in a photo later if you want
 // full photorealism.
 const VB = { w: 1000, h: 620 };
-const SCREEN = { x: 70, y: 54, w: 860, h: 508 };
+const SCREEN = { x: 70, y: 54, w: 860, h: 502 };
 
 function LaptopFrame({ width, children }: { width: number; children: React.ReactNode }) {
   const H = (width * VB.h) / VB.w;
@@ -95,8 +95,8 @@ function LaptopFrame({ width, children }: { width: number; children: React.React
         <rect x="450" y="573" width="100" height="7" rx="3.5" fill="#141519" />
         {/* rubber feet: short cylinders, so thin rectangles from the front,
             sitting directly under the base deck */}
-        <rect x="161" y="597" width="48" height="7" rx="1.5" fill="#16171b" />
-        <rect x="791" y="597" width="48" height="7" rx="1.5" fill="#16171b" />
+        <rect x="153" y="597" width="64" height="7" rx="1.5" fill="#16171b" />
+        <rect x="783" y="597" width="64" height="7" rx="1.5" fill="#16171b" />
         {/* lid: rounded top corners only; bottom corners square (that edge sits
             into the keyboard deck and is not visible). Its top radius is exactly
             the bezel radius + 6 so the grey border is a uniform 6px, corners

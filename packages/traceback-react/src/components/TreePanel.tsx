@@ -101,6 +101,7 @@ function TreeFlowInner({
 }) {
   const reactFlow = useReactFlow();
   const prevActiveRef = useRef<string | null>(null);
+  const prevCountRef = useRef(0);
 
   // Confirmation popup: position + which node is pending
   const [confirm, setConfirm] = useState<{ x: number; y: number; nodeId: string } | null>(null);
@@ -108,19 +109,21 @@ function TreeFlowInner({
   useEffect(() => {
     if (!activeNodeId || activeNodeId === prevActiveRef.current) return;
     const isFirst = prevActiveRef.current === null;
+    // A new branch (the node count grew) re-frames the WHOLE graph, so the fork
+    // is always brought into frame in the context of the full tree. Plain
+    // navigation between existing nodes zooms to the node you moved to.
+    const grew = layoutNodes.length > prevCountRef.current;
     prevActiveRef.current = activeNodeId;
+    prevCountRef.current = layoutNodes.length;
     const timer = setTimeout(() => {
-      // On first load (and each time the panel re-mounts, e.g. the mobile
-      // overlay opening) frame the WHOLE graph so it can never be off-screen.
-      // After that, zoom to the node you navigated to. Same fitView either way.
-      if (isFirst) {
-        reactFlow.fitView({ duration: 400, padding: 0.4 });
+      if (isFirst || grew) {
+        reactFlow.fitView({ duration: 500, padding: 0.35 });
       } else {
         reactFlow.fitView({ nodes: [{ id: activeNodeId }], duration: 400, padding: 1.5 });
       }
     }, 80);
     return () => clearTimeout(timer);
-  }, [activeNodeId, reactFlow]);
+  }, [activeNodeId, layoutNodes, reactFlow]);
 
   useEffect(() => {
     const close = () => setConfirm(null);

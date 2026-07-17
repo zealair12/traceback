@@ -43,7 +43,7 @@ const BEATS: Beat[] = [
 const VB = { w: 1000, h: 620 };
 const SCREEN = { x: 82, y: 52, w: 836, h: 494 };
 
-function LaptopFrame({ width, focusTree, children }: { width: number; focusTree: boolean; children: React.ReactNode }) {
+function LaptopFrame({ width, children }: { width: number; children: React.ReactNode }) {
   const H = (width * VB.h) / VB.w;
   const sw = (width * SCREEN.w) / VB.w;
   const sh = (H * SCREEN.h) / VB.h;
@@ -56,23 +56,24 @@ function LaptopFrame({ width, focusTree, children }: { width: number; focusTree:
       <svg viewBox={`0 0 ${VB.w} ${VB.h}`} width="100%" style={{ display: 'block' }} aria-label="MacBook">
         <defs>
           <linearGradient id="tb-alu" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#e8eaed" />
-            <stop offset="0.5" stopColor="#c7cbd0" />
-            <stop offset="1" stopColor="#aeb2b7" />
+            <stop offset="0" stopColor="#46474c" />
+            <stop offset="0.5" stopColor="#34353a" />
+            <stop offset="1" stopColor="#25262b" />
           </linearGradient>
           <linearGradient id="tb-deck" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#eceef0" />
-            <stop offset="1" stopColor="#a7abb0" />
+            <stop offset="0" stopColor="#3c3d43" />
+            <stop offset="1" stopColor="#212227" />
           </linearGradient>
         </defs>
         {/* thin base deck (front lip), slightly wider than the lid */}
         <rect x="44" y="577" width="912" height="20" rx="9" fill="url(#tb-deck)" />
         {/* front thumb scoop */}
-        <rect x="460" y="577" width="80" height="6" rx="3" fill="#b0b4b9" />
+        <rect x="460" y="577" width="80" height="6" rx="3" fill="#3a3b41" />
         {/* hinge seam (thin, narrower than the lid) */}
-        <rect x="96" y="571" width="808" height="5" fill="#7f8388" />
-        {/* lid (aluminum) */}
-        <rect x="56" y="16" width="888" height="556" rx="26" fill="url(#tb-alu)" />
+        <rect x="96" y="571" width="808" height="5" fill="#4a4b51" />
+        {/* lid (dark grey / space-gray) with a subtle rim so it stands apart
+            from the near-black page background */}
+        <rect x="56" y="16" width="888" height="556" rx="26" fill="url(#tb-alu)" stroke="#54555b" strokeWidth="1" />
         {/* screen bezel */}
         <rect x="70" y="30" width="860" height="528" rx="15" fill="#0b0b0d" />
         {/* camera notch */}
@@ -94,21 +95,8 @@ function LaptopFrame({ width, focusTree, children }: { width: number; focusTree:
           borderRadius: 4
         }}
       >
-        {/* Pan/zoom layer: on the branch beat, zoom toward the tree pane (right
-            side) so the graph fork is centered and large -- the graph is the
-            headline feature, so the branch beat spotlights it. */}
-        <div
-          style={{
-            width: '100%',
-            height: '100%',
-            transformOrigin: '77% 44%',
-            transform: focusTree ? 'scale(1.55)' : 'scale(1)',
-            transition: 'transform .7s ease'
-          }}
-        >
-          <div style={{ position: 'absolute', top: (sh - appH) / 2, left: (sw - appW) / 2, width: APP_W, height: APP_H, transform: `scale(${appScale})`, transformOrigin: 'top left', pointerEvents: 'none' }}>
-            {children}
-          </div>
+        <div style={{ position: 'absolute', top: (sh - appH) / 2, left: (sw - appW) / 2, width: APP_W, height: APP_H, transform: `scale(${appScale})`, transformOrigin: 'top left', pointerEvents: 'none' }}>
+          {children}
         </div>
       </div>
     </div>
@@ -226,7 +214,7 @@ export function LaptopDemo() {
           ))}
 
           <div style={{ zIndex: 2 }}>
-            <LaptopFrame width={laptopW} focusTree={beat >= 3}>
+            <LaptopFrame width={laptopW}>
               <TracebackChat key={demoKey} client={mock} onEngineReady={(tb) => { engineRef.current = tb; }} />
             </LaptopFrame>
           </div>

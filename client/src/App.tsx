@@ -20,7 +20,7 @@ function App() {
   }, []);
 
   if (hash === '#demo') return <LaptopDemo authUrl={`${API_BASE}/auth/google`} />;
-  return <TracebackChat apiUrl={API_BASE} />;
+  return <TracebackChat apiUrl={API_BASE} requireAuth />;
 }
 
 export default App;

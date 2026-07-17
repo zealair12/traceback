@@ -1,6 +1,5 @@
 // Message routes: send a turn into the tree, or prune a branch out of it.
-// Guests are limited to GUEST_DAILY_LIMIT messages per day (counted by their
-// cookie-scoped guestId). Signed-in users have no limit.
+// Sending requires a signed-in user (see AUTH_OPTIONAL for the local test relax).
 
 import type { Express } from 'express';
 import { prisma } from '../prismaClient.js';
@@ -9,7 +8,10 @@ import { resolveApiKey } from '../auth/apiKey.js';
 import { ownerWhere } from '../auth/owner.js';
 import { wrap } from './wrap.js';
 
-const GUEST_DAILY_LIMIT = Number(process.env.GUEST_DAILY_LIMIT ?? 5);
+// Sending requires sign-in. Set AUTH_OPTIONAL=true locally so the headless
+// verify suite (which cannot do a real Google login) can still run. Never set it
+// in production.
+const AUTH_OPTIONAL = process.env.AUTH_OPTIONAL === 'true';
 
 function attachmentsProblem(raw: unknown): string | null {
   if (raw === undefined) return null;
@@ -72,23 +74,10 @@ export function registerMessageRoutes(app: Express) {
         return;
       }
 
-      // Rate-limit guests.
-      if (!req.isAuthenticated()) {
-        const today = new Date(); today.setHours(0, 0, 0, 0);
-        const used = await prisma.message.count({
-          where: {
-            role: 'user',
-            createdAt: { gte: today },
-            session: { guestId: req.session.guestId }
-          }
-        });
-        if (used >= GUEST_DAILY_LIMIT) {
-          res.status(429).json({
-            error: `You've used your ${GUEST_DAILY_LIMIT} free messages for today. Sign in to continue without limits.`,
-            guestLimitReached: true
-          });
-          return;
-        }
+      // Sign-in required: no anonymous message sending.
+      if (!AUTH_OPTIONAL && !req.isAuthenticated()) {
+        res.status(401).json({ error: 'Please sign in to send messages.', authRequired: true });
+        return;
       }
 
       const result = await createMessageWithAutoReply({
@@ -145,18 +134,9 @@ export function registerMessageRoutes(app: Express) {
         return;
       }
 
-      if (!req.isAuthenticated()) {
-        const today = new Date(); today.setHours(0, 0, 0, 0);
-        const used = await prisma.message.count({
-          where: { role: 'user', createdAt: { gte: today }, session: { guestId: req.session.guestId } }
-        });
-        if (used >= GUEST_DAILY_LIMIT) {
-          res.status(429).json({
-            error: `You've used your ${GUEST_DAILY_LIMIT} free messages for today. Sign in to continue without limits.`,
-            guestLimitReached: true
-          });
-          return;
-        }
+      if (!AUTH_OPTIONAL && !req.isAuthenticated()) {
+        res.status(401).json({ error: 'Please sign in to send messages.', authRequired: true });
+        return;
       }
 
       // From here on we stream; errors are reported as SSE events, not HTTP codes.

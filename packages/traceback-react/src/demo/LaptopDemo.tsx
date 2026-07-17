@@ -27,11 +27,13 @@ interface Beat {
   side: 'left' | 'right';
   top: number;
 }
+// Cards flank the laptop (two per side) so the active one always sits beside the
+// screen, never above or below it.
 const BEATS: Beat[] = [
-  { title: 'One linear thread', body: 'Ask a question, get an answer — a normal chat, top to bottom.', side: 'left', top: 96 },
-  { title: 'Ask follow-ups', body: 'Keep the conversation going in the same thread… though it can play a little coy 😏.', side: 'right', top: 130 },
-  { title: 'Any model, per message', body: 'A reply falls flat? Switch to a sharper model and ask again — the badge shows exactly who answered.', side: 'right', top: 340 },
-  { title: 'Branch any reply', body: 'Fork a tangent off any earlier point. Your main thread stays exactly where it was.', side: 'left', top: 360 }
+  { title: 'One linear thread', body: 'Ask a question, get an answer — a normal chat, top to bottom.', side: 'left', top: 210 },
+  { title: 'Ask follow-ups', body: 'Keep the conversation going in the same thread… though it can play a little coy 😏.', side: 'right', top: 210 },
+  { title: 'Any model, per message', body: 'A reply falls flat? Switch to a sharper model and ask again — the badge shows exactly who answered.', side: 'right', top: 430 },
+  { title: 'Branch any reply', body: 'Fork a tangent off any earlier point. Your main thread stays exactly where it was.', side: 'left', top: 430 }
 ];
 
 // A straight-on MacBook, hand-built so the live app renders crisply inside it.
@@ -61,11 +63,13 @@ function Laptop({ screenW, screenH, children }: { screenW: number; screenH: numb
           <div style={{ width: screenW, height: screenH, borderRadius: 5, overflow: 'hidden', background: '#0d0d0d' }}>{children}</div>
         </div>
       </div>
-      {/* Hinge */}
-      <div style={{ width: lidW, height: 9, background: 'linear-gradient(180deg,#b4b8bd,#8d9196)', borderRadius: '0 0 3px 3px' }} />
-      {/* Base deck (tapered), with the front-lip notch */}
-      <div style={{ position: 'relative', width: baseW, height: 15, background: 'linear-gradient(180deg,#d2d6da,#a6aab0)', borderRadius: '0 0 14px 14px', borderTop: '1px solid #c6cace' }}>
-        <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: 90, height: 7, background: '#92979d', borderRadius: '0 0 8px 8px' }} />
+      {/* A thin flat seam (the hinge) so the lid and deck read as one unit,
+          not two stacked bars. */}
+      <div style={{ width: lidW, height: 4, background: '#8b8f94' }} />
+      {/* Base deck: one clean piece, slightly wider than the lid, with a single
+          centered thumb scoop at the front. */}
+      <div style={{ position: 'relative', width: baseW, height: 12, background: 'linear-gradient(180deg,#e4e7ea 0%,#c3c7cc 55%,#a9adb2 100%)', borderRadius: '0 0 11px 11px', boxShadow: 'inset 0 1px 0 #eef0f2' }}>
+        <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: baseW * 0.12, height: 5, background: '#b6babf', borderRadius: '0 0 6px 6px' }} />
       </div>
     </div>
   );

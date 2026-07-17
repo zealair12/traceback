@@ -139,9 +139,14 @@ export function LaptopDemo({ authUrl }: { authUrl?: string }) {
     };
   }, []);
 
-  // Size the laptop to the viewport (leave room for the side cards).
+  // Size the laptop to the viewport, capped by BOTH width and height so the
+  // logo + laptop fit in one screen (nothing needs to scroll to see it all).
   useEffect(() => {
-    const fit = () => setLaptopW(Math.min(920, Math.max(320, window.innerWidth - 140)));
+    const fit = () => {
+      const wCap = window.innerWidth - 100;
+      const hCap = (window.innerHeight - 190) / (VB.h / VB.w); // room for the logo
+      setLaptopW(Math.max(320, Math.min(1120, wCap, hCap)));
+    };
     fit();
     window.addEventListener('resize', fit);
     return () => window.removeEventListener('resize', fit);
@@ -185,15 +190,16 @@ export function LaptopDemo({ authUrl }: { authUrl?: string }) {
         }
       `}</style>
 
-      {/* Brand lockup at the very top of the page */}
-      <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, padding: '52px 24px 20px' }}>
-        <span style={{ color: '#3b82f6', display: 'inline-flex' }}><BrandIcon size={46} /></span>
-        <span style={{ fontSize: 'clamp(30px, 6vw, 52px)', fontWeight: 400, letterSpacing: 6, color: '#eef0f2' }}>traceback</span>
-      </header>
-
-      {/* Pinned section: the laptop steps through beats while this scrolls past. */}
+      {/* Everything lives in ONE pinned viewport: the logo and laptop never move
+          as you scroll -- scrolling only advances the demo steps, so "traceback"
+          stays at the top the whole time. */}
       <div ref={scrollRef} style={{ position: 'relative', height: `${(STEPS + 1) * 100}vh` }}>
-        <div style={{ position: 'sticky', top: 0, height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+        <div style={{ position: 'sticky', top: 0, height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', overflow: 'hidden' }}>
+          <header style={{ display: 'flex', alignItems: 'center', gap: 18, paddingTop: 'clamp(20px, 4vh, 52px)', paddingBottom: 6, flexShrink: 0 }}>
+            <span style={{ color: '#3b82f6', display: 'inline-flex' }}><BrandIcon size={70} /></span>
+            <span style={{ fontSize: 'clamp(42px, 7vw, 84px)', fontWeight: 400, letterSpacing: 8, color: '#eef0f2' }}>traceback</span>
+          </header>
+          <div style={{ position: 'relative', flex: 1, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {BEATS.map((b, i) => (
             <div
               key={i}
@@ -216,10 +222,11 @@ export function LaptopDemo({ authUrl }: { authUrl?: string }) {
             </div>
           ))}
 
-          <div style={{ zIndex: 2 }}>
-            <LaptopFrame width={laptopW}>
-              <TracebackChat client={mock} initialActiveNodeId={stepActiveId} />
-            </LaptopFrame>
+            <div style={{ zIndex: 2 }}>
+              <LaptopFrame width={laptopW}>
+                <TracebackChat client={mock} initialActiveNodeId={stepActiveId} />
+              </LaptopFrame>
+            </div>
           </div>
         </div>
       </div>

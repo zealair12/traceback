@@ -88,14 +88,16 @@ function LaptopFrame({ width, children }: { width: number; children: React.React
             <stop offset="1" stopColor="#212227" />
           </linearGradient>
         </defs>
-        {/* thin base deck (front lip), slightly wider than the lid */}
-        <rect x="44" y="577" width="912" height="20" rx="9" fill="url(#tb-deck)" />
-        {/* front thumb scoop */}
-        <rect x="460" y="577" width="80" height="6" rx="3" fill="#3a3b41" />
-        {/* hinge seam (thin, narrower than the lid) */}
-        <rect x="96" y="571" width="808" height="5" fill="#4a4b51" />
-        {/* lid (dark grey / space-gray) with a subtle rim so it stands apart
-            from the near-black page background */}
+        {/* base deck: sits directly under the lid; the lid is drawn on top of
+            the join, so from the front there is no visible hinge gap */}
+        <rect x="44" y="570" width="912" height="26" rx="11" fill="url(#tb-deck)" />
+        {/* the dark opening dent (finger notch) on the front edge, centered */}
+        <rect x="450" y="573" width="100" height="7" rx="3.5" fill="#141519" />
+        {/* rubber feet, peeking from the front elevation */}
+        <ellipse cx="185" cy="593" rx="24" ry="4.5" fill="#16171b" />
+        <ellipse cx="815" cy="593" rx="24" ry="4.5" fill="#16171b" />
+        {/* lid (dark grey / space-gray) with a subtle rim; drawn on top so it
+            covers the lid/deck join (no visible seam from the front) */}
         <rect x="56" y="16" width="888" height="556" rx="26" fill="url(#tb-alu)" stroke="#54555b" strokeWidth="1" />
         {/* screen bezel */}
         <rect x="70" y="30" width="860" height="528" rx="15" fill="#0b0b0d" />
@@ -120,6 +122,12 @@ function LaptopFrame({ width, children }: { width: number; children: React.React
       >
         <div style={{ position: 'absolute', top: (sh - appH) / 2, left: (sw - appW) / 2, width: APP_W, height: APP_H, transform: `scale(${appScale})`, transformOrigin: 'top left', pointerEvents: 'none' }}>
           {children}
+        </div>
+        {/* macOS window controls, top-left */}
+        <div style={{ position: 'absolute', top: 9, left: 11, display: 'flex', gap: 6, zIndex: 3, pointerEvents: 'none' }}>
+          <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#ff5f56' }} />
+          <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#febc2e' }} />
+          <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#28c840' }} />
         </div>
       </div>
     </div>

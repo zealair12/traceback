@@ -95,8 +95,8 @@ function LaptopFrame({ width, children }: { width: number; children: React.React
         <rect x="450" y="573" width="100" height="7" rx="3.5" fill="#141519" />
         {/* rubber feet: short cylinders, so thin rectangles from the front,
             sitting directly under the base deck */}
-        <rect x="153" y="597" width="64" height="7" rx="1.5" fill="#16171b" />
-        <rect x="783" y="597" width="64" height="7" rx="1.5" fill="#16171b" />
+        <rect x="98" y="597" width="64" height="7" rx="1.5" fill="#16171b" />
+        <rect x="838" y="597" width="64" height="7" rx="1.5" fill="#16171b" />
         {/* lid: rounded top corners only; bottom corners square (that edge sits
             into the keyboard deck and is not visible). Its top radius is exactly
             the bezel radius + 6 so the grey border is a uniform 6px, corners

@@ -760,34 +760,17 @@ export function useTraceback({ apiUrl, client: injectedClient, initialActiveNode
     }
   }, [incognito, incognitoSessionId, activeSessionId, client]);
 
-  // Sign out: clear the signed-in user's data from view immediately (no refresh
-  // needed), then reload as a fresh guest so none of their chats remain visible.
+  // Sign out, then return to the homepage (the landing) so there is a single
+  // entry point. The landing currently lives at /#demo; change this to '/' once
+  // the landing becomes the root.
   const handleSignOut = useCallback(async () => {
     try {
       await client.signOut();
     } catch (err) {
       console.error('Sign out failed:', err);
     }
-    setAllMessages([]);
-    setActiveNodeId(null);
-    setGuestLimitReached(false);
-    clearBranching();
-    refreshAuth();
-    try {
-      const s = await client.fetchSessions();
-      if (s.length === 0) {
-        const created = await client.createSession();
-        setSessions([created]);
-        setActiveSessionId(created.id);
-      } else {
-        setSessions(s);
-        setActiveSessionId(s[0].id);
-      }
-    } catch {
-      setSessions([]);
-      setActiveSessionId(null);
-    }
-  }, [client, clearBranching, refreshAuth]);
+    window.location.href = '/#demo';
+  }, [client]);
 
   return {
     // data

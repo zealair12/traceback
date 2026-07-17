@@ -46,13 +46,13 @@ function node(
   };
 }
 
-// The starter tree: just the joke. Linear. The scroll demo then plays out a
-// short, funny exchange -- a coy dodge, the user pushing back, and a real answer
-// from a sharper model -- before branching a tangent off the original joke.
+// The starter tree: a question and a rambly first answer. The scroll demo then
+// plays out a short exchange (the user laughs to refocus it, then a sharper model
+// nails the answer) before branching off into gullible questions on the topic.
 function seed(): MessageResponse[] {
   return [
-    node('d0', null, 'user', 'Tell me a dad joke', 0),
-    node('d1', 'd0', 'assistant', "Why don't eggs tell jokes? They'd crack each other up.", 1, 'groq', 'llama-3.3-70b')
+    node('d0', null, 'user', 'If people on the basketball court call me washed, what does this mean?', 0),
+    node('d1', 'd0', 'assistant', 'Oh, washed is a classic bit of court talk. It pulls from a whole world of playground slang, the old streetball mixtapes, the trash talk that gets handed down from run to run, and honestly the roots of it go back further than most people realize into...', 1, 'groq', 'llama-3.3-70b')
   ];
 }
 
@@ -65,12 +65,12 @@ interface ScriptedReply {
   model: string;
 }
 const REPLIES: ScriptedReply[] = [
-  // 1) The coy dodge (fast model).
-  { content: "Ha — you smiled though 😏. Do I really have to explain my own joke?", provider: 'groq', model: 'llama-3.3-70b' },
-  // 2) The real answer, after the user pushes back -- from a sharper model.
-  { content: 'My bad 😅 — okay, for real: it is a pun on "crack up." An egg can literally crack, and to crack up means to burst out laughing. Both meanings fire at once, and that is the joke.', provider: 'anthropic', model: 'claude-3-5-sonnet' },
-  // 3) A deeper dig, branched off the original joke.
-  { content: 'Going deeper: "crack" is the hinge of the pun. Physically an egg cracks; idiomatically people crack up. It works because both senses are active in the same breath.', provider: 'groq', model: 'llama-3.3-70b' }
+  // 1) Refocused answer after the user laughs.
+  { content: 'Ha, fair. Straight answer: being called washed means people think your best playing days are behind you. It is a friendly jab that you have lost a step.', provider: 'groq', model: 'llama-3.3-70b' },
+  // 2) The sharper take, from a stronger model.
+  { content: 'Mostly it is lighthearted trash talk between people who hoop together, not a real insult. Tone and context carry it. A teammate grinning while they say it is pure banter. A stranger saying it flat can sting a little more.', provider: 'anthropic', model: 'claude-3-5-sonnet' },
+  // 3) The gullible branch off the original question.
+  { content: 'Ha, no, nothing to do with soap or showers. Washed is only about your game slipping, never your hygiene. You are good on the smell front.', provider: 'groq', model: 'llama-3.3-70b' }
 ];
 
 const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
@@ -118,9 +118,9 @@ export class MockTracebackClient extends TracebackClient {
     };
     let leaf = 'd1';
     let active = 'd1';
-    if (step >= 1) { leaf = add('d1', 'Explain it', REPLIES[0]); active = leaf; }
-    if (step >= 2) { leaf = add(leaf, 'yo — answer the question man 🤣', REPLIES[1]); active = leaf; }
-    if (step >= 3) { active = add('d1', 'Explain this in more detail: "crack each other up"', REPLIES[2]); }
+    if (step >= 1) { leaf = add('d1', '😂', REPLIES[0]); active = leaf; }
+    if (step >= 2) { leaf = add(leaf, 'So is it an insult or a joke?', REPLIES[1]); active = leaf; }
+    if (step >= 3) { active = add('d1', 'Wait, does washed mean they think I forgot to shower before the game?', REPLIES[2]); }
     this.msgs = msgs;
     return active;
   }

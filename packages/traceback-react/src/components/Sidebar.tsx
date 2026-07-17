@@ -55,7 +55,7 @@ export function Sidebar({
       <div className="px-4 py-4">
         <h1 className="flex items-center gap-2">
           <BrandIcon size={22} className="text-blue-400 translate-y-px" />
-          <span style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 300, fontSize: '1.25rem', letterSpacing: '0.18em' }}>
+          <span style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 300, fontSize: '1.25rem', letterSpacing: '0.18em', color: theme === 'light' ? '#000000' : undefined }}>
             traceback
           </span>
         </h1>

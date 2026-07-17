@@ -32,10 +32,10 @@ interface Beat {
 // Cards flank the laptop (two per side) so the active one always sits beside the
 // screen, never above or below it.
 const BEATS: Beat[] = [
-  { title: 'One linear thread', body: 'Ask a question, get an answer — a normal chat, top to bottom.', side: 'left', top: 210 },
-  { title: 'Ask follow-ups', body: 'Keep the conversation going in the same thread… though it can play a little coy 😏.', side: 'right', top: 210 },
-  { title: 'Any model, per message', body: 'A reply falls flat? Switch to a sharper model and ask again — the badge shows exactly who answered.', side: 'right', top: 430 },
-  { title: 'Branch any reply', body: 'Fork a tangent off any earlier point. Your main thread stays exactly where it was.', side: 'left', top: 430 }
+  { title: 'Your chat, as a map', body: 'Ask anything and get your answer like normal. traceback quietly keeps the whole talk as a map you can walk back into, so nothing useful gets buried in endless scroll.', side: 'left', top: 210 },
+  { title: 'Wander, then snap back', body: 'Go off on a tangent or crack a joke, then jump right back to the real question. The thread holds every turn, so a detour never loses your place.', side: 'right', top: 210 },
+  { title: 'Any model, only the path', body: 'Any reply can come from a different model, and only the branch you are on is sent to it, never the full history. Long chats stay fast and cheap since nothing gets re-read.', side: 'right', top: 430 },
+  { title: 'Split without starting over', body: 'Take any reply in a fresh direction while the old one stays put. Both paths sit side by side, so you compare answers instead of losing one.', side: 'left', top: 430 }
 ];
 
 // One rhythm, three modes. Each beat recolors EVERYTHING to a mode -- the app's
@@ -57,7 +57,7 @@ interface Scheme {
 const SCHEMES: Scheme[] = [
   { appTheme: 'dark', pageBg: '#07070a', logo: '#eef0f2', logoIcon: '#3b82f6', cardBg: '#0f1117', cardBorder: '#1e2330', cardTitle: '#60a5fa', cardBody: '#9aa6b8', signinBg: '#ffffff', signinFg: '#3c4043', signinGlow: 'rgba(255,255,255,0.4)' },
   { appTheme: 'blue', pageBg: '#04070f', logo: '#dbeafe', logoIcon: '#3b82f6', cardBg: '#0a1526', cardBorder: '#1a2a4a', cardTitle: '#7cb0ff', cardBody: '#9db4d8', signinBg: '#2563eb', signinFg: '#ffffff', signinGlow: 'rgba(59,130,246,0.55)' },
-  { appTheme: 'light', pageBg: '#eceff4', logo: '#1e293b', logoIcon: '#2563eb', cardBg: '#ffffff', cardBorder: '#d5dae2', cardTitle: '#2563eb', cardBody: '#5b6472', signinBg: '#1c1c1e', signinFg: '#ffffff', signinGlow: 'rgba(0,0,0,0.28)' }
+  { appTheme: 'light', pageBg: '#eceff4', logo: '#000000', logoIcon: '#2563eb', cardBg: '#ffffff', cardBorder: '#d5dae2', cardTitle: '#2563eb', cardBody: '#5b6472', signinBg: '#1c1c1e', signinFg: '#ffffff', signinGlow: 'rgba(0,0,0,0.28)' }
 ];
 
 // A hand-authored MacBook SVG frame: vector, crisp at any size, no external
@@ -103,7 +103,7 @@ function LaptopFrame({ width, children }: { width: number; children: React.React
         {/* camera notch */}
         <rect x="468" y="34" width="64" height="9" rx="4.5" fill="#0b0b0d" />
         <circle cx="500" cy="38.5" r="2.1" fill="#1b1b20" />
-        {/* screen cutout — the app overlays exactly here */}
+        {/* screen cutout: the app overlays exactly here */}
         <rect x={SCREEN.x} y={SCREEN.y} width={SCREEN.w} height={SCREEN.h} rx="5" fill="#0d0d0d" />
       </svg>
       {/* Live screen overlay, clipped to the cutout */}
@@ -224,7 +224,7 @@ export function LaptopDemo({ authUrl }: { authUrl?: string }) {
           cards, logo and in-frame app only change color, in the same rhythm. */}
       <style>{`
         .tb-demo-root [data-theme], .tb-demo-root [data-theme] *{
-          transition: background-color 2.5s ease, border-color 2.5s ease, fill 2.5s ease, stroke 2.5s ease, color 0s linear 1.25s;
+          transition: background-color 2.5s ease, border-color 2.5s ease, fill 2.5s ease, stroke 2.5s ease, color 2.5s ease;
         }
         .tb-demo-root [data-tb-signin]{
           pointer-events:auto !important; cursor:pointer !important;
@@ -245,8 +245,8 @@ export function LaptopDemo({ authUrl }: { authUrl?: string }) {
       <div ref={scrollRef} style={{ position: 'relative', height: `${(STEPS + 1) * 100}vh` }}>
         <div style={{ position: 'sticky', top: 0, height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', overflow: 'hidden' }}>
           <header style={{ display: 'flex', alignItems: 'center', gap: 18, paddingTop: 'clamp(20px, 4vh, 52px)', paddingBottom: 6, flexShrink: 0 }}>
-            <span style={{ color: scheme.logoIcon, display: 'inline-flex', transform: 'translateY(3px)', transition: 'color 0s linear 1.25s' }}><BrandIcon size={70} /></span>
-            <span style={{ fontSize: 'clamp(42px, 7vw, 84px)', fontWeight: 400, letterSpacing: 8, lineHeight: 1, color: scheme.logo, transition: 'color 0s linear 1.25s' }}>traceback</span>
+            <span style={{ color: scheme.logoIcon, display: 'inline-flex', transform: 'translateY(3px)', transition: 'color 2.5s ease' }}><BrandIcon size={70} /></span>
+            <span style={{ fontSize: 'clamp(42px, 7vw, 84px)', fontWeight: 400, letterSpacing: 8, lineHeight: 1, color: scheme.logo, transition: 'color 2.5s ease' }}>traceback</span>
           </header>
           <div style={{ position: 'relative', flex: 1, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {BEATS.map((b, i) => (
@@ -266,8 +266,8 @@ export function LaptopDemo({ authUrl }: { authUrl?: string }) {
                 transition: 'opacity .5s ease, transform .5s ease, background-color 2.5s ease, border-color 2.5s ease'
               }}
             >
-              <div style={{ fontSize: 13, fontWeight: 500, color: scheme.cardTitle, marginBottom: 4, transition: 'color 0s linear 1.25s' }}>{b.title}</div>
-              <div style={{ fontSize: 13.5, color: scheme.cardBody, lineHeight: 1.5, transition: 'color 0s linear 1.25s' }}>{b.body}</div>
+              <div style={{ fontSize: 13, fontWeight: 500, color: scheme.cardTitle, marginBottom: 4, transition: 'color 2.5s ease' }}>{b.title}</div>
+              <div style={{ fontSize: 13.5, color: scheme.cardBody, lineHeight: 1.5, transition: 'color 2.5s ease' }}>{b.body}</div>
             </div>
           ))}
 

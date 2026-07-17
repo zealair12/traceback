@@ -101,7 +101,7 @@ function TreeFlowInner({
 }) {
   const reactFlow = useReactFlow();
   const prevActiveRef = useRef<string | null>(null);
-  const prevCountRef = useRef(0);
+  const seenIdsRef = useRef<Set<string>>(new Set());
 
   // Confirmation popup: position + which node is pending
   const [confirm, setConfirm] = useState<{ x: number; y: number; nodeId: string } | null>(null);
@@ -109,14 +109,17 @@ function TreeFlowInner({
   useEffect(() => {
     if (!activeNodeId || activeNodeId === prevActiveRef.current) return;
     const isFirst = prevActiveRef.current === null;
-    // A new branch (the node count grew) re-frames the WHOLE graph, so the fork
-    // is always brought into frame in the context of the full tree. Plain
-    // navigation between existing nodes zooms to the node you moved to.
-    const grew = layoutNodes.length > prevCountRef.current;
+    // Was the newly-active node just created (a branch / new message), or an
+    // existing node we navigated to? A freshly created node -- INCLUDING the real
+    // node that replaces an optimistic streaming placeholder -- re-frames the
+    // WHOLE graph. Navigating to an existing node zooms to it. Checking the id
+    // SET (not the node count) is what stops the post-stream placeholder->real
+    // swap from being mistaken for navigation and zooming in.
+    const isNewNode = !seenIdsRef.current.has(activeNodeId);
     prevActiveRef.current = activeNodeId;
-    prevCountRef.current = layoutNodes.length;
+    seenIdsRef.current = new Set(layoutNodes.map((n) => n.id));
     const timer = setTimeout(() => {
-      if (isFirst || grew) {
+      if (isFirst || isNewNode) {
         reactFlow.fitView({ duration: 500, padding: 0.35 });
       } else {
         reactFlow.fitView({ nodes: [{ id: activeNodeId }], duration: 400, padding: 1.5 });

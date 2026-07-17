@@ -32,10 +32,10 @@ interface Beat {
 // Cards flank the laptop (two per side) so the active one always sits beside the
 // screen, never above or below it.
 const BEATS: Beat[] = [
-  { title: 'Your chat, as a map', body: 'Ask anything and get your answer like normal. traceback quietly keeps the whole talk as a map you can walk back into, so nothing useful gets buried in endless scroll.', side: 'left', top: 210 },
-  { title: 'Wander, then snap back', body: 'Go off on a tangent or crack a joke, then jump right back to the real question. The thread holds every turn, so a detour never loses your place.', side: 'right', top: 210 },
-  { title: 'Any model, only the path', body: 'Any reply can come from a different model, and only the branch you are on is sent to it, never the full history. Long chats stay fast and cheap since nothing gets re-read.', side: 'right', top: 430 },
-  { title: 'Split without starting over', body: 'Take any reply in a fresh direction while the old one stays put. Both paths sit side by side, so you compare answers instead of losing one.', side: 'left', top: 430 }
+  { title: 'Your whole chat', body: 'Every question and answer stays as a map, so nothing gets buried in scroll.', side: 'left', top: 210 },
+  { title: 'Chase tangents', body: 'Wander off or joke around, then jump straight back. The thread holds your place.', side: 'right', top: 210 },
+  { title: 'Only what matters', body: "Only the branch you're on gets sent to the model, so long chats stay cheap.", side: 'right', top: 430 },
+  { title: 'Branch anywhere', body: 'Take any reply a new direction. The old one stays right where it was.', side: 'left', top: 430 }
 ];
 
 // One rhythm, three modes. Each beat recolors EVERYTHING to a mode -- the app's
@@ -211,10 +211,9 @@ export function LaptopDemo({ authUrl }: { authUrl?: string }) {
     color: scheme.logo,
     fontFamily: 'Inter, system-ui, sans-serif',
     transition: 'background-color 2.5s ease, color 2.5s ease',
-    // Sign-in stays a constant green so it stands out against every mode.
-    '--tb-si-bg': '#16a34a',
-    '--tb-si-fg': '#ffffff',
-    '--tb-si-glow': 'rgba(34,197,94,0.55)'
+    '--tb-si-bg': scheme.signinBg,
+    '--tb-si-fg': scheme.signinFg,
+    '--tb-si-glow': scheme.signinGlow
   } as CSSProperties;
 
   return (
@@ -261,13 +260,18 @@ export function LaptopDemo({ authUrl }: { authUrl?: string }) {
                 border: `1px solid ${scheme.cardBorder}`,
                 borderRadius: 14,
                 padding: '14px 16px',
+                overflow: 'hidden',
                 opacity: beat === i ? 1 : 0.32,
                 transform: beat === i ? 'translateY(0)' : `translateY(${b.side === 'left' ? '-' : ''}6px)`,
                 transition: 'opacity .5s ease, transform .5s ease, background-color 2.5s ease, border-color 2.5s ease'
               }}
             >
-              <div style={{ fontSize: 13, fontWeight: 500, color: scheme.cardTitle, marginBottom: 4, transition: 'color 2.5s ease' }}>{b.title}</div>
-              <div style={{ fontSize: 13.5, color: scheme.cardBody, lineHeight: 1.5, transition: 'color 2.5s ease' }}>{b.body}</div>
+              {/* Faint branch mark so the cards read less flat; angled per side. */}
+              <span aria-hidden="true" style={{ position: 'absolute', top: -14, right: -12, opacity: 0.12, color: scheme.cardTitle, transform: `rotate(${b.side === 'left' ? -14 : 14}deg)`, transition: 'color 2.5s ease' }}><BrandIcon size={62} /></span>
+              <div style={{ position: 'relative', zIndex: 1 }}>
+                <div style={{ fontSize: 13, fontWeight: 500, color: scheme.cardTitle, marginBottom: 4, transition: 'color 2.5s ease' }}>{b.title}</div>
+                <div style={{ fontSize: 13.5, color: scheme.cardBody, lineHeight: 1.5, transition: 'color 2.5s ease' }}>{b.body}</div>
+              </div>
             </div>
           ))}
 

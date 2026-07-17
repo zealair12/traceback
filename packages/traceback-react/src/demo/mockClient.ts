@@ -52,7 +52,7 @@ function node(
 function seed(): MessageResponse[] {
   return [
     node('d0', null, 'user', 'If people on the basketball court call me washed, what does this mean?', 0),
-    node('d1', 'd0', 'assistant', 'Oh, washed is a classic bit of court talk. It pulls from a whole world of playground slang, the old streetball mixtapes, the trash talk that gets handed down from run to run, and honestly the roots of it go back further than most people realize into...', 1, 'groq', 'llama-3.3-70b')
+    node('d1', 'd0', 'assistant', "It means your game fell off. Slow first step, no hops, settling for jumpers you used to dunk, getting cooked by kids half your age. Honestly at this point you might be better off keeping stats and bringing the orange slices.", 1, 'groq', 'llama-3.3-70b')
   ];
 }
 
@@ -65,12 +65,12 @@ interface ScriptedReply {
   model: string;
 }
 const REPLIES: ScriptedReply[] = [
-  // 1) Refocused answer after the user laughs.
-  { content: 'Ha, fair. Straight answer: being called washed means people think your best playing days are behind you. It is a friendly jab that you have lost a step.', provider: 'groq', model: 'llama-3.3-70b' },
+  // 1) Backs off and answers plainly after the user calls it out.
+  { content: "lol my bad. Short version: it just means people think your best days on the court are behind you. Usually it's only trash talk.", provider: 'groq', model: 'llama-3.3-70b' },
   // 2) The sharper take, from a stronger model.
-  { content: 'Mostly it is lighthearted trash talk between people who hoop together, not a real insult. Tone and context carry it. A teammate grinning while they say it is pure banter. A stranger saying it flat can sting a little more.', provider: 'anthropic', model: 'claude-3-5-sonnet' },
+  { content: "Depends who says it. From a teammate it's a joke. From a stranger it can sting. Mostly it's just banter though.", provider: 'anthropic', model: 'claude-3-5-sonnet' },
   // 3) The gullible branch off the original question.
-  { content: 'Ha, no, nothing to do with soap or showers. Washed is only about your game slipping, never your hygiene. You are good on the smell front.', provider: 'groq', model: 'llama-3.3-70b' }
+  { content: "Nah, nothing to do with showers. Washed is only about your game slipping, not your hygiene.", provider: 'groq', model: 'llama-3.3-70b' }
 ];
 
 const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
@@ -118,9 +118,9 @@ export class MockTracebackClient extends TracebackClient {
     };
     let leaf = 'd1';
     let active = 'd1';
-    if (step >= 1) { leaf = add('d1', '😂', REPLIES[0]); active = leaf; }
+    if (step >= 1) { leaf = add('d1', "you're getting carried away 😭", REPLIES[0]); active = leaf; }
     if (step >= 2) { leaf = add(leaf, 'So is it an insult or a joke?', REPLIES[1]); active = leaf; }
-    if (step >= 3) { active = add('d1', 'Wait, does washed mean they think I forgot to shower before the game?', REPLIES[2]); }
+    if (step >= 3) { active = add('d1', 'Wait does it mean I need to shower?', REPLIES[2]); }
     this.msgs = msgs;
     return active;
   }

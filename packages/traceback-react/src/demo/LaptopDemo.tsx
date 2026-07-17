@@ -36,35 +36,65 @@ const BEATS: Beat[] = [
   { title: 'Branch any reply', body: 'Fork a tangent off any earlier point. Your main thread stays exactly where it was.', side: 'left', top: 430 }
 ];
 
-// The real MacBook photo as the device frame. The live app is overlaid onto the
-// screen rectangle (cover-scaled + clipped), so it looks like the app is running
-// on an actual Mac. Save the provided image to client/public/macbook.png; until
-// it exists, a plain dark frame stands in so the demo still works.
-const FRAME_SRC = '/macbook.png';
-const IMG_ASPECT = 731 / 487; // width / height of the provided photo
-// The display (wallpaper) rectangle as a % of the photo. Tuned by eye; easy to
-// nudge once the file is committed and I can measure it precisely.
-const SCREEN = { topPct: 6.6, leftPct: 12.6, widthPct: 74.8, heightPct: 72.4 };
+// A hand-authored MacBook SVG frame: vector, crisp at any size, no external
+// asset. We control the screen-cutout coordinates, so the live app overlays it
+// perfectly (no eyeballing insets on a photo). Swap in a photo later if you want
+// full photorealism.
+const VB = { w: 1000, h: 660 };
+const SCREEN = { x: 82, y: 52, w: 836, h: 500 };
 
 function LaptopFrame({ width, children }: { width: number; children: React.ReactNode }) {
-  const [imgOk, setImgOk] = useState(true);
-  const imgH = width / IMG_ASPECT;
-  const screenW = (width * SCREEN.widthPct) / 100;
-  const screenH = (imgH * SCREEN.heightPct) / 100;
+  const H = (width * VB.h) / VB.w;
+  const sw = (width * SCREEN.w) / VB.w;
+  const sh = (H * SCREEN.h) / VB.h;
   // Cover-scale the app so it fills the screen with no letterbox, then clip.
-  const appScale = Math.max(screenW / APP_W, screenH / APP_H);
+  const appScale = Math.max(sw / APP_W, sh / APP_H);
   const appW = APP_W * appScale;
   const appH = APP_H * appScale;
   return (
     <div style={{ position: 'relative', width, filter: 'drop-shadow(0 34px 46px rgba(0,0,0,0.55))' }}>
-      {imgOk ? (
-        <img src={FRAME_SRC} alt="MacBook" onError={() => setImgOk(false)} draggable={false} style={{ width: '100%', display: 'block', userSelect: 'none' }} />
-      ) : (
-        <div style={{ width, height: imgH, borderRadius: 18, background: '#1b1b1d', border: '1px solid #2a2a2e' }} />
-      )}
-      {/* Live screen overlay, clipped to the display rectangle */}
-      <div style={{ position: 'absolute', top: `${SCREEN.topPct}%`, left: `${SCREEN.leftPct}%`, width: `${SCREEN.widthPct}%`, height: `${SCREEN.heightPct}%`, overflow: 'hidden', background: '#0d0d0d' }}>
-        <div style={{ position: 'absolute', top: (screenH - appH) / 2, left: (screenW - appW) / 2, width: APP_W, height: APP_H, transform: `scale(${appScale})`, transformOrigin: 'top left', pointerEvents: 'none' }}>
+      <svg viewBox={`0 0 ${VB.w} ${VB.h}`} width="100%" style={{ display: 'block' }} aria-label="MacBook">
+        <defs>
+          <linearGradient id="tb-alu" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#e8eaed" />
+            <stop offset="0.5" stopColor="#c7cbd0" />
+            <stop offset="1" stopColor="#aeb2b7" />
+          </linearGradient>
+          <linearGradient id="tb-deck" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#eceef0" />
+            <stop offset="1" stopColor="#a7abb0" />
+          </linearGradient>
+        </defs>
+        {/* base deck (slightly wider than the lid) */}
+        <rect x="26" y="586" width="948" height="38" rx="13" fill="url(#tb-deck)" />
+        {/* front thumb scoop */}
+        <rect x="456" y="586" width="88" height="8" rx="4" fill="#b0b4b9" />
+        {/* hinge seam */}
+        <rect x="70" y="576" width="860" height="7" fill="#8b8f94" />
+        {/* lid (aluminum) */}
+        <rect x="56" y="16" width="888" height="564" rx="26" fill="url(#tb-alu)" />
+        {/* screen bezel */}
+        <rect x="70" y="30" width="860" height="536" rx="15" fill="#0b0b0d" />
+        {/* camera notch */}
+        <rect x="468" y="34" width="64" height="9" rx="4.5" fill="#0b0b0d" />
+        <circle cx="500" cy="38.5" r="2.1" fill="#1b1b20" />
+        {/* screen cutout — the app overlays exactly here */}
+        <rect x={SCREEN.x} y={SCREEN.y} width={SCREEN.w} height={SCREEN.h} rx="5" fill="#0d0d0d" />
+      </svg>
+      {/* Live screen overlay, clipped to the cutout */}
+      <div
+        style={{
+          position: 'absolute',
+          top: `${(SCREEN.y / VB.h) * 100}%`,
+          left: `${(SCREEN.x / VB.w) * 100}%`,
+          width: `${(SCREEN.w / VB.w) * 100}%`,
+          height: `${(SCREEN.h / VB.h) * 100}%`,
+          overflow: 'hidden',
+          background: '#0d0d0d',
+          borderRadius: 4
+        }}
+      >
+        <div style={{ position: 'absolute', top: (sh - appH) / 2, left: (sw - appW) / 2, width: APP_W, height: APP_H, transform: `scale(${appScale})`, transformOrigin: 'top left', pointerEvents: 'none' }}>
           {children}
         </div>
       </div>
@@ -155,13 +185,6 @@ export function LaptopDemo() {
     return () => window.removeEventListener('scroll', onScroll);
   }, [demoKey]);
 
-  const replay = () => {
-    mock.reset();
-    firedRef.current = new Set();
-    setDemoKey((k) => k + 1);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
   return (
     <div style={{ background: '#07070a', color: '#e5e7eb', fontFamily: 'Inter, system-ui, sans-serif' }}>
       <header style={{ textAlign: 'center', padding: '72px 24px 8px' }}>
@@ -207,34 +230,6 @@ export function LaptopDemo() {
           </div>
         </div>
       </div>
-
-      {/* Released content: normal page scroll resumes here after the last step. */}
-      <section style={{ maxWidth: 960, margin: '0 auto', padding: '40px 24px 20px' }}>
-        <h2 style={{ textAlign: 'center', fontSize: 30, fontWeight: 500, color: '#f8fafc', margin: '0 0 8px' }}>
-          Why a tree beats a scroll
-        </h2>
-        <p style={{ textAlign: 'center', color: '#94a3b8', maxWidth: 560, margin: '0 auto 36px', lineHeight: 1.6 }}>
-          Every branch keeps its own context. Explore tangents without derailing the main thread — and never re-send a whole conversation to the model.
-        </p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: 16 }}>
-          {[
-            { h: 'Branch anything', p: 'Fork any reply into a new line of thought. The old one stays exactly where it was.' },
-            { h: 'Pruned context', p: 'Only the active path travels to the model, so long trees stay cheap to continue.' },
-            { h: 'Any model', p: 'Continue a branch with Groq, OpenAI, or Claude — pick per message.' }
-          ].map((c) => (
-            <div key={c.h} style={{ background: '#0f1117', border: '1px solid #1e2330', borderRadius: 14, padding: '20px 20px' }}>
-              <div style={{ fontSize: 16, fontWeight: 500, color: '#f1f5f9', marginBottom: 6 }}>{c.h}</div>
-              <div style={{ fontSize: 14, color: '#94a3b8', lineHeight: 1.55 }}>{c.p}</div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <footer style={{ textAlign: 'center', padding: '30px 0 90px' }}>
-        <button onClick={replay} style={{ background: '#1d4ed8', color: '#fff', border: 'none', borderRadius: 24, padding: '12px 24px', fontSize: 14, cursor: 'pointer' }}>
-          Replay the demo
-        </button>
-      </footer>
     </div>
   );
 }

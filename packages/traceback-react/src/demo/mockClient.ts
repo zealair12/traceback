@@ -97,6 +97,34 @@ export class MockTracebackClient extends TracebackClient {
     this.counter = 0;
   }
 
+  // Rebuild the whole conversation to the state at a given scroll step, and
+  // return the node that should be active (shown) at that step. Deterministic,
+  // so scrolling up and down always lands on the same branch state:
+  //   0: just the joke
+  //   1: + "Explain it" -> a coy dodge
+  //   2: + "yo, answer the question" -> the real answer from a sharper model
+  //   3: + a branch off the original joke (the tree forks)
+  buildTo(step: number): string {
+    const msgs = seed();
+    let c = 0;
+    const add = (parentId: string, userText: string, reply: ScriptedReply): string => {
+      const parent = msgs.find((m) => m.id === parentId);
+      const ud = (parent?.depth ?? -1) + 1;
+      c += 1;
+      const u = node(`bu${c}`, parentId, 'user', userText, ud);
+      const a = node(`ba${c}`, u.id, 'assistant', reply.content, ud + 1, reply.provider, reply.model);
+      msgs.push(u, a);
+      return a.id;
+    };
+    let leaf = 'd1';
+    let active = 'd1';
+    if (step >= 1) { leaf = add('d1', 'Explain it', REPLIES[0]); active = leaf; }
+    if (step >= 2) { leaf = add(leaf, 'yo — answer the question man 🤣', REPLIES[1]); active = leaf; }
+    if (step >= 3) { active = add('d1', 'Explain this in more detail: "crack each other up"', REPLIES[2]); }
+    this.msgs = msgs;
+    return active;
+  }
+
   private session(): SessionResponse {
     return { id: SESSION_ID, name: 'Dad jokes', createdAt: stamp(0), updatedAt: stamp(9) };
   }

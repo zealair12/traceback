@@ -15,10 +15,12 @@ export interface TracebackChatProps {
   // landing-page scroll demo) can drive real actions -- send a message, branch
   // a reply -- from outside. Left unset for the normal app.
   onEngineReady?: (tb: UseTracebackReturn) => void;
+  // Optional: which node to focus on first load (the demo sets this per step).
+  initialActiveNodeId?: string;
 }
 
-export function TracebackChat({ apiUrl, client, onEngineReady }: TracebackChatProps) {
-  const tb = useTraceback({ apiUrl, client });
+export function TracebackChat({ apiUrl, client, onEngineReady, initialActiveNodeId }: TracebackChatProps) {
+  const tb = useTraceback({ apiUrl, client, initialActiveNodeId });
   // Hand the latest engine actions to a parent driver when one is attached.
   useEffect(() => { onEngineReady?.(tb); });
 

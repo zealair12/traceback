@@ -12,7 +12,6 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { TracebackChat } from '../TracebackChat';
-import type { UseTracebackReturn } from '../useTraceback';
 import { BrandIcon } from '../components/BrandIcon';
 import { MockTracebackClient } from './mockClient';
 
@@ -108,12 +107,14 @@ function LaptopFrame({ width, children }: { width: number; children: React.React
 
 export function LaptopDemo({ authUrl }: { authUrl?: string }) {
   const mock = useMemo(() => new MockTracebackClient(authUrl ?? ''), [authUrl]);
-  const engineRef = useRef<UseTracebackReturn | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
-  const firedRef = useRef<Set<number>>(new Set());
+  const stepRef = useRef(0);
 
   const [beat, setBeat] = useState(0);
   const [demoKey, setDemoKey] = useState(0);
+  // The node to focus for the current step; the app remounts with it so the
+  // shown branch matches the scroll position (in both directions).
+  const [stepActiveId, setStepActiveId] = useState('d1');
   const [laptopW, setLaptopW] = useState(820);
 
   // The standalone app locks the page (html, body, #root are height:100% /
@@ -146,8 +147,10 @@ export function LaptopDemo({ authUrl }: { authUrl?: string }) {
     return () => window.removeEventListener('resize', fit);
   }, []);
 
-  // Scroll progress across the pinned section drives the steps. Past the section,
-  // the sticky stage releases and the page scrolls on into the content below.
+  // Scroll position maps to a step. Whenever the step changes -- scrolling DOWN
+  // or UP -- we rebuild the conversation to that step's exact state and remount
+  // the app on it, so the shown branch always matches where you are in the
+  // scroll. This is what makes scrolling back up revert to the earlier branch.
   useEffect(() => {
     const onScroll = () => {
       const el = scrollRef.current;
@@ -155,39 +158,18 @@ export function LaptopDemo({ authUrl }: { authUrl?: string }) {
       const rect = el.getBoundingClientRect();
       const total = rect.height - window.innerHeight;
       const progress = Math.max(0, Math.min(1, -rect.top / (total || 1)));
-
-      setBeat(progress < 0.24 ? 0 : progress < 0.46 ? 1 : progress < 0.7 ? 2 : 3);
-
-      // Scrolled back to the very top after playing some steps: reset to the
-      // linear starter so the demo replays cleanly instead of showing a
-      // half-finished conversation under a "linear thread" caption.
-      if (progress < 0.02 && firedRef.current.size > 0) {
-        firedRef.current = new Set();
-        mock.reset();
+      const step = progress < 0.24 ? 0 : progress < 0.46 ? 1 : progress < 0.7 ? 2 : 3;
+      setBeat(step);
+      if (step !== stepRef.current) {
+        stepRef.current = step;
+        setStepActiveId(mock.buildTo(step));
         setDemoKey((k) => k + 1);
-        return;
       }
-
-      // Fire each scripted step once, only when the engine is idle so a fast
-      // scroll can't drop a message mid-stream. The steps chain: a coy dodge, the
-      // user pushing back (answered by a sharper model), then a branch off the
-      // original joke to show the tree fork.
-      const tb = engineRef.current;
-      if (!tb) return;
-      const act = (threshold: number, run: (e: UseTracebackReturn) => void) => {
-        if (progress >= threshold && !firedRef.current.has(threshold) && !tb.sending && tb.allMessages.length > 0) {
-          firedRef.current.add(threshold);
-          run(tb);
-        }
-      };
-      act(0.24, (e) => e.handleSendMessage('Explain it'));
-      act(0.46, (e) => e.handleSendMessage('yo — answer the question man 🤣'));
-      act(0.7, (e) => e.handleBranchFromMessage('d1', 'crack each other up', 'dig'));
     };
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
     return () => window.removeEventListener('scroll', onScroll);
-  }, [demoKey]);
+  }, [mock]);
 
   return (
     <div className="tb-demo-root" style={{ background: '#07070a', color: '#e5e7eb', fontFamily: 'Inter, system-ui, sans-serif' }}>
@@ -232,7 +214,7 @@ export function LaptopDemo({ authUrl }: { authUrl?: string }) {
 
           <div style={{ zIndex: 2 }}>
             <LaptopFrame width={laptopW}>
-              <TracebackChat key={demoKey} client={mock} onEngineReady={(tb) => { engineRef.current = tb; }} />
+              <TracebackChat key={demoKey} client={mock} initialActiveNodeId={stepActiveId} />
             </LaptopFrame>
           </div>
         </div>

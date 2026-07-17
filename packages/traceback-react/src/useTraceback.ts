@@ -33,6 +33,10 @@ export interface UseTracebackOptions {
   // inject a scripted, no-network MockTracebackClient so the real UI runs on
   // canned data. Any embedder can pass a wrapped/extended client the same way.
   client?: TracebackClient;
+  // Optional: which node to focus when messages first load (otherwise the
+  // deepest node). The landing demo sets this per scroll step so the right
+  // branch is shown. Normal app leaves it unset.
+  initialActiveNodeId?: string;
 }
 
 function friendlyError(err: any): string {
@@ -90,7 +94,7 @@ const SEED_CONVERSATION = {
   ]
 };
 
-export function useTraceback({ apiUrl, client: injectedClient }: UseTracebackOptions) {
+export function useTraceback({ apiUrl, client: injectedClient, initialActiveNodeId }: UseTracebackOptions) {
   // One HTTP client per server address, unless an embedder injects its own.
   // Rebuilt only if the injected client or address changes.
   const client = useMemo(
@@ -220,13 +224,17 @@ export function useTraceback({ apiUrl, client: injectedClient }: UseTracebackOpt
       .fetchSessionMessages(activeSessionId)
       .then((msgs) => {
         setAllMessages(msgs);
+        const preferred =
+          initialActiveNodeId && msgs.some((m) => m.id === initialActiveNodeId)
+            ? initialActiveNodeId
+            : null;
         const deepest = msgs.length
           ? msgs.reduce((a, b) => (a.depth >= b.depth ? a : b))
           : null;
-        setActiveNodeId(deepest ? deepest.id : null);
+        setActiveNodeId(preferred ?? (deepest ? deepest.id : null));
       })
       .catch((err) => console.error('Failed to load messages:', err));
-  }, [client, activeSessionId]);
+  }, [client, activeSessionId, initialActiveNodeId]);
 
   // All tree math lives in one plain class.
   const tree = useMemo(

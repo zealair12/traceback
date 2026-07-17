@@ -743,16 +743,15 @@ export function useTraceback({ apiUrl, client: injectedClient, initialActiveNode
     }
   }, [incognito, incognitoSessionId, activeSessionId, client]);
 
-  // Sign out, then return to the homepage (the landing) so there is a single
-  // entry point. The landing currently lives at /#demo; change this to '/' once
-  // the landing becomes the root.
+  // Sign out, then return to the homepage (the landing at '/') so it stays the
+  // single entry point.
   const handleSignOut = useCallback(async () => {
     try {
       await client.signOut();
     } catch (err) {
       console.error('Sign out failed:', err);
     }
-    window.location.href = '/#demo';
+    window.location.href = '/';
   }, [client]);
 
   return {

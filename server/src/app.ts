@@ -137,7 +137,7 @@ export function createApp() {
         });
         delete req.session.guestId;
       }
-      res.redirect((process.env.CLIENT_ORIGIN ?? '') + '/');
+      res.redirect((process.env.CLIENT_ORIGIN ?? '') + '/app');
     })
   );
 

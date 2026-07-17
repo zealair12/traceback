@@ -31,10 +31,10 @@ export function TracebackChat({ apiUrl, client, onEngineReady, initialActiveNode
   useEffect(() => { onEngineReady?.(tb); });
 
   // Sign-in required: once auth resolves and the visitor is not signed in, send
-  // them to the landing so it is the single way in.
+  // them to the landing (the homepage at '/') so it is the single way in.
   useEffect(() => {
     if (requireAuth && tb.authState && tb.authState.isGuest) {
-      window.location.href = '/#demo';
+      window.location.href = '/';
     }
   }, [requireAuth, tb.authState]);
 

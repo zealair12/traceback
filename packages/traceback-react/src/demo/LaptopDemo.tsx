@@ -13,11 +13,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { TracebackChat } from '../TracebackChat';
 import type { UseTracebackReturn } from '../useTraceback';
+import { BrandIcon } from '../components/BrandIcon';
 import { MockTracebackClient } from './mockClient';
 
-// Logical size the real app is rendered at, then scaled down into the screen.
+// Logical size the real app is rendered at, then scaled into the screen. The
+// height is chosen so the app's aspect ratio matches the SVG screen cutout
+// (836:494), so it fills the screen edge-to-edge with nothing clipped.
 const APP_W = 1180;
-const APP_H = 740;
+const APP_H = Math.round((1180 * 494) / 836); // ~697
 // Each step gets roughly one viewport of scroll; +1 viewport of lead-in room.
 const STEPS = 4;
 
@@ -188,6 +191,12 @@ export function LaptopDemo() {
 
   return (
     <div style={{ background: '#07070a', color: '#e5e7eb', fontFamily: 'Inter, system-ui, sans-serif' }}>
+      {/* Brand lockup at the very top of the page */}
+      <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, padding: '52px 24px 20px' }}>
+        <span style={{ color: '#3b82f6', display: 'inline-flex' }}><BrandIcon size={46} /></span>
+        <span style={{ fontSize: 'clamp(30px, 6vw, 52px)', fontWeight: 400, letterSpacing: 6, color: '#eef0f2' }}>traceback</span>
+      </header>
+
       {/* Pinned section: the laptop steps through beats while this scrolls past. */}
       <div ref={scrollRef} style={{ position: 'relative', height: `${(STEPS + 1) * 100}vh` }}>
         <div style={{ position: 'sticky', top: 0, height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>

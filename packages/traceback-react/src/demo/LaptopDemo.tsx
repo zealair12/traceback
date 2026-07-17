@@ -19,7 +19,7 @@ import { MockTracebackClient } from './mockClient';
 // height is chosen so the app's aspect ratio matches the SVG screen cutout
 // (836:494), so it fills the screen edge-to-edge with nothing clipped.
 const APP_W = 1180;
-const APP_H = Math.round((1180 * 494) / 836); // ~697
+const APP_H = Math.round((1180 * 504) / 860); // matches the screen-cutout aspect
 // Each step gets roughly one viewport of scroll; +1 viewport of lead-in room.
 const STEPS = 4;
 
@@ -64,7 +64,7 @@ const SCHEMES: Scheme[] = [
 // perfectly (no eyeballing insets on a photo). Swap in a photo later if you want
 // full photorealism.
 const VB = { w: 1000, h: 620 };
-const SCREEN = { x: 82, y: 52, w: 836, h: 494 };
+const SCREEN = { x: 70, y: 54, w: 860, h: 504 };
 
 function LaptopFrame({ width, children }: { width: number; children: React.ReactNode }) {
   const H = (width * VB.h) / VB.w;
@@ -99,11 +99,13 @@ function LaptopFrame({ width, children }: { width: number; children: React.React
         {/* lid (dark grey / space-gray) with a subtle rim; drawn on top so it
             covers the lid/deck join (no visible seam from the front) */}
         <rect x="56" y="16" width="888" height="556" rx="26" fill="url(#tb-alu)" stroke="#54555b" strokeWidth="1" />
-        {/* screen bezel */}
-        <rect x="70" y="30" width="860" height="528" rx="15" fill="#0b0b0d" />
-        {/* camera notch */}
-        <rect x="468" y="34" width="64" height="9" rx="4.5" fill="#0b0b0d" />
-        <circle cx="500" cy="38.5" r="2.1" fill="#1b1b20" />
+        {/* black bezel: thin at the sides and bottom, taller at the top edge */}
+        <rect x="62" y="22" width="876" height="544" rx="16" fill="#0a0a0c" />
+        {/* webcam + a lit green indicator (camera on), centered in the top edge */}
+        <circle cx="497" cy="38" r="3.4" fill="#111116" stroke="#2a2a30" strokeWidth="0.8" />
+        <circle cx="497" cy="38" r="1.2" fill="#2c2c34" />
+        <circle cx="509" cy="38" r="3" fill="#34d058" opacity="0.28" />
+        <circle cx="509" cy="38" r="1.7" fill="#40df66" />
         {/* screen cutout: the app overlays exactly here */}
         <rect x={SCREEN.x} y={SCREEN.y} width={SCREEN.w} height={SCREEN.h} rx="5" fill="#0d0d0d" />
       </svg>

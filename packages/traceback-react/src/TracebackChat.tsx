@@ -17,9 +17,12 @@ export interface TracebackChatProps {
   onEngineReady?: (tb: UseTracebackReturn) => void;
   // Optional: which node to focus on first load (the demo sets this per step).
   initialActiveNodeId?: string;
+  // Optional: force the color theme from outside (the landing demo cycles it in
+  // rhythm with the sign-in pulse). Does not touch the user's saved preference.
+  themeOverride?: 'dark' | 'blue' | 'light';
 }
 
-export function TracebackChat({ apiUrl, client, onEngineReady, initialActiveNodeId }: TracebackChatProps) {
+export function TracebackChat({ apiUrl, client, onEngineReady, initialActiveNodeId, themeOverride }: TracebackChatProps) {
   const tb = useTraceback({ apiUrl, client, initialActiveNodeId });
   // Hand the latest engine actions to a parent driver when one is attached.
   useEffect(() => { onEngineReady?.(tb); });
@@ -58,8 +61,13 @@ export function TracebackChat({ apiUrl, client, onEngineReady, initialActiveNode
 
   type Theme = 'dark' | 'blue' | 'light';
   const [theme, setTheme] = useState<Theme>(
-    () => (localStorage.getItem('tb-theme') as Theme | null) ?? 'dark'
+    () => themeOverride ?? (localStorage.getItem('tb-theme') as Theme | null) ?? 'dark'
   );
+  // When the parent drives the theme (the landing demo), follow it. This sets
+  // state only -- it never writes localStorage, so the user's real choice is kept.
+  useEffect(() => {
+    if (themeOverride) setTheme(themeOverride);
+  }, [themeOverride]);
 
   const handleSetTheme = useCallback((t: Theme) => {
     setTheme(t);

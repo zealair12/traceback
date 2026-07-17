@@ -10,7 +10,7 @@
 // normal content below (features, footer). The laptop screen is the actual
 // product on canned data, so the demo can never drift from the live app.
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { TracebackChat } from '../TracebackChat';
 import { BrandIcon } from '../components/BrandIcon';
 import { MockTracebackClient } from './mockClient';
@@ -36,6 +36,28 @@ const BEATS: Beat[] = [
   { title: 'Ask follow-ups', body: 'Keep the conversation going in the same thread… though it can play a little coy 😏.', side: 'right', top: 210 },
   { title: 'Any model, per message', body: 'A reply falls flat? Switch to a sharper model and ask again — the badge shows exactly who answered.', side: 'right', top: 430 },
   { title: 'Branch any reply', body: 'Fork a tangent off any earlier point. Your main thread stays exactly where it was.', side: 'left', top: 430 }
+];
+
+// One rhythm, three modes. Each beat recolors EVERYTHING to a mode -- the app's
+// real theme, the page background, the cards, the logo, and the sign-in button
+// (white -> blue -> black) -- while only the button changes size.
+interface Scheme {
+  appTheme: 'dark' | 'blue' | 'light';
+  pageBg: string;
+  logo: string;
+  logoIcon: string;
+  cardBg: string;
+  cardBorder: string;
+  cardTitle: string;
+  cardBody: string;
+  signinBg: string;
+  signinFg: string;
+  signinGlow: string;
+}
+const SCHEMES: Scheme[] = [
+  { appTheme: 'dark', pageBg: '#07070a', logo: '#eef0f2', logoIcon: '#3b82f6', cardBg: '#0f1117', cardBorder: '#1e2330', cardTitle: '#60a5fa', cardBody: '#9aa6b8', signinBg: '#ffffff', signinFg: '#3c4043', signinGlow: 'rgba(255,255,255,0.4)' },
+  { appTheme: 'blue', pageBg: '#04070f', logo: '#dbeafe', logoIcon: '#3b82f6', cardBg: '#0a1526', cardBorder: '#1a2a4a', cardTitle: '#7cb0ff', cardBody: '#9db4d8', signinBg: '#2563eb', signinFg: '#ffffff', signinGlow: 'rgba(59,130,246,0.55)' },
+  { appTheme: 'light', pageBg: '#eceff4', logo: '#1e293b', logoIcon: '#2563eb', cardBg: '#ffffff', cardBorder: '#d5dae2', cardTitle: '#2563eb', cardBody: '#5b6472', signinBg: '#1c1c1e', signinFg: '#ffffff', signinGlow: 'rgba(0,0,0,0.28)' }
 ];
 
 // A hand-authored MacBook SVG frame: vector, crisp at any size, no external
@@ -116,6 +138,14 @@ export function LaptopDemo({ authUrl }: { authUrl?: string }) {
   // in both directions -- no remount needed.
   const [stepActiveId, setStepActiveId] = useState('d1');
   const [laptopW, setLaptopW] = useState(820);
+  // The color rhythm: advances every beat, recoloring everything to that mode.
+  const [phase, setPhase] = useState(0);
+  const scheme = SCHEMES[phase];
+
+  useEffect(() => {
+    const id = window.setInterval(() => setPhase((p) => (p + 1) % SCHEMES.length), 1800);
+    return () => window.clearInterval(id);
+  }, []);
 
   // The standalone app locks the page (html, body, #root are height:100% /
   // overflow:hidden so the chat fills the viewport). This demo needs the PAGE to
@@ -176,17 +206,32 @@ export function LaptopDemo({ authUrl }: { authUrl?: string }) {
     return () => window.removeEventListener('scroll', onScroll);
   }, [mock]);
 
+  const rootStyle = {
+    background: scheme.pageBg,
+    color: scheme.logo,
+    fontFamily: 'Inter, system-ui, sans-serif',
+    transition: 'background-color .9s ease, color .9s ease',
+    '--tb-si-bg': scheme.signinBg,
+    '--tb-si-fg': scheme.signinFg,
+    '--tb-si-glow': scheme.signinGlow
+  } as CSSProperties;
+
   return (
-    <div className="tb-demo-root" style={{ background: '#07070a', color: '#e5e7eb', fontFamily: 'Inter, system-ui, sans-serif' }}>
-      {/* Make the in-laptop "Sign in with Google" the only clickable, pulsing
-          element on the page: the rest of the app is pointer-events:none, and
-          this re-enables just that button. */}
+    <div className="tb-demo-root" style={rootStyle}>
+      {/* Sign-in is the only clickable element (the rest is pointer-events:none).
+          It pulses in SIZE and takes its colors from the current mode; the page,
+          cards, logo and in-frame app only change color, in the same rhythm. */}
       <style>{`
-        .tb-demo-root [data-tb-signin]{ pointer-events:auto !important; cursor:pointer !important; animation: tb-pulse 1.6s ease-in-out infinite; }
+        .tb-demo-root [data-tb-signin]{
+          pointer-events:auto !important; cursor:pointer !important;
+          background: var(--tb-si-bg) !important; color: var(--tb-si-fg) !important;
+          transition: background-color .9s ease, color .9s ease, transform .5s ease, box-shadow .6s ease;
+          animation: tb-pulse 1.8s ease-in-out infinite;
+        }
         .tb-demo-root [data-tb-signin] *{ cursor:pointer !important; }
         @keyframes tb-pulse{
-          0%,100%{ transform: scale(1); box-shadow: 0 0 0 0 rgba(255,255,255,0); }
-          50%{ transform: scale(1.05); box-shadow: 0 0 20px 3px rgba(255,255,255,0.28); }
+          0%,100%{ transform: scale(1.06); box-shadow: 0 0 24px 4px var(--tb-si-glow); }
+          50%{ transform: scale(1); box-shadow: 0 0 0 0 transparent; }
         }
       `}</style>
 
@@ -196,8 +241,8 @@ export function LaptopDemo({ authUrl }: { authUrl?: string }) {
       <div ref={scrollRef} style={{ position: 'relative', height: `${(STEPS + 1) * 100}vh` }}>
         <div style={{ position: 'sticky', top: 0, height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', overflow: 'hidden' }}>
           <header style={{ display: 'flex', alignItems: 'center', gap: 18, paddingTop: 'clamp(20px, 4vh, 52px)', paddingBottom: 6, flexShrink: 0 }}>
-            <span style={{ color: '#3b82f6', display: 'inline-flex' }}><BrandIcon size={70} /></span>
-            <span style={{ fontSize: 'clamp(42px, 7vw, 84px)', fontWeight: 400, letterSpacing: 8, color: '#eef0f2' }}>traceback</span>
+            <span style={{ color: scheme.logoIcon, display: 'inline-flex', transition: 'color .9s ease' }}><BrandIcon size={70} /></span>
+            <span style={{ fontSize: 'clamp(42px, 7vw, 84px)', fontWeight: 400, letterSpacing: 8, color: scheme.logo, transition: 'color .9s ease' }}>traceback</span>
           </header>
           <div style={{ position: 'relative', flex: 1, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {BEATS.map((b, i) => (
@@ -208,23 +253,23 @@ export function LaptopDemo({ authUrl }: { authUrl?: string }) {
                 [b.side]: 'max(16px, 4vw)',
                 top: b.top,
                 width: 224,
-                background: '#0f1117',
-                border: '1px solid #1e2330',
+                background: scheme.cardBg,
+                border: `1px solid ${scheme.cardBorder}`,
                 borderRadius: 14,
                 padding: '14px 16px',
                 opacity: beat === i ? 1 : 0.2,
                 transform: beat === i ? 'translateY(0)' : `translateY(${b.side === 'left' ? '-' : ''}6px)`,
-                transition: 'opacity .5s ease, transform .5s ease'
+                transition: 'opacity .5s ease, transform .5s ease, background-color .9s ease, border-color .9s ease'
               }}
             >
-              <div style={{ fontSize: 13, fontWeight: 500, color: '#60a5fa', marginBottom: 4 }}>{b.title}</div>
-              <div style={{ fontSize: 13.5, color: '#9aa6b8', lineHeight: 1.5 }}>{b.body}</div>
+              <div style={{ fontSize: 13, fontWeight: 500, color: scheme.cardTitle, marginBottom: 4, transition: 'color .9s ease' }}>{b.title}</div>
+              <div style={{ fontSize: 13.5, color: scheme.cardBody, lineHeight: 1.5, transition: 'color .9s ease' }}>{b.body}</div>
             </div>
           ))}
 
             <div style={{ zIndex: 2 }}>
               <LaptopFrame width={laptopW}>
-                <TracebackChat client={mock} initialActiveNodeId={stepActiveId} />
+                <TracebackChat client={mock} initialActiveNodeId={stepActiveId} themeOverride={scheme.appTheme} />
               </LaptopFrame>
             </div>
           </div>

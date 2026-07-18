@@ -270,13 +270,16 @@ export function LaptopDemo({ authUrl }: { authUrl?: string }) {
         // Flank: reserve a card's width on each side so the laptop is sized to
         // leave space for the cards (never overlapping).
         const wCap = W - (2 * (CARD_W + CARD_GAP) + 48);
-        const hCap = (Hh - 190) / (VB.h / VB.w);
+        // Reserve vertical room for the logo above AND the "use traceback"
+        // button below, so both fit in one screen and the laptop sits higher.
+        const hCap = (Hh - 320) / (VB.h / VB.w);
         setLaptopW(Math.max(300, Math.min(1120, wCap, hCap)));
       } else {
         // Stacked (mobile): laptop near the screen width with small margins;
         // reserve vertical room for the logo above and the typewriter box below.
         const wCap = W - 36;
-        const hCap = (Hh - 320) / (VB.h / VB.w);
+        // Reserve room for the logo, the typewriter box, AND the CTA button.
+        const hCap = (Hh - 440) / (VB.h / VB.w);
         setLaptopW(Math.max(280, Math.min(620, wCap, hCap)));
       }
     };
@@ -319,6 +322,35 @@ export function LaptopDemo({ authUrl }: { authUrl?: string }) {
     '--tb-si-glow': scheme.signinGlow
   } as CSSProperties;
 
+  // The bold call to action. Same width as the laptop; on desktop it pins to the
+  // bottom of the screen, on mobile it tucks into the centered stack under the
+  // typewriter box. Runs the same sign-in as the in-laptop easter-egg button.
+  const ctaButton = (
+    <button
+      type="button"
+      data-tb-cta
+      onClick={() => mock.signIn()}
+      style={{
+        width: laptopW,
+        flexShrink: 0,
+        marginTop: canFlank ? 24 : 4,
+        marginBottom: canFlank ? 'clamp(18px, 4vh, 48px)' : 0,
+        padding: 'clamp(15px, 2.2vh, 24px) 0',
+        border: 'none',
+        borderRadius: 18,
+        background: scheme.signinBg,
+        color: scheme.signinFg,
+        fontFamily: 'inherit',
+        fontSize: 'clamp(19px, 2.3vw, 30px)',
+        fontWeight: 500,
+        letterSpacing: 3,
+        lineHeight: 1
+      }}
+    >
+      use traceback
+    </button>
+  );
+
   return (
     <div className="tb-demo-root" style={rootStyle}>
       {/* Sign-in is the only clickable element (the rest is pointer-events:none).
@@ -344,6 +376,11 @@ export function LaptopDemo({ authUrl }: { authUrl?: string }) {
           vertical-align:-2px; background:#6ea8fe; animation: tb-blink 1s step-end infinite;
         }
         @keyframes tb-blink{ 0%,100%{opacity:1} 50%{opacity:0} }
+        .tb-demo-root [data-tb-cta]{
+          cursor:pointer; pointer-events:auto;
+          transition: background-color 2.5s ease, color 2.5s ease, transform .2s ease, box-shadow .35s ease;
+        }
+        .tb-demo-root [data-tb-cta]:hover{ transform: translateY(-2px); box-shadow: 0 12px 34px var(--tb-si-glow); }
       `}</style>
 
       {/* Everything lives in ONE pinned viewport: the logo and laptop never move
@@ -355,7 +392,7 @@ export function LaptopDemo({ authUrl }: { authUrl?: string }) {
             <span style={{ color: scheme.logoIcon, display: 'inline-flex', transform: 'translateY(3px)', transition: 'color 2.5s ease' }}><BrandIcon size={70} /></span>
             <span style={{ fontSize: 'clamp(42px, 7vw, 84px)', fontWeight: 400, letterSpacing: 8, lineHeight: 1, color: scheme.logo, transition: 'color 2.5s ease' }}>traceback</span>
           </header>
-          <div style={{ position: 'relative', flex: 1, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ position: 'relative', flex: 1, width: '100%', display: 'flex', justifyContent: 'center', alignItems: canFlank ? 'center' : 'flex-start', paddingTop: canFlank ? 0 : 'clamp(10px, 3vh, 40px)' }}>
           {/* Desktop: four terminal cards flank the laptop, the active one lit. */}
           {canFlank &&
             BEATS.map((b, i) => {
@@ -402,8 +439,13 @@ export function LaptopDemo({ authUrl }: { authUrl?: string }) {
                 <TracebackChat client={mock} initialActiveNodeId={stepActiveId} themeOverride={scheme.appTheme} forceDesktop />
               </LaptopFrame>
               {!canFlank && <TypeCard text={BEATS[beat].body} width={boxW} />}
+              {/* Mobile: the CTA tucks into the centered stack under the box. */}
+              {!canFlank && ctaButton}
             </div>
           </div>
+
+          {/* Desktop: the CTA pins to the bottom of the screen, laptop-wide. */}
+          {canFlank && ctaButton}
         </div>
       </div>
     </div>

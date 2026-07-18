@@ -1,4 +1,4 @@
-#www.tracebackai.com
+## www.tracebackai.com
 
 A chat interface that models conversations as trees instead of linear transcripts, allowing you to branch from any response, compare paths side-by-side, and prune context dynamically to keep model interactions focused and cost-effective.
 

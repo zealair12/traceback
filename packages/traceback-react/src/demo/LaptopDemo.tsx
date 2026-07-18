@@ -333,7 +333,7 @@ export function LaptopDemo({ authUrl }: { authUrl?: string }) {
       style={{
         width: laptopW,
         flexShrink: 0,
-        marginTop: canFlank ? 24 : 4,
+        marginTop: canFlank ? 24 : 16,
         marginBottom: canFlank ? 'clamp(18px, 4vh, 48px)' : 0,
         padding: 'clamp(15px, 2.2vh, 24px) 0',
         border: 'none',
@@ -434,7 +434,7 @@ export function LaptopDemo({ authUrl }: { authUrl?: string }) {
 
             {/* Centered unit: the laptop, and on mobile the persistent typewriter
                 box directly below it (both near the screen width). */}
-            <div style={{ zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: canFlank ? 0 : 18 }}>
+            <div style={{ zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: canFlank ? 0 : 30 }}>
               <LaptopFrame width={laptopW}>
                 <TracebackChat client={mock} initialActiveNodeId={stepActiveId} themeOverride={scheme.appTheme} forceDesktop />
               </LaptopFrame>

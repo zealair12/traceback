@@ -141,6 +141,68 @@ function LaptopFrame({ width, children }: { width: number; children: React.React
   );
 }
 
+// The mobile card: one persistent terminal box whose body text animates when
+// the beat changes -- the current line highlights (a visible selection), gets
+// deleted, then the new line types in with a blinking caret.
+//
+// Fast-scroll handling: a debounce. When the text prop changes, we wait ~150ms
+// for the scroll to SETTLE before animating, and every new target cancels the
+// pending/in-flight sequence. So blowing through beats does not fire a
+// highlight/delete/type for each one -- the box holds its last line, then plays
+// exactly one clean animation to the beat you land on.
+function TypeCard({ text, width }: { text: string; width: number }) {
+  const [shown, setShown] = useState(text);
+  const [highlight, setHighlight] = useState(false);
+  const shownRef = useRef(text);
+  useEffect(() => {
+    shownRef.current = shown;
+  }, [shown]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const timers: number[] = [];
+    const at = (ms: number, fn: () => void) =>
+      timers.push(window.setTimeout(() => { if (!cancelled) fn(); }, ms));
+
+    at(150, () => {
+      if (shownRef.current === text) return; // already showing the settled line
+      setHighlight(true); // 1) select the whole current line
+      at(240, () => {
+        setHighlight(false);
+        setShown(''); // 2) delete it
+        let i = 0;
+        const type = () => {
+          i += 1;
+          setShown(text.slice(0, i));
+          if (i < text.length) at(18, type); // 3) type the new line out
+        };
+        at(110, type);
+      });
+    });
+
+    return () => { cancelled = true; timers.forEach(clearTimeout); };
+  }, [text]);
+
+  return (
+    <div style={{ width, background: '#0e1117', border: '1px solid #262b36', borderRadius: 12, overflow: 'hidden' }}>
+      {/* Terminal chrome: traffic lights left, the traceback mark right. */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 13px', borderBottom: '1px solid #1b1f27' }}>
+        <div style={{ display: 'flex', gap: 7 }}>
+          <span style={{ width: 11, height: 11, borderRadius: '50%', background: '#ff5f56' }} />
+          <span style={{ width: 11, height: 11, borderRadius: '50%', background: '#ffbd2e' }} />
+          <span style={{ width: 11, height: 11, borderRadius: '50%', background: '#27c93f' }} />
+        </div>
+        <span aria-hidden="true" style={{ color: '#6ea8fe', display: 'inline-flex' }}><BrandIcon size={16} /></span>
+      </div>
+      {/* Fixed min-height so the box never resizes as the line length changes. */}
+      <div style={{ padding: '14px 16px', minHeight: 92, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', fontSize: 13.5, lineHeight: 1.6, color: '#c9d1d9' }}>
+        <span style={{ background: highlight ? 'rgba(96,165,250,0.4)' : 'transparent', borderRadius: 2, WebkitBoxDecorationBreak: 'clone', boxDecorationBreak: 'clone', transition: 'background .12s ease' }}>{shown}</span>
+        <span className="tb-caret" aria-hidden="true" />
+      </div>
+    </div>
+  );
+}
+
 export function LaptopDemo({ authUrl }: { authUrl?: string }) {
   const mock = useMemo(() => new MockTracebackClient(authUrl ?? ''), [authUrl]);
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -161,11 +223,12 @@ export function LaptopDemo({ authUrl }: { authUrl?: string }) {
   // colliding with it, the cards flank the laptop (hugging its edges with a
   // fixed gap). Otherwise (narrow/mobile) they cannot flank, so only the active
   // card shows, placed just below the laptop where it never overlaps.
-  const laptopH = (laptopW * VB.h) / VB.w;
   const halfLaptop = laptopW / 2;
   // Flank on desktop/laptop widths (the laptop is sized above to leave room);
-  // stack below on narrower screens where cards would collide with the frame.
+  // stack below on narrower screens where the typewriter box sits under it.
   const canFlank = vw >= 1024;
+  // Mobile box: near the screen width, matched under the laptop.
+  const boxW = Math.min(vw - 36, 440);
 
   useEffect(() => {
     const id = window.setInterval(() => setPhase((p) => (p + 1) % SCHEMES.length), 5000);
@@ -201,14 +264,19 @@ export function LaptopDemo({ authUrl }: { authUrl?: string }) {
       const W = window.innerWidth;
       const Hh = window.innerHeight;
       setVw(W);
-      const wantFlank = W >= 1024;
-      // Horizontal room: when flanking, reserve a card's width on each side so
-      // the laptop is sized to leave space for them (never overlapping).
-      const wCap = W - (wantFlank ? 2 * (CARD_W + CARD_GAP) + 48 : 100);
-      // Vertical room: always leave room for the logo; when stacked, also leave
-      // room for the one card that sits below the laptop.
-      const hCap = (Hh - (wantFlank ? 190 : 380)) / (VB.h / VB.w);
-      setLaptopW(Math.max(300, Math.min(1120, wCap, hCap)));
+      if (W >= 1024) {
+        // Flank: reserve a card's width on each side so the laptop is sized to
+        // leave space for the cards (never overlapping).
+        const wCap = W - (2 * (CARD_W + CARD_GAP) + 48);
+        const hCap = (Hh - 190) / (VB.h / VB.w);
+        setLaptopW(Math.max(300, Math.min(1120, wCap, hCap)));
+      } else {
+        // Stacked (mobile): laptop near the screen width with small margins;
+        // reserve vertical room for the logo above and the typewriter box below.
+        const wCap = W - 36;
+        const hCap = (Hh - 320) / (VB.h / VB.w);
+        setLaptopW(Math.max(280, Math.min(620, wCap, hCap)));
+      }
     };
     fit();
     window.addEventListener('resize', fit);
@@ -269,6 +337,11 @@ export function LaptopDemo({ authUrl }: { authUrl?: string }) {
           0%,100%{ transform: scale(1.06); box-shadow: 0 0 24px 4px var(--tb-si-glow); }
           50%{ transform: scale(1); box-shadow: 0 0 0 0 transparent; }
         }
+        .tb-caret{
+          display:inline-block; width:7px; height:1.05em; margin-left:2px;
+          vertical-align:-2px; background:#6ea8fe; animation: tb-blink 1s step-end infinite;
+        }
+        @keyframes tb-blink{ 0%,100%{opacity:1} 50%{opacity:0} }
       `}</style>
 
       {/* Everything lives in ONE pinned viewport: the logo and laptop never move
@@ -281,66 +354,52 @@ export function LaptopDemo({ authUrl }: { authUrl?: string }) {
             <span style={{ fontSize: 'clamp(42px, 7vw, 84px)', fontWeight: 400, letterSpacing: 8, lineHeight: 1, color: scheme.logo, transition: 'color 2.5s ease' }}>traceback</span>
           </header>
           <div style={{ position: 'relative', flex: 1, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          {BEATS.map((b, i) => {
-            const active = beat === i;
-            // In stacked (narrow) mode, render only the active card, below the
-            // laptop; skip the rest so nothing stacks or hides behind the frame.
-            if (!canFlank && !active) return null;
-
-            const placement: CSSProperties = canFlank
-              ? {
-                  // Flank: hug the laptop's edge with a fixed gap, staggered into
-                  // an upper and a lower row around the vertical center.
-                  top: b.row === 'upper' ? 'calc(50% - 168px)' : 'calc(50% + 6px)',
-                  left:
-                    b.side === 'left'
-                      ? `calc(50% - ${halfLaptop + CARD_GAP + CARD_W}px)`
-                      : `calc(50% + ${halfLaptop + CARD_GAP}px)`,
-                  width: CARD_W,
-                  opacity: active ? 1 : 0.32,
-                  transform: active ? 'translateY(0)' : `translateY(${b.side === 'left' ? '-' : ''}6px)`
-                }
-              : {
-                  // Stacked: centered just below the laptop, always fully visible.
-                  top: `calc(50% + ${laptopH / 2 + 16}px)`,
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  width: Math.min(CARD_W, vw - 32),
-                  opacity: 1
-                };
-
-            return (
-              <div
-                key={i}
-                style={{
-                  position: 'absolute',
-                  zIndex: 3,
-                  background: '#0e1117',
-                  border: '1px solid #262b36',
-                  borderRadius: 10,
-                  overflow: 'hidden',
-                  transition: 'opacity .5s ease, transform .5s ease',
-                  ...placement
-                }}
-              >
-                {/* Terminal chrome: traffic lights left, the traceback mark right. */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 10px', borderBottom: '1px solid #1b1f27' }}>
-                  <div style={{ display: 'flex', gap: 6 }}>
-                    <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#ff5f56' }} />
-                    <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#ffbd2e' }} />
-                    <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#27c93f' }} />
+          {/* Desktop: four terminal cards flank the laptop, the active one lit. */}
+          {canFlank &&
+            BEATS.map((b, i) => {
+              const active = beat === i;
+              return (
+                <div
+                  key={i}
+                  style={{
+                    position: 'absolute',
+                    zIndex: 3,
+                    background: '#0e1117',
+                    border: '1px solid #262b36',
+                    borderRadius: 10,
+                    overflow: 'hidden',
+                    transition: 'opacity .5s ease, transform .5s ease',
+                    top: b.row === 'upper' ? 'calc(50% - 168px)' : 'calc(50% + 6px)',
+                    left:
+                      b.side === 'left'
+                        ? `calc(50% - ${halfLaptop + CARD_GAP + CARD_W}px)`
+                        : `calc(50% + ${halfLaptop + CARD_GAP}px)`,
+                    width: CARD_W,
+                    opacity: active ? 1 : 0.32,
+                    transform: active ? 'translateY(0)' : `translateY(${b.side === 'left' ? '-' : ''}6px)`
+                  }}
+                >
+                  {/* Terminal chrome: traffic lights left, the traceback mark right. */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 10px', borderBottom: '1px solid #1b1f27' }}>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#ff5f56' }} />
+                      <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#ffbd2e' }} />
+                      <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#27c93f' }} />
+                    </div>
+                    <span aria-hidden="true" style={{ color: '#6ea8fe', display: 'inline-flex' }}><BrandIcon size={15} /></span>
                   </div>
-                  <span aria-hidden="true" style={{ color: '#6ea8fe', display: 'inline-flex' }}><BrandIcon size={15} /></span>
+                  <div style={{ padding: '11px 13px 13px', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', fontSize: 12.5, lineHeight: 1.55, color: '#c9d1d9' }}>{b.body}</div>
                 </div>
-                <div style={{ padding: '11px 13px 13px', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', fontSize: 12.5, lineHeight: 1.55, color: '#c9d1d9' }}>{b.body}</div>
-              </div>
-            );
-          })}
+              );
+            })}
 
-            <div style={{ zIndex: 2 }}>
+            {/* Centered unit: the laptop, and on mobile the persistent typewriter
+                box directly below it (both near the screen width). */}
+            <div style={{ zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: canFlank ? 0 : 18 }}>
               <LaptopFrame width={laptopW}>
                 <TracebackChat client={mock} initialActiveNodeId={stepActiveId} themeOverride={scheme.appTheme} />
               </LaptopFrame>
+              {!canFlank && <TypeCard text={BEATS[beat].body} width={boxW} />}
             </div>
           </div>
         </div>

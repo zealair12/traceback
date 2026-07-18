@@ -23,9 +23,14 @@ export interface TracebackChatProps {
   // When true (the real app), the app requires sign-in: anyone not signed in is
   // sent to the landing (the single entry point). The demo leaves this unset.
   requireAuth?: boolean;
+  // When true, always render the full desktop layout (sidebar + tree side by
+  // side) regardless of viewport width. The landing demo uses this so the app
+  // shown inside the laptop looks like the laptop (desktop) app even when the
+  // page is viewed on a phone. The real app leaves it unset, staying responsive.
+  forceDesktop?: boolean;
 }
 
-export function TracebackChat({ apiUrl, client, onEngineReady, initialActiveNodeId, themeOverride, requireAuth }: TracebackChatProps) {
+export function TracebackChat({ apiUrl, client, onEngineReady, initialActiveNodeId, themeOverride, requireAuth, forceDesktop }: TracebackChatProps) {
   const tb = useTraceback({ apiUrl, client, initialActiveNodeId });
   // Hand the latest engine actions to a parent driver when one is attached.
   useEffect(() => { onEngineReady?.(tb); });
@@ -43,7 +48,9 @@ export function TracebackChat({ apiUrl, client, onEngineReady, initialActiveNode
   const [showKeys, setShowKeys] = useState(false);
   const [showImport, setShowImport] = useState(false);
 
-  const isMobile = () => window.innerWidth < 768;
+  // In forced-desktop mode (the landing demo's in-laptop app) nothing is ever
+  // "mobile", so the sidebar + tree default open and stay side by side.
+  const isMobile = () => !forceDesktop && window.innerWidth < 768;
 
   // Sidebar open/width state — hidden by default on mobile.
   const [sidebarOpen, setSidebarOpen] = useState(() => !isMobile());
@@ -207,20 +214,20 @@ export function TracebackChat({ apiUrl, client, onEngineReady, initialActiveNode
       {/* Sidebar — overlays on mobile, in-flow flex child on desktop */}
       {!treeFullscreen && (
         <>
-          {/* Mobile backdrop: tap outside to close sidebar */}
-          {sidebarOpen && (
+          {/* Mobile backdrop: tap outside to close sidebar (not in forced-desktop) */}
+          {!forceDesktop && sidebarOpen && (
             <div
               className="fixed inset-0 z-40 bg-black/50 md:hidden"
               onClick={() => setSidebarOpen(false)}
             />
           )}
 
-          {/* On mobile (< md): fixed overlay; on desktop: in-flow flex child */}
+          {/* On mobile (< md): fixed overlay; on desktop (or forced): in-flow child */}
           <div
             style={{ width: sidebarOpen ? sidebarWidth : 0 }}
             className={`
               overflow-hidden flex-shrink-0
-              max-md:fixed max-md:left-0 max-md:top-0 max-md:h-full max-md:z-50
+              ${forceDesktop ? '' : 'max-md:fixed max-md:left-0 max-md:top-0 max-md:h-full max-md:z-50'}
               ${!sidebarResizing ? 'transition-[width] duration-200' : ''}
             `}
           >
@@ -246,7 +253,7 @@ export function TracebackChat({ apiUrl, client, onEngineReady, initialActiveNode
           {/* Resize divider — desktop only; wider hit area, thin visual line */}
           <div
             onMouseDown={handleSidebarDividerMouseDown}
-            className="hidden md:flex w-5 flex-shrink-0 cursor-col-resize items-center justify-center group"
+            className={`${forceDesktop ? 'flex' : 'hidden md:flex'} w-5 flex-shrink-0 cursor-col-resize items-center justify-center group`}
           >
             <div className="w-px h-full transition-colors" style={{ backgroundColor: treeConnectorColor(theme) }} />
           </div>
@@ -302,8 +309,8 @@ export function TracebackChat({ apiUrl, client, onEngineReady, initialActiveNode
 
       {(treePanelVisible || treeFullscreen) && (
         <>
-          {/* Mobile: dim backdrop behind the tree — tap to close */}
-          {treePanelVisible && !treeFullscreen && (
+          {/* Mobile: dim backdrop behind the tree — tap to close (not forced-desktop) */}
+          {!forceDesktop && treePanelVisible && !treeFullscreen && (
             <div
               className="fixed inset-0 z-20 bg-black/40 md:hidden"
               onClick={() => setTreePanelVisible(false)}
@@ -311,8 +318,8 @@ export function TracebackChat({ apiUrl, client, onEngineReady, initialActiveNode
           )}
 
           {/* On mobile: fixed full-screen overlay (z-30, above backdrop).
-              On desktop: normal flex child at treePanelWidth. */}
-          <div className="max-md:fixed max-md:inset-0 max-md:z-30 max-md:flex md:contents">
+              On desktop (or forced): normal flex child at treePanelWidth. */}
+          <div className={forceDesktop ? 'contents' : 'max-md:fixed max-md:inset-0 max-md:z-30 max-md:flex md:contents'}>
             <TreePanel
               nodes={tb.nodes}
               edges={tb.edges}
@@ -325,7 +332,7 @@ export function TracebackChat({ apiUrl, client, onEngineReady, initialActiveNode
                 if (window.innerWidth < 768) setTreePanelVisible(false);
               }}
               onDeleteSubtree={tb.handleDeleteSubtree}
-              width={treeFullscreen ? viewportW : viewportW < 768 ? viewportW : treePanelWidth}
+              width={treeFullscreen ? viewportW : !forceDesktop && viewportW < 768 ? viewportW : treePanelWidth}
               isFullscreen={treeFullscreen}
               onToggleFullscreen={() => setTreeFullscreen((f) => !f)}
               onClose={() => { setTreePanelVisible(false); setTreeFullscreen(false); }}

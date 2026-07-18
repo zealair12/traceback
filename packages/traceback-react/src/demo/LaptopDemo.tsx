@@ -100,11 +100,13 @@ function LaptopFrame({ width, children }: { width: number; children: React.React
             corners, only the bottom two rounded */}
         <path d="M440 575 L560 575 L560 578 Q560 584 554 584 L446 584 Q440 584 440 578 Z" fill="#141519" />
         {/* rubber feet: short cylinders, so thin rectangles from the front.
-            Their top overlaps INTO the deck bottom (deck ends at y=598) so no
-            background sliver can show between deck and foot at any scale/DPI or
-            in light theme; they protrude a few units below the deck. */}
-        <rect x="98" y="594" width="64" height="9" rx="1.5" fill="#16171b" />
-        <rect x="838" y="594" width="64" height="9" rx="1.5" fill="#16171b" />
+            Their top overlaps just 2 units INTO the deck bottom (deck ends at
+            y=598) -- enough that no background sliver shows between deck and
+            foot at any scale/DPI or in light theme -- while the rest protrudes
+            clearly below, so the foot reads as a pad under the base, not buried
+            half-inside it. */}
+        <rect x="98" y="596" width="64" height="12" rx="1.5" fill="#16171b" />
+        <rect x="838" y="596" width="64" height="12" rx="1.5" fill="#16171b" />
         {/* lid: rounded top corners only; bottom corners square (that edge sits
             into the keyboard deck and is not visible). Its top radius is exactly
             the bezel radius + 6 so the grey border is a uniform 6px, corners
@@ -397,7 +399,7 @@ export function LaptopDemo({ authUrl }: { authUrl?: string }) {
                 box directly below it (both near the screen width). */}
             <div style={{ zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: canFlank ? 0 : 18 }}>
               <LaptopFrame width={laptopW}>
-                <TracebackChat client={mock} initialActiveNodeId={stepActiveId} themeOverride={scheme.appTheme} />
+                <TracebackChat client={mock} initialActiveNodeId={stepActiveId} themeOverride={scheme.appTheme} forceDesktop />
               </LaptopFrame>
               {!canFlank && <TypeCard text={BEATS[beat].body} width={boxW} />}
             </div>

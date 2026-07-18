@@ -1,113 +1,70 @@
-# traceback
+# tracebackai.com
 
-https://www.tracebackai.com/
+A chat interface that models conversations as trees instead of linear transcripts, allowing you to branch from any response, compare paths side-by-side, and prune context dynamically to keep model interactions focused and cost-effective.
 
-How can we utilize relational database structures to enable non-linear, tree-based conversations that optimize LLM memory usage?
+---
 
-## Repositories
+## Inspiration
 
-This repo is the **Traceback** stack: `server/` (Express + Prisma + Groq), `client/` (standalone tree UI), and `packages/traceback-shared` (HTTP client types).
+Every traditional chat tool forces thinking into a straight line, but real thinking branches. When researching, drafting, or weighing a decision, you want to try one direction, back up, try another, and keep them side by side. In a normal transcript, the moment you follow one path, every other path you considered gets buried below an endless scroll.
 
-**River** ([zealair12/river](https://github.com/zealair12/river)) is a separate project. For local development, clone both next to each other (same parent folder), for example:
+There is a second, quieter problem. To continue any of those directions, most apps resend the entire history to the model every turn, including the tangents that have nothing to do with what you are asking now. That is slower, more expensive, and it dilutes the model's focus.
 
-```text
-your-workspace/
-  traceback/    ← this repo
-  river/        ← River UI + market stack
-```
+---
 
-River’s client embeds Traceback chat via `VITE_TRACEBACK_API_URL` (see `river/.env.example`) and vendors a copy of `@traceback/shared` under `river/packages/traceback-shared` so the River repo builds on its own. Keep that package in sync with `traceback/packages/traceback-shared` when the API changes.
+## What It Does
 
-## Backend setup
+Traceback stores every conversation as a tree. You can:
 
-The backend lives in the `server/` directory and is built with:
+* Branch from any earlier reply into a new direction.
+* Switch between branches and compare their answers side-by-side.
+* Return to the exact point you left, with nothing lost.
 
-- **Node.js / Express**
-- **PostgreSQL** with **Prisma ORM**
-- **Groq** for LLM chat completions
+The key move happens on the backend. When you continue from a branch, Traceback sends the model only that branch's root-to-node lineage (the direct line of ancestors) instead of the whole tree.
 
-### 1. Install dependencies
+For a node $n$ at depth $d$ in a conversation of $N$ total messages, a linear chat pays for every message it has ever seen:
 
-```bash
-cd server
-npm install
-```
+$$\text{cost}_{\text{linear}} \propto \sum_{i=1}^{N} t_i$$
 
-### 2. Configure environment
+Traceback pays only for the active lineage $A(n)$, where $\vert{}A(n)\vert{} = d + 1 \ll N$:
 
-Copy `server/.env.example` to `server/.env` and set:
+$$\text{cost}_{\text{traceback}} \propto \sum_{m \in A(n)} t_m$$
 
-- `PORT` – API port (default `4000`)
-- `DATABASE_URL` – PostgreSQL connection string
-- `GROQ_API_KEY` – your Groq API key
-- `CLIENT_ORIGIN` – frontend origin (e.g. `http://localhost:5173`)
+You keep your full exploration history, but each reply stays focused and cheap.
 
-### 3. Run Prisma migrations
+---
 
-Generate the Prisma client and create/update the database schema:
+## Architecture & Tech Stack
 
-```bash
-cd server
-npm run prisma:generate
-npm run prisma:migrate
-```
+Traceback is built as a TypeScript monorepo:
 
-This will apply the `Session` and `Message` models used to represent the non-linear conversation tree.
+* **Server:** Express, Prisma, and PostgreSQL (hosted on Neon). Messages self-reference via a `parentId`, making the table the tree. Fetching a branch's context happens in a single recursive CTE that walks root-to-node, so the pruned lineage never has to be reassembled in application code.
+* **Web:** React, Vite, and Tailwind CSS. React Flow renders the live conversation graph. A shared client package speaks to the server so the same engine drives both the app and the landing-page demo.
+* **Models:** An OpenAI-compatible provider layer routes to OpenRouter (for chat and web search) and Groq (for fast speech-to-text). Switching models is a matter of configuration, not code.
+* **Realtime:** Replies and agent steps stream token-by-token over Server-Sent Events (SSE).
+* **Auth & Sessions:** Google OAuth via Passport with Postgres-backed sessions so a user's tree survives restarts.
 
-### 4. Start the backend
+The landing page renders the real application inside a scroll-driven MacBook frame using canned data, ensuring the demo matches what actually ships.
 
-```bash
-cd server
-npm run dev
-```
+---
 
-The Express server will start on `http://localhost:4000` (or the port you configured).
+## Technical Challenges
 
-### 5. Verification suites
+* **Modeling a Tree in a Relational DB:** Getting lineage queries right and fast using a recursive CTE, avoiding $N$ round-trips per branch.
+* **Pruning Context Safely:** Sending only the ancestry required precision around what "the conversation so far" means on a fork without breaking model coherence.
+* **Persistent Sessions:** An in-memory session store silently wiped user logins on each redeploy. Moving to a Postgres-backed store resolved this unexpected behavior.
+* **Responsive Layouts:** The tree canvas, branch controls, and landing demo had to scale from a 375px phone to ultra-wide desktops, including forcing the in-frame app to render its desktop layout when viewed on a mobile device.
 
-Eight headless scripts under `server/scripts/` prove the system end to end --
-no API key needed (they run against the local database and a built-in mock
-model). Each prints PASSED or FAILED:
+---
 
-```bash
-cd server
-npx tsx scripts/verify-lineage.ts        # core context pruning (recursive CTE)
-npx tsx scripts/verify-delete.ts         # subtree deletion
-npx tsx scripts/verify-message-flow.ts   # providers + per-message model choice
-npx tsx scripts/verify-openai-proxy.ts   # the /v1/chat/completions proxy
-npx tsx scripts/verify-byok.ts           # bring-your-own-key handling
-npx tsx scripts/verify-import.ts         # chat-history importers
-npx tsx scripts/verify-multimodal.ts     # image and PDF attachments
-npx tsx scripts/verify-transcribe.ts     # speech-to-text endpoint
-```
+## Project Status
 
-## Universal OpenAI-compatible proxy
+URL: tracebackai.com
 
-Traceback also speaks the OpenAI API format, so existing apps that talk to
-OpenAI can route through it with no code changes -- just point their base URL at
-the Traceback server. The endpoint is `POST /v1/chat/completions`.
+---
 
-- The `model` field selects the backend and model as `provider/model`
-  (e.g. `groq/llama-3.3-70b-versatile` or `openai/gpt-4o`). A bare model name
-  uses the default provider (`LLM_PROVIDER`).
-- **Drop-in:** send a normal OpenAI request. Traceback stores the conversation
-  as a tree and answers the last message, replying in the standard
-  `chat.completion` shape.
-- **Branch-aware (opt-in):** include `session_id` (and optionally `parent_id`)
-  to attach the new turn at a specific point in an existing tree. Traceback then
-  forwards only the pruned root-to-node lineage to the model -- this is where the
-  context-saving really pays off. The response includes a `traceback` object
-  with `session_id`, `user_message_id`, and `assistant_message_id` so a
-  branch-aware client can continue the tree.
+## Note for Hackathon Reviewers: LLM Usage & Tooling
 
-Example:
+This project was built with the assistance of advanced language models, primarily utilizing OpenAI Codex and GPT-5.6 for initial architectural planning, scaffolding the monorepo, and drafting the complex recursive CTEs needed for tree traversal.
 
-```bash
-curl http://localhost:4000/v1/chat/completions \
-  -H 'content-type: application/json' \
-  -d '{"model":"groq/llama-3.3-70b-versatile","messages":[{"role":"user","content":"Hello"}]}'
-```
-
-Notes: streaming (`stream: true`) is not supported yet; the proxy currently adds
-Traceback's own brief system instruction to the context.
-
+During development, the initial API credits provided for the frontier models were exhausted rapidly (essentially burned through in about three prompts due to heavy context windows during large-file code generation). While the generation finished well and set up a solid foundation, the remainder of the development, refinement, and edge-case debugging had to be completed using Anthropic Claude (Opus 4.8) to bring the project to its final state.

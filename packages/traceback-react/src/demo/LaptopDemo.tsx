@@ -333,7 +333,7 @@ export function LaptopDemo({ authUrl }: { authUrl?: string }) {
       style={{
         width: laptopW,
         flexShrink: 0,
-        marginTop: canFlank ? 24 : 16,
+        marginTop: canFlank ? 24 : 0,
         marginBottom: canFlank ? 'clamp(18px, 4vh, 48px)' : 0,
         padding: 'clamp(15px, 2.2vh, 24px) 0',
         border: 'none',
@@ -392,7 +392,7 @@ export function LaptopDemo({ authUrl }: { authUrl?: string }) {
             <span style={{ color: scheme.logoIcon, display: 'inline-flex', transform: 'translateY(3px)', transition: 'color 2.5s ease' }}><BrandIcon size={70} /></span>
             <span style={{ fontSize: 'clamp(42px, 7vw, 84px)', fontWeight: 400, letterSpacing: 8, lineHeight: 1, color: scheme.logo, transition: 'color 2.5s ease' }}>traceback</span>
           </header>
-          <div style={{ position: 'relative', flex: 1, width: '100%', display: 'flex', justifyContent: 'center', alignItems: canFlank ? 'center' : 'flex-start', paddingTop: canFlank ? 0 : 'clamp(10px, 3vh, 40px)' }}>
+          <div style={{ position: 'relative', flex: 1, width: '100%', display: 'flex', justifyContent: 'center', alignItems: canFlank ? 'center' : 'stretch', paddingTop: canFlank ? 0 : 'clamp(8px, 2vh, 24px)', paddingBottom: canFlank ? 0 : 'clamp(16px, 3vh, 32px)' }}>
           {/* Desktop: four terminal cards flank the laptop, the active one lit. */}
           {canFlank &&
             BEATS.map((b, i) => {
@@ -434,7 +434,7 @@ export function LaptopDemo({ authUrl }: { authUrl?: string }) {
 
             {/* Centered unit: the laptop, and on mobile the persistent typewriter
                 box directly below it (both near the screen width). */}
-            <div style={{ zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: canFlank ? 0 : 30 }}>
+            <div style={{ zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: canFlank ? 'flex-start' : 'space-between', gap: 0 }}>
               <LaptopFrame width={laptopW}>
                 <TracebackChat client={mock} initialActiveNodeId={stepActiveId} themeOverride={scheme.appTheme} forceDesktop />
               </LaptopFrame>

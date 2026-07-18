@@ -99,10 +99,12 @@ function LaptopFrame({ width, children }: { width: number; children: React.React
         {/* the dark opening dent (finger notch): a wide, shallow U -- square top
             corners, only the bottom two rounded */}
         <path d="M440 573 L560 573 L560 576 Q560 582 554 582 L446 582 Q440 582 440 576 Z" fill="#141519" />
-        {/* rubber feet: short cylinders, so thin rectangles from the front,
-            sitting directly under the base deck */}
-        <rect x="98" y="597" width="64" height="7" rx="1.5" fill="#16171b" />
-        <rect x="838" y="597" width="64" height="7" rx="1.5" fill="#16171b" />
+        {/* rubber feet: short cylinders, so thin rectangles from the front.
+            Their top overlaps INTO the deck bottom (deck ends at y=596) so no
+            background sliver can show between deck and foot at any scale/DPI or
+            in light theme; they protrude a few units below the deck. */}
+        <rect x="98" y="592" width="64" height="9" rx="1.5" fill="#16171b" />
+        <rect x="838" y="592" width="64" height="9" rx="1.5" fill="#16171b" />
         {/* lid: rounded top corners only; bottom corners square (that edge sits
             into the keyboard deck and is not visible). Its top radius is exactly
             the bezel radius + 6 so the grey border is a uniform 6px, corners

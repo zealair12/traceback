@@ -11,6 +11,7 @@
 // product on canned data, so the demo can never drift from the live app.
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { ThumbsUp, ThumbsDown } from 'lucide-react';
 import { TracebackChat } from '../TracebackChat';
 import { BrandIcon } from '../components/BrandIcon';
 import { MockTracebackClient } from './mockClient';
@@ -205,6 +206,48 @@ function TypeCard({ text, width }: { text: string; width: number }) {
   );
 }
 
+// A one-shot confetti burst. Mounting it fires a batch of pieces that fall,
+// drift, and spin over ~2s; the parent unmounts it after the celebration.
+const CONFETTI_COLORS = ['#3b82f6', '#ffffff', '#ff5f56', '#ffbd2e', '#27c93f', '#a78bfa'];
+function Confetti() {
+  const pieces = useMemo(
+    () =>
+      Array.from({ length: 90 }, () => ({
+        left: Math.random() * 100,
+        bg: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
+        delay: Math.random() * 0.25,
+        dur: 1.5 + Math.random() * 1.1,
+        w: 6 + Math.random() * 6,
+        drift: (Math.random() - 0.5) * 260,
+        spin: 600 + Math.random() * 800
+      })),
+    []
+  );
+  return (
+    <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 60, overflow: 'hidden' }} aria-hidden="true">
+      {pieces.map((p, i) => (
+        <span
+          key={i}
+          style={
+            {
+              position: 'absolute',
+              top: '-6vh',
+              left: `${p.left}%`,
+              width: p.w,
+              height: p.w * 1.6,
+              background: p.bg,
+              borderRadius: 2,
+              '--tb-drift': `${p.drift}px`,
+              '--tb-spin': `${p.spin}deg`,
+              animation: `tb-confetti ${p.dur}s ${p.delay}s cubic-bezier(.2,.6,.4,1) forwards`
+            } as CSSProperties
+          }
+        />
+      ))}
+    </div>
+  );
+}
+
 export function LaptopDemo({ authUrl }: { authUrl?: string }) {
   const mock = useMemo(() => new MockTracebackClient(authUrl ?? ''), [authUrl]);
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -231,6 +274,19 @@ export function LaptopDemo({ authUrl }: { authUrl?: string }) {
   const canFlank = vw >= 1024;
   // Mobile box: near the screen width, matched under the laptop.
   const boxW = Math.min(vw - 36, 440);
+
+  // Feedback easter egg: thumbs up shakes the laptop + fires confetti for ~2s
+  // (everything on the screen stays intact, it just shakes); thumbs down... well.
+  const [celebrating, setCelebrating] = useState(false);
+  const [burst, setBurst] = useState(0);
+  const handleThumbsUp = () => {
+    setBurst((b) => b + 1);
+    setCelebrating(true);
+    window.setTimeout(() => setCelebrating(false), 2000);
+  };
+  const handleThumbsDown = () => {
+    window.location.href = 'https://youtu.be/dQw4w9WgXcQ?si=YBKjSgfe-2JFBjll&t=44';
+  };
 
   useEffect(() => {
     const id = window.setInterval(() => setPhase((p) => (p + 1) % SCHEMES.length), 5000);
@@ -322,33 +378,52 @@ export function LaptopDemo({ authUrl }: { authUrl?: string }) {
     '--tb-si-glow': scheme.signinGlow
   } as CSSProperties;
 
-  // The bold call to action. Same width as the laptop; on desktop it pins to the
-  // bottom of the screen, on mobile it tucks into the centered stack under the
-  // typewriter box. Runs the same sign-in as the in-laptop easter-egg button.
-  const ctaButton = (
-    <button
-      type="button"
-      data-tb-cta
-      onClick={() => mock.signIn()}
+  // The bold call to action + a plain thumbs up/down row. Same width as the
+  // laptop; on desktop it pins to the bottom of the screen, on mobile it tucks
+  // into the centered stack. The button runs the same sign-in as the in-laptop
+  // easter-egg button.
+  const ctaBlock = (
+    <div
       style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 14,
         width: laptopW,
         flexShrink: 0,
         marginTop: canFlank ? 24 : 0,
-        marginBottom: canFlank ? 'clamp(18px, 4vh, 48px)' : 0,
-        padding: 'clamp(15px, 2.2vh, 24px) 0',
-        border: 'none',
-        borderRadius: 18,
-        background: scheme.signinBg,
-        color: scheme.signinFg,
-        fontFamily: 'inherit',
-        fontSize: 'clamp(19px, 2.3vw, 30px)',
-        fontWeight: 500,
-        letterSpacing: 3,
-        lineHeight: 1
+        marginBottom: canFlank ? 'clamp(18px, 4vh, 48px)' : 0
       }}
     >
-      use traceback
-    </button>
+      <button
+        type="button"
+        data-tb-cta
+        onClick={() => mock.signIn()}
+        style={{
+          width: '100%',
+          border: 'none',
+          borderRadius: 18,
+          padding: 'clamp(15px, 2.2vh, 24px) 0',
+          background: scheme.signinBg,
+          color: scheme.signinFg,
+          fontFamily: 'inherit',
+          fontSize: 'clamp(19px, 2.3vw, 30px)',
+          fontWeight: 500,
+          letterSpacing: 3,
+          lineHeight: 1
+        }}
+      >
+        use traceback
+      </button>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 22 }}>
+        <button type="button" data-tb-thumb aria-label="I like this" onClick={handleThumbsUp}>
+          <ThumbsUp size={22} />
+        </button>
+        <button type="button" data-tb-thumb aria-label="I do not like this" onClick={handleThumbsDown}>
+          <ThumbsDown size={22} />
+        </button>
+      </div>
+    </div>
   );
 
   return (
@@ -378,10 +453,34 @@ export function LaptopDemo({ authUrl }: { authUrl?: string }) {
         @keyframes tb-blink{ 0%,100%{opacity:1} 50%{opacity:0} }
         .tb-demo-root [data-tb-cta]{
           cursor:pointer; pointer-events:auto;
-          transition: background-color 2.5s ease, color 2.5s ease, transform .2s ease, box-shadow .35s ease;
+          transition: background-color 2.5s ease, color 2.5s ease, transform .2s ease;
         }
-        .tb-demo-root [data-tb-cta]:hover{ transform: translateY(-2px); box-shadow: 0 12px 34px var(--tb-si-glow); }
+        .tb-demo-root [data-tb-cta]:hover{ transform: scale(1.035); }
+        .tb-demo-root [data-tb-thumb]{
+          background:none; border:none; padding:6px; cursor:pointer; color:inherit;
+          opacity:.5; display:inline-flex; transition: opacity .2s ease, transform .2s ease;
+        }
+        .tb-demo-root [data-tb-thumb]:hover{ opacity:1; transform: scale(1.18); }
+        @keyframes tb-shake{
+          0%,100%{ transform: translate(0,0) rotate(0deg); }
+          10%{ transform: translate(-7px,3px) rotate(-1.6deg); }
+          20%{ transform: translate(8px,-3px) rotate(1.6deg); }
+          30%{ transform: translate(-8px,2px) rotate(-1.4deg); }
+          40%{ transform: translate(8px,-2px) rotate(1.4deg); }
+          50%{ transform: translate(-6px,3px) rotate(-1.2deg); }
+          60%{ transform: translate(7px,-3px) rotate(1.2deg); }
+          70%{ transform: translate(-6px,2px) rotate(-1deg); }
+          80%{ transform: translate(6px,-2px) rotate(1deg); }
+          90%{ transform: translate(-4px,1px) rotate(-0.6deg); }
+        }
+        .tb-shake{ animation: tb-shake 0.5s linear 4; }
+        @keyframes tb-confetti{
+          0%{ transform: translate(0,-6vh) rotate(0deg); opacity:1; }
+          100%{ transform: translate(var(--tb-drift), 112vh) rotate(var(--tb-spin)); opacity:1; }
+        }
       `}</style>
+
+      {celebrating && <Confetti key={burst} />}
 
       {/* Everything lives in ONE pinned viewport: the logo and laptop never move
           as you scroll -- scrolling only advances the demo steps, so "traceback"
@@ -435,17 +534,20 @@ export function LaptopDemo({ authUrl }: { authUrl?: string }) {
             {/* Centered unit: the laptop, and on mobile the persistent typewriter
                 box directly below it (both near the screen width). */}
             <div style={{ zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: canFlank ? 'flex-start' : 'space-between', gap: 0 }}>
-              <LaptopFrame width={laptopW}>
-                <TracebackChat client={mock} initialActiveNodeId={stepActiveId} themeOverride={scheme.appTheme} forceDesktop />
-              </LaptopFrame>
+              {/* Wrapper takes the shake so the whole laptop (app intact) jitters. */}
+              <div style={{ display: 'flex' }} className={celebrating ? 'tb-shake' : undefined}>
+                <LaptopFrame width={laptopW}>
+                  <TracebackChat client={mock} initialActiveNodeId={stepActiveId} themeOverride={scheme.appTheme} forceDesktop />
+                </LaptopFrame>
+              </div>
               {!canFlank && <TypeCard text={BEATS[beat].body} width={boxW} />}
               {/* Mobile: the CTA tucks into the centered stack under the box. */}
-              {!canFlank && ctaButton}
+              {!canFlank && ctaBlock}
             </div>
           </div>
 
           {/* Desktop: the CTA pins to the bottom of the screen, laptop-wide. */}
-          {canFlank && ctaButton}
+          {canFlank && ctaBlock}
         </div>
       </div>
     </div>

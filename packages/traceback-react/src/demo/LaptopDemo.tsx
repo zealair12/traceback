@@ -26,16 +26,21 @@ const STEPS = 4;
 interface Beat {
   body: string;
   side: 'left' | 'right';
-  top: number;
+  row: 'upper' | 'lower';
 }
-// Terminal-style cards flank the laptop (two per side) so the active one always
-// sits beside the screen.
+// Terminal-style cards flank the laptop (two per side, one upper + one lower)
+// so the active one always sits beside the screen. On narrow screens where they
+// cannot flank without colliding with the laptop, only the active card shows,
+// placed just below the laptop instead.
 const BEATS: Beat[] = [
-  { body: 'Your whole conversation is saved as a tree, so nothing gets lost in scroll.', side: 'left', top: 210 },
-  { body: 'Take any reply in a new direction without starting a new chat.', side: 'right', top: 210 },
-  { body: 'The model only reads the branch you are on, not every unrelated tangent, so it stays focused on what matters.', side: 'right', top: 430 },
-  { body: 'Keep several answers side by side and compare them instead of asking again.', side: 'left', top: 430 }
+  { body: 'Your whole conversation is saved as a tree, so nothing gets lost in scroll.', side: 'left', row: 'upper' },
+  { body: 'Take any reply in a new direction without starting a new chat.', side: 'right', row: 'upper' },
+  { body: 'The model only reads the branch you are on, not every unrelated tangent, so it stays focused on what matters.', side: 'right', row: 'lower' },
+  { body: 'Keep several answers side by side and compare them instead of asking again.', side: 'left', row: 'lower' }
 ];
+// Card geometry, shared by the flank/stack math below.
+const CARD_W = 236;
+const CARD_GAP = 28;
 
 // One rhythm, three modes. Each beat recolors EVERYTHING to a mode -- the app's
 // real theme, the page background, the cards, the logo, and the sign-in button
@@ -145,9 +150,20 @@ export function LaptopDemo({ authUrl }: { authUrl?: string }) {
   // in both directions -- no remount needed.
   const [stepActiveId, setStepActiveId] = useState('d1');
   const [laptopW, setLaptopW] = useState(820);
+  const [vw, setVw] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
   // The color rhythm: advances every beat, recoloring everything to that mode.
   const [phase, setPhase] = useState(0);
   const scheme = SCHEMES[phase];
+
+  // Card placement. When the space beside the laptop can hold a card without
+  // colliding with it, the cards flank the laptop (hugging its edges with a
+  // fixed gap). Otherwise (narrow/mobile) they cannot flank, so only the active
+  // card shows, placed just below the laptop where it never overlaps.
+  const laptopH = (laptopW * VB.h) / VB.w;
+  const halfLaptop = laptopW / 2;
+  // Flank on desktop/laptop widths (the laptop is sized above to leave room);
+  // stack below on narrower screens where cards would collide with the frame.
+  const canFlank = vw >= 1024;
 
   useEffect(() => {
     const id = window.setInterval(() => setPhase((p) => (p + 1) % SCHEMES.length), 5000);
@@ -180,9 +196,17 @@ export function LaptopDemo({ authUrl }: { authUrl?: string }) {
   // logo + laptop fit in one screen (nothing needs to scroll to see it all).
   useEffect(() => {
     const fit = () => {
-      const wCap = window.innerWidth - 100;
-      const hCap = (window.innerHeight - 190) / (VB.h / VB.w); // room for the logo
-      setLaptopW(Math.max(320, Math.min(1120, wCap, hCap)));
+      const W = window.innerWidth;
+      const Hh = window.innerHeight;
+      setVw(W);
+      const wantFlank = W >= 1024;
+      // Horizontal room: when flanking, reserve a card's width on each side so
+      // the laptop is sized to leave space for them (never overlapping).
+      const wCap = W - (wantFlank ? 2 * (CARD_W + CARD_GAP) + 48 : 100);
+      // Vertical room: always leave room for the logo; when stacked, also leave
+      // room for the one card that sits below the laptop.
+      const hCap = (Hh - (wantFlank ? 190 : 380)) / (VB.h / VB.w);
+      setLaptopW(Math.max(300, Math.min(1120, wCap, hCap)));
     };
     fit();
     window.addEventListener('resize', fit);
@@ -255,35 +279,61 @@ export function LaptopDemo({ authUrl }: { authUrl?: string }) {
             <span style={{ fontSize: 'clamp(42px, 7vw, 84px)', fontWeight: 400, letterSpacing: 8, lineHeight: 1, color: scheme.logo, transition: 'color 2.5s ease' }}>traceback</span>
           </header>
           <div style={{ position: 'relative', flex: 1, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          {BEATS.map((b, i) => (
-            <div
-              key={i}
-              style={{
-                position: 'absolute',
-                [b.side]: 'max(16px, 4vw)',
-                top: b.top,
-                width: 236,
-                background: '#0e1117',
-                border: '1px solid #262b36',
-                borderRadius: 10,
-                overflow: 'hidden',
-                opacity: beat === i ? 1 : 0.32,
-                transform: beat === i ? 'translateY(0)' : `translateY(${b.side === 'left' ? '-' : ''}6px)`,
-                transition: 'opacity .5s ease, transform .5s ease'
-              }}
-            >
-              {/* Terminal chrome: traffic lights left, the traceback mark right. */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 10px', borderBottom: '1px solid #1b1f27' }}>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#ff5f56' }} />
-                  <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#ffbd2e' }} />
-                  <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#27c93f' }} />
+          {BEATS.map((b, i) => {
+            const active = beat === i;
+            // In stacked (narrow) mode, render only the active card, below the
+            // laptop; skip the rest so nothing stacks or hides behind the frame.
+            if (!canFlank && !active) return null;
+
+            const placement: CSSProperties = canFlank
+              ? {
+                  // Flank: hug the laptop's edge with a fixed gap, staggered into
+                  // an upper and a lower row around the vertical center.
+                  top: b.row === 'upper' ? 'calc(50% - 168px)' : 'calc(50% + 6px)',
+                  left:
+                    b.side === 'left'
+                      ? `calc(50% - ${halfLaptop + CARD_GAP + CARD_W}px)`
+                      : `calc(50% + ${halfLaptop + CARD_GAP}px)`,
+                  width: CARD_W,
+                  opacity: active ? 1 : 0.32,
+                  transform: active ? 'translateY(0)' : `translateY(${b.side === 'left' ? '-' : ''}6px)`
+                }
+              : {
+                  // Stacked: centered just below the laptop, always fully visible.
+                  top: `calc(50% + ${laptopH / 2 + 16}px)`,
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  width: Math.min(CARD_W, vw - 32),
+                  opacity: 1
+                };
+
+            return (
+              <div
+                key={i}
+                style={{
+                  position: 'absolute',
+                  zIndex: 3,
+                  background: '#0e1117',
+                  border: '1px solid #262b36',
+                  borderRadius: 10,
+                  overflow: 'hidden',
+                  transition: 'opacity .5s ease, transform .5s ease',
+                  ...placement
+                }}
+              >
+                {/* Terminal chrome: traffic lights left, the traceback mark right. */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 10px', borderBottom: '1px solid #1b1f27' }}>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#ff5f56' }} />
+                    <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#ffbd2e' }} />
+                    <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#27c93f' }} />
+                  </div>
+                  <span aria-hidden="true" style={{ color: '#6ea8fe', display: 'inline-flex' }}><BrandIcon size={15} /></span>
                 </div>
-                <span aria-hidden="true" style={{ color: '#6ea8fe', display: 'inline-flex' }}><BrandIcon size={15} /></span>
+                <div style={{ padding: '11px 13px 13px', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', fontSize: 12.5, lineHeight: 1.55, color: '#c9d1d9' }}>{b.body}</div>
               </div>
-              <div style={{ padding: '11px 13px 13px', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', fontSize: 12.5, lineHeight: 1.55, color: '#c9d1d9' }}>{b.body}</div>
-            </div>
-          ))}
+            );
+          })}
 
             <div style={{ zIndex: 2 }}>
               <LaptopFrame width={laptopW}>

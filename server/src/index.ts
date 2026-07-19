@@ -10,5 +10,5 @@ const app = createApp();
 const port = process.env.PORT ?? 4000;
 
 app.listen(port, () => {
-  console.log(`TraceBack server listening on http://localhost:${port}`);
+  console.log(`traceback server listening on http://localhost:${port}`);
 });

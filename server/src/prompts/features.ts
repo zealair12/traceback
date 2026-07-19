@@ -1,11 +1,11 @@
-// Single source of truth for what TraceBack can do and where each feature lives.
+// Single source of truth for what traceback can do and where each feature lives.
 // It is injected into the system prompt so the assistant can answer "what can
 // you do?" and "how do I ...?" accurately. This is self-knowledge, not agency —
 // the model can DESCRIBE these features, not operate them.
 //
 // KEEP THIS CURRENT: when a feature is added, moved, or changed, update this
 // file. That is the only place the assistant's feature knowledge comes from.
-export const TRACEBACK_FEATURES = `What TraceBack can do, and where to find it (use this to answer "what can you do" and "how do I ..."):
+export const TRACEBACK_FEATURES = `What traceback can do, and where to find it (use this to answer "what can you do" and "how do I ..."):
 - Branch a reply: hover a reply and click "Branch", or select any text in a reply, to start a new direction from that exact point.
 - Tree view: the panel on the right (tap the graph icon in the top bar on phones) shows the whole chat as a tree; click any node to jump to that branch.
 - Switch models: the model menu at the bottom of the message box; "Auto" chooses one for you. Adding your own API key unlocks that provider's models.

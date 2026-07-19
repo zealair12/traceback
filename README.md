@@ -1,4 +1,6 @@
-## www.tracebackai.com
+# traceback
+
+tracebackai.com
 
 A chat interface that models conversations as trees instead of linear transcripts, allowing you to branch from any response, compare paths side-by-side, and prune context dynamically to keep model interactions focused and cost-effective.
 
@@ -45,6 +47,71 @@ Traceback is built as a TypeScript monorepo:
 * **Auth & Sessions:** Google OAuth via Passport with Postgres-backed sessions so a user's tree survives restarts.
 
 The landing page renders the real application inside a scroll-driven MacBook frame using canned data, ensuring the demo matches what actually ships.
+
+---
+
+## Getting Started
+
+Traceback runs as a TypeScript monorepo. You need Node.js and a PostgreSQL database.
+
+### Backend
+
+```bash
+cd server
+npm install
+cp .env.example .env   # then fill in real values
+npm run prisma:generate
+npm run prisma:migrate
+npm run dev            # API on http://localhost:4000
+```
+
+Key environment variables (see `server/.env.example` for the full list):
+
+* `DATABASE_URL`: PostgreSQL connection string.
+* `CLIENT_ORIGIN`: frontend origin, for example `http://localhost:5173`.
+* `LLM_PROVIDER`: default backend (`groq`, `openai`, `anthropic`, or `local`).
+* Provider credentials for the model you use. For an OpenAI-compatible service such as OpenRouter, set `OPENAI_API_KEY` and `OPENAI_MODEL` and point `OPENAI_BASE_URL` at the provider. For speech-to-text, set `GROQ_API_KEY`.
+* Google sign-in: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_CALLBACK_URL`, and a `SESSION_SECRET` (generate with `openssl rand -hex 32`).
+
+### Frontend
+
+```bash
+cd client
+npm install
+npm run dev            # app on http://localhost:5173
+```
+
+Set `VITE_API_BASE_URL` to the backend URL (locally, `http://localhost:4000`) so the client can reach the API and the Google sign-in endpoint.
+
+### Verification
+
+Headless scripts under `server/scripts/` prove the system end to end against the local database and a built-in mock model, so they need no API key. Each prints PASSED or FAILED, for example:
+
+```bash
+cd server
+npx tsx scripts/verify-lineage.ts   # core context pruning (recursive CTE)
+npx tsx scripts/verify-delete.ts    # subtree deletion
+```
+
+---
+
+## OpenAI-compatible proxy
+
+Traceback also speaks the OpenAI API format, so any app that talks to OpenAI can route through it by pointing its base URL at the Traceback server and calling `POST /v1/chat/completions`.
+
+* The `model` field selects the backend and model as `provider/model`, for example `openai/gpt-4o`. A bare name uses the default provider.
+* **Branch-aware (opt-in):** include `session_id` (and optionally `parent_id`) to attach the turn at a point in an existing tree. Traceback then forwards only the pruned root-to-node lineage to the model, which is where the context saving pays off.
+
+To protect server credits, the proxy spends the server key only for a signed-in user. Anonymous callers must bring their own key:
+
+```bash
+curl http://localhost:4000/v1/chat/completions \
+  -H 'content-type: application/json' \
+  -H 'authorization: Bearer YOUR_PROVIDER_KEY' \
+  -d '{"model":"openai/gpt-4o-mini","messages":[{"role":"user","content":"Hello"}]}'
+```
+
+Streaming through the proxy (`stream: true`) is not supported yet.
 
 ---
 

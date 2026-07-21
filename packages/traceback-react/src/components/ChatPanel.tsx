@@ -22,6 +22,7 @@ interface ChatPanelProps {
   branchingFromMessageId: string | null;
   branchingFromPreview: string | null;
   branchingFromText: string | null;
+  onCancelBranch: () => void;
   sending: boolean;
   error: string | null;
   guestLimitReached: boolean;
@@ -56,6 +57,7 @@ export function ChatPanel({
   branchingFromMessageId,
   branchingFromPreview,
   branchingFromText,
+  onCancelBranch,
   sending,
   error,
   guestLimitReached,
@@ -121,6 +123,8 @@ export function ChatPanel({
       sending={sending}
       branchingFromMessageId={branchingFromMessageId}
       branchingFromText={branchingFromText}
+      branchingFromPreview={branchingFromPreview}
+      onCancelBranch={onCancelBranch}
       onSendMessage={onSendMessage}
       onTranscribeAudio={onTranscribeAudio}
       providers={providers}

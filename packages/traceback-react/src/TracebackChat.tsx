@@ -271,6 +271,7 @@ export function TracebackChat({ apiUrl, client, onEngineReady, initialActiveNode
           branchingFromMessageId={tb.branchingFromMessageId}
           branchingFromPreview={tb.branchingFromPreview}
           branchingFromText={tb.branchingFromText}
+          onCancelBranch={tb.clearBranching}
           sending={tb.sending}
           error={tb.error}
           guestLimitReached={tb.guestLimitReached}

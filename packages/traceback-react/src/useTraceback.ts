@@ -768,6 +768,7 @@ export function useTraceback({ apiUrl, client: injectedClient, initialActiveNode
     branchingFromMessageId,
     branchingFromPreview,
     branchingFromText,
+    clearBranching,
     sending,
     error,
     guestLimitReached,

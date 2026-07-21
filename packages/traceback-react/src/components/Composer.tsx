@@ -15,9 +15,13 @@ import { ModelPicker } from './ModelPicker';
 
 interface ComposerProps {
   sending: boolean;
-  // Prefill trigger: when the user branches from a passage, it lands here.
+  // Branch context: when the user picks "Ask" on a passage, it lands here.
   branchingFromMessageId: string | null;
   branchingFromText: string | null;
+  // The passage to show in the quote preview (the highlight, or a message preview).
+  branchingFromPreview: string | null;
+  // Dismiss the quote preview (cancels the pending branch).
+  onCancelBranch: () => void;
   onSendMessage: (content: string, attachments?: ImageAttachment[]) => void;
   onTranscribeAudio: (audioDataUrl: string, mediaType: string) => Promise<string>;
   // Model picker.
@@ -42,6 +46,8 @@ export function Composer({
   sending,
   branchingFromMessageId,
   branchingFromText,
+  branchingFromPreview,
+  onCancelBranch,
   onSendMessage,
   onTranscribeAudio,
   providers,
@@ -79,11 +85,11 @@ export function Composer({
   const finalTranscriptRef = useRef('');
   const baseInputRef = useRef('');
 
-  // Branching pre-fills the input with the chosen passage and focuses it.
+  // Branching shows the passage as a quote preview above the input (not injected
+  // into the textarea), and focuses the input so the user can type their question.
   useEffect(() => {
-    if (branchingFromText) setInput(`> "${branchingFromText}"\n\n`);
     if (branchingFromMessageId) inputRef.current?.focus();
-  }, [branchingFromMessageId, branchingFromText]);
+  }, [branchingFromMessageId]);
 
   const transcribeAndInsert = async (dataUrl: string, mediaType: string) => {
     setMicState('transcribing');
@@ -227,7 +233,11 @@ export function Composer({
 
   const submit = () => {
     if ((!input.trim() && pending.length === 0) || sending) return;
-    onSendMessage(input.trim(), pending.length > 0 ? pending : undefined);
+    // The quoted passage rides along as a blockquote so the model (and the
+    // saved thread) still see what the question is about, even though the
+    // composer shows it as a tidy preview rather than raw text in the box.
+    const quoted = branchingFromText ? `> "${branchingFromText}"\n\n` : '';
+    onSendMessage((quoted + input.trim()).trim(), pending.length > 0 ? pending : undefined);
     setInput('');
     setPending([]);
   };
@@ -252,6 +262,25 @@ export function Composer({
         </div>
       )}
       <div className="w-full rounded-2xl bg-inputBg/75 backdrop-blur-md border border-gray-800 focus-within:ring-1 focus-within:ring-gray-600">
+        {/* Quote preview: the passage being asked about, shown as a compact
+            reply chip (accent bar + text + dismiss) instead of raw markdown. */}
+        {branchingFromPreview && (
+          <div className="mx-2.5 mt-2.5 flex items-start gap-2 rounded-lg bg-gray-800/40 py-1.5 pl-2 pr-1.5">
+            <div className="w-[3px] self-stretch rounded-full bg-blue-400 flex-shrink-0" />
+            <p className="flex-1 min-w-0 text-xs text-gray-300 line-clamp-2 break-words py-0.5">
+              {branchingFromPreview}
+            </p>
+            <button
+              type="button"
+              onClick={onCancelBranch}
+              title="Remove quote"
+              aria-label="Remove quote"
+              className="h-5 w-5 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-100 hover:bg-gray-700 flex-shrink-0"
+            >
+              <X size={13} />
+            </button>
+          </div>
+        )}
         {pending.length > 0 && (
           <div className="flex gap-2 px-3 pt-3 flex-wrap">
             {pending.map((att, i) => (

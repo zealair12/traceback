@@ -27,6 +27,15 @@ interface PopoverState {
   text: string;
 }
 
+// An "Ask" message is stored as: > "quoted passage"\n\nthe question.
+// Split it so the bubble can show the passage as a quote chip (matching the
+// composer preview) rather than raw "> ..." markdown. Non-matching content,
+// including plain messages and the "Explain this..." dig form, passes through.
+function splitAskQuote(content: string): { quote: string | null; body: string } {
+  const m = /^> "([\s\S]*?)"\n\n([\s\S]*)$/.exec(content);
+  return m ? { quote: m[1], body: m[2] } : { quote: null, body: content };
+}
+
 export function MessageBubble({ message, onBranchFromMessage, onResendMessage, onEditMessage, keyedProviders }: MessageBubbleProps) {
   const [popover, setPopover] = useState<PopoverState | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -190,7 +199,20 @@ export function MessageBubble({ message, onBranchFromMessage, onResendMessage, o
               </div>
             </div>
           ) : (
-            message.content
+            (() => {
+              const { quote, body } = splitAskQuote(message.content);
+              return (
+                <>
+                  {quote && (
+                    <div className="mb-2 flex items-start gap-2 rounded-lg bg-black/15 py-1.5 pl-2 pr-2.5">
+                      <div className="w-[3px] self-stretch rounded-full bg-blue-400 flex-shrink-0" />
+                      <p className="flex-1 min-w-0 text-xs opacity-70 line-clamp-3 break-words py-0.5">{quote}</p>
+                    </div>
+                  )}
+                  {body}
+                </>
+              );
+            })()
           )}
         </div>
         {lightbox && (

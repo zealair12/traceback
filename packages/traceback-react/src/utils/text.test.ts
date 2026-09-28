@@ -43,3 +43,28 @@ test('display math and already-escaped dollars are untouched', () => {
 test('\\( \\) still converts to $', () => {
   assert.equal(normalizeLatex('\\(x^2\\) costs $5'), '$x^2$ costs \\$5');
 });
+
+test('\\[ \\] on its own lines becomes a display block', () => {
+  assert.equal(normalizeLatex('Energy:\n\\[\nE = mc^2\n\\]\nDone.'), 'Energy:\n$$\nE = mc^2\n$$\nDone.');
+});
+
+test('\\[ \\] inside a list item keeps its indentation', () => {
+  assert.equal(normalizeLatex('- Area:\n  \\[ \\pi r^2 \\]'), '- Area:\n  $$\n  \\pi r^2\n  $$');
+});
+
+test('\\[ \\] mid-sentence stays inline', () => {
+  assert.equal(normalizeLatex('so \\[y = 2\\] holds'), 'so $y = 2$ holds');
+});
+
+test('dollars inside inline code are left alone', () => {
+  assert.equal(normalizeLatex('Run `echo $5` for $5'), 'Run `echo $5` for \\$5');
+});
+
+test('fenced code is left alone', () => {
+  const code = '```python\nre.compile(r"\\(\\d+\\)")  # costs $5\n```';
+  assert.equal(normalizeLatex(`${code}\nIt costs $5.`), `${code}\nIt costs \\$5.`);
+});
+
+test('unclosed backticks are treated as text', () => {
+  assert.equal(normalizeLatex('a ` tick and $5'), 'a ` tick and \\$5');
+});

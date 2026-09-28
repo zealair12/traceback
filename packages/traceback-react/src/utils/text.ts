@@ -60,18 +60,64 @@ function escapeCurrencyDollars(text: string): string {
   return out;
 }
 
+// Apply `fn` to everything except code: inline `code` spans and ``` fenced
+// blocks (a backtick run closed by a run of the same length). Code is shown
+// verbatim, so math and currency handling must never touch it.
+function mapOutsideCode(text: string, fn: (prose: string) => string): string {
+  let out = '';
+  let prose = '';
+  let i = 0;
+  while (i < text.length) {
+    if (text[i] !== '`' || text[i - 1] === '\\') {
+      prose += text[i++];
+      continue;
+    }
+    let n = 0;
+    while (text[i + n] === '`') n++;
+    const run = '`'.repeat(n);
+    let close = -1;
+    for (let j = text.indexOf(run, i + n); j !== -1; j = text.indexOf(run, j)) {
+      let end = j;
+      while (text[end] === '`') end++;
+      if (end - j === n) {
+        close = j;
+        break;
+      }
+      j = end;
+    }
+    if (close === -1) {
+      // Unclosed (or still streaming): just literal backticks for now.
+      prose += run;
+      i += n;
+      continue;
+    }
+    out += fn(prose) + text.slice(i, close + n);
+    prose = '';
+    i = close + n;
+  }
+  return out + fn(prose);
+}
+
+// LLMs often write \(...\) and \[...\] instead of $...$ and $$...$$. remark-math
+// renders $$ as a centered display block only when the $$ lines stand alone,
+// so \[...\] set on its own line(s) becomes such a block (keeping the line's
+// indentation, so it stays inside a list item); mid-sentence it can only be
+// inline. (Replacements use functions: in a replacement string "$$" means "$".)
+function convertMathDelimiters(prose: string): string {
+  return prose
+    .replace(/^([ \t]*)\\\[((?:(?!\\\[)[\s\S])*?)\\\][ \t]*$/gm, (_m, indent: string, body: string) =>
+      [`${indent}$$`, ...body.trim().split('\n').map((line) => indent + line.trim()), `${indent}$$`].join('\n')
+    )
+    .replace(/\\\[((?:(?!\\\[)[\s\S])*?)\\\]/g, (_m, body: string) => `$${body.trim()}$`)
+    .replace(/\\\(/g, () => '$')
+    .replace(/\\\)/g, () => '$');
+}
+
 /**
- * Normalize LaTeX delimiters so remark-math can parse them.
- * LLMs often output \(...\) and \[...\] instead of $...$ and $$...$$.
+ * Prepare a reply's markdown for remark-math: escape dollars that are money,
+ * then normalize \(...\) / \[...\] delimiters. Code is left untouched.
  */
 export function normalizeLatex(text: string): string {
-  return (
-    // Escape currency dollar signs FIRST, before the delimiter conversion below,
-    // so only dollars the model actually wrote are judged.
-    escapeCurrencyDollars(text)
-      .replace(/\\\[/g, '$$')
-      .replace(/\\\]/g, '$$')
-      .replace(/\\\(/g, '$')
-      .replace(/\\\)/g, '$')
-  );
+  // Currency first, so only dollars the model actually wrote are judged.
+  return mapOutsideCode(text, (prose) => convertMathDelimiters(escapeCurrencyDollars(prose)));
 }

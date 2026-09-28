@@ -87,7 +87,8 @@ export function registerMessageRoutes(app: Express) {
         provider: typeof providerRaw === 'string' && providerRaw ? providerRaw : undefined,
         model: typeof modelRaw === 'string' && modelRaw ? modelRaw : undefined,
         apiKey: resolveApiKey(req),
-        attachments: attachmentsRaw === undefined ? undefined : attachmentsRaw
+        attachments: attachmentsRaw === undefined ? undefined : attachmentsRaw,
+        markKeyTerms: true
       });
 
       res.status(201).json({
@@ -157,6 +158,7 @@ export function registerMessageRoutes(app: Express) {
           model: typeof modelRaw === 'string' && modelRaw ? modelRaw : undefined,
           apiKey: resolveApiKey(req),
           attachments: attachmentsRaw === undefined ? undefined : attachmentsRaw,
+          markKeyTerms: true,
           onToken: (chunk) => emit('token', { chunk })
         });
         emit('done', { userMessage: result.userMessage, assistantMessage: result.assistantMessage });

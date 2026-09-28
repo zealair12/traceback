@@ -21,6 +21,11 @@ interface Run {
   parent: Parent;
 }
 
+// Key-term links (term:...) are part of the prose, so passages may run through
+// them; ordinary links stay untouched.
+const isTermLink = (el: Element) => el.tagName === 'a' && String(el.properties?.href ?? '').startsWith('term:');
+const isOpaque = (el: Element) => (OPAQUE.has(el.tagName) && !isTermLink(el)) || isKatex(el);
+
 const isKatex = (el: Element) => {
   const cls = el.properties?.className;
   return Array.isArray(cls) && cls.some((c) => String(c).startsWith('katex'));
@@ -30,7 +35,7 @@ const isKatex = (el: Element) => {
 function eachBlock(node: Parent, fn: (block: Element) => void) {
   for (const child of node.children as RootContent[]) {
     if (child.type !== 'element') continue;
-    if (OPAQUE.has(child.tagName) || isKatex(child)) continue;
+    if (isOpaque(child)) continue;
     if (BLOCKS.has(child.tagName)) fn(child);
     eachBlock(child, fn);
   }
@@ -44,7 +49,7 @@ function collectRuns(block: Element): Run[] {
       if (child.type === 'text') runs.push({ node: child, parent });
       else if (child.type === 'element') {
         if (BLOCKS.has(child.tagName) || CONTAINERS.has(child.tagName)) continue;
-        if (OPAQUE.has(child.tagName) || isKatex(child)) continue;
+        if (isOpaque(child)) continue;
         walk(child);
       }
     }

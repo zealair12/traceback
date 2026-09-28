@@ -16,6 +16,7 @@ import { getProvider } from '../providers/index.js';
 import type { LlmMessage, ImageAttachment } from '../providers/index.js';
 import { HUMANIZE_WRITING_PROMPT } from '../prompts/humanizeWriting.js';
 import { TRACEBACK_FEATURES } from '../prompts/features.js';
+import { KEY_TERMS_PROMPT } from '../prompts/keyTerms.js';
 // Re-exported from their new home (server/src/providers) so existing importers
 // of these error types keep working unchanged after the provider refactor.
 export { ApiRateLimitError, LlmTimeoutError } from '../providers/index.js';
@@ -115,8 +116,12 @@ export async function createMessageWithAutoReply(options: {
   // Optional token callback. When provided and the chosen provider supports
   // streaming, the reply is streamed chunk by chunk through this callback.
   onToken?: (chunk: string) => void;
+  // Ask the model to mark key terms for the app's hover previews. Set only for
+  // replies shown in the traceback app, never for the OpenAI-compatible proxy.
+  markKeyTerms?: boolean;
 }): Promise<CreatedMessagePair> {
-  const { sessionId, parentId, content, provider, model, temperature, maxTokens, apiKey, attachments, onToken } = options;
+  const { sessionId, parentId, content, provider, model, temperature, maxTokens, apiKey, attachments, onToken, markKeyTerms } =
+    options;
 
   // Fetch parent (if any) to derive the new depth and to validate
   // that we are not creating an orphaned node.
@@ -228,7 +233,8 @@ export async function createMessageWithAutoReply(options: {
           'Use markdown for formatting. For math, use LaTeX with $...$ for inline and $$...$$ for display equations. Never put math or LaTeX inside code spans or code blocks (backticks) — write formulas as LaTeX, not as code.\n\n' +
           // Every reply passes through the anti-trope guide so the writing
           // reads like a person, whichever provider answers.
-          HUMANIZE_WRITING_PROMPT
+          HUMANIZE_WRITING_PROMPT +
+          (markKeyTerms ? '\n\n' + KEY_TERMS_PROMPT : '')
       },
       ...lineage.map((m) => {
         // Anything attached along the path travels with its turn: images for

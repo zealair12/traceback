@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo, type ComponentProps, type MouseEvent } from 'react';
-import ReactMarkdown from 'react-markdown';
+import ReactMarkdown, { defaultUrlTransform, type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
@@ -10,6 +10,8 @@ import { FileText, Pencil, RotateCcw, Copy, Check } from 'lucide-react';
 import { BrandIcon } from './BrandIcon';
 import { splitAskQuote, type BranchAnchorGroup } from '../lib/branchAnchors';
 import { rehypeBranchAnchors } from '../lib/rehypeBranchAnchors';
+import { isTermHref, stripTermLinks, termTitle } from '../lib/termPreview';
+import { HoverTerm } from './HoverTerm';
 
 interface MessageBubbleProps {
   message: ChatMessage;
@@ -42,6 +44,10 @@ interface AnchorMenuState {
 
 type RehypePlugins = NonNullable<ComponentProps<typeof ReactMarkdown>['rehypePlugins']>;
 
+// Let the model's key-term links (term:Wikipedia_Title) through; everything
+// else gets react-markdown's normal safe-URL handling.
+const urlTransform = (url: string) => (url.startsWith('term:') ? url : defaultUrlTransform(url));
+
 export function MessageBubble({
   message,
   onBranchFromMessage,
@@ -60,6 +66,29 @@ export function MessageBubble({
   const rehypePlugins = useMemo(
     () => [rehypeKatex, [rehypeBranchAnchors, branchAnchors ?? []]] as RehypePlugins,
     [branchAnchors]
+  );
+
+  // Links: key terms get a Wikipedia-style preview card; everything else opens
+  // in a new tab so a cited source never replaces the app. Memoized so a
+  // re-render (e.g. another reply streaming) doesn't remount an open card.
+  const branchRef = useRef(onBranchFromMessage);
+  useEffect(() => {
+    branchRef.current = onBranchFromMessage;
+  });
+  const markdownComponents = useMemo<Components>(
+    () => ({
+      a: ({ node: _node, href, children, ...props }) =>
+        isTermHref(href) ? (
+          <HoverTerm title={termTitle(href)} onBranch={(text) => branchRef.current(message.id, text, 'dig')}>
+            {children}
+          </HoverTerm>
+        ) : (
+          <a href={href} {...props} target="_blank" rel="noopener noreferrer">
+            {children}
+          </a>
+        )
+    }),
+    [message.id]
   );
 
   // Clicking a marked passage opens its branch (or asks which, if several).
@@ -307,12 +336,8 @@ export function MessageBubble({
         <ReactMarkdown
           remarkPlugins={[remarkGfm, remarkMath]}
           rehypePlugins={rehypePlugins}
-          components={{
-            // Open links in a new tab so a cited source never replaces the app.
-            // Drop react-markdown's internal `node` prop so it isn't rendered as
-            // a stray DOM attribute.
-            a: ({ node: _node, ...props }) => <a {...props} target="_blank" rel="noopener noreferrer" />
-          }}
+          components={markdownComponents}
+          urlTransform={urlTransform}
         >
           {normalizeLatex(message.content)}
         </ReactMarkdown>
@@ -330,7 +355,7 @@ export function MessageBubble({
       <div className="w-full pl-9 md:w-auto md:pl-0 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity flex items-center gap-1 md:mt-1 flex-shrink-0">
         <button
           type="button"
-          onClick={() => handleCopy(message.content)}
+          onClick={() => handleCopy(stripTermLinks(message.content))}
           className="h-6 w-6 rounded flex items-center justify-center text-gray-400 hover:text-gray-100 hover:bg-gray-700 transition-colors"
           title="Copy"
         >

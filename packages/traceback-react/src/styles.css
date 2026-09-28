@@ -143,6 +143,19 @@
   border-bottom-color: rgba(96, 165, 250, 0.95);
 }
 
+/* A key term with a Wikipedia-style preview: dotted underline, like a gloss. */
+.tb-term {
+  border-bottom: 1px dotted var(--color-gray-500);
+  cursor: help;
+}
+.tb-term:hover {
+  border-bottom-color: var(--color-gray-300);
+}
+/* A term you already branched from shows the branch highlight instead. */
+.tb-term:has(.tb-branch-anchor) {
+  border-bottom: none;
+}
+
 /* KaTeX: follow the surrounding text color so math reads in every theme */
 .katex {
   color: inherit !important;

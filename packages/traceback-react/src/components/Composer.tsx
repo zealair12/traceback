@@ -11,7 +11,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type ClipboardEvent } from 'react';
 import type { ProviderInfo, ImageAttachment } from '@traceback/shared';
 import { ArrowUp, Bot, FileText, Mic, Paperclip, X } from 'lucide-react';
-import { ModelPicker } from './ModelPicker';
 import { audioBlobToWav, blobToDataUrl } from '../lib/wav';
 
 // One mic session: the text before it, the live speech engine (preview), and
@@ -70,8 +69,6 @@ export function Composer({
   providers,
   selectedProvider,
   selectedModel,
-  keyedProviders,
-  onSelectModel,
   agentMode,
   agentAvailable,
   onToggleAgent
@@ -501,16 +498,11 @@ export function Composer({
               <Bot size={15} />
             </button>
           )}
-          {/* min-w-0 so picker shrinks before buttons are pushed off-screen */}
-          <div className="flex-1 min-w-0 overflow-hidden">
-            <ModelPicker
-              providers={providers}
-              selectedProvider={selectedProvider}
-              selectedModel={selectedModel}
-              keyedProviders={keyedProviders}
-              onSelect={onSelectModel}
-            />
-          </div>
+          {/* The model picker is hidden for now: only "Auto" is offered, so the
+              choice added nothing. To bring it back, render <ModelPicker> here
+              with providers / selectedProvider / selectedModel / keyedProviders /
+              onSelectModel. */}
+          <div className="flex-1" />
           <div className="flex items-center gap-1.5 flex-shrink-0">
             <input
               ref={fileRef}

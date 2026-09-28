@@ -11,6 +11,7 @@ import OpenAI from 'openai';
 import { BaseChatProvider, type ProviderTraits, type ProviderRequest } from './base.js';
 import type { ChatProvider, CompletionOptions, LlmMessage } from './types.js';
 import { toOpenAiDialectMessages } from './imageContent.js';
+import { openRouterWebPlugin } from '../prompts/citations.js';
 
 interface DialectTraits extends ProviderTraits {
   // Where this backend lives; the env variable (when set) wins.
@@ -25,17 +26,21 @@ export class OpenAIDialectProvider extends BaseChatProvider {
     super(dialect);
   }
 
+  private baseURL(): string | undefined {
+    return (this.dialect.baseURLEnv ? process.env[this.dialect.baseURLEnv] : undefined) ?? this.dialect.defaultBaseURL;
+  }
+
   protected async performRequest({ messages, model, apiKey, timeoutMs, options }: ProviderRequest): Promise<string> {
+    const baseURL = this.baseURL();
     const client = new OpenAI({
       // Local servers accept any non-empty key; send a placeholder if absent.
       apiKey: apiKey ?? 'not-needed',
-      baseURL:
-        (this.dialect.baseURLEnv ? process.env[this.dialect.baseURLEnv] : undefined) ??
-        this.dialect.defaultBaseURL,
+      baseURL,
       timeout: timeoutMs
     });
     const completion = await client.chat.completions.create({
       model,
+      ...openRouterWebPlugin(model, baseURL),
       // Turns with images/documents become content-parts lists; text turns
       // stay plain strings.
       messages: toOpenAiDialectMessages(messages, {
@@ -61,15 +66,15 @@ export class OpenAIDialectProvider extends BaseChatProvider {
       return t;
     }
     const req = this.buildRequest(messages, options);
+    const baseURL = this.baseURL();
     const client = new OpenAI({
       apiKey: req.apiKey ?? 'not-needed',
-      baseURL:
-        (this.dialect.baseURLEnv ? process.env[this.dialect.baseURLEnv] : undefined) ??
-        this.dialect.defaultBaseURL,
+      baseURL,
       timeout: req.timeoutMs
     });
     const stream = await client.chat.completions.create({
       model: req.model,
+      ...openRouterWebPlugin(req.model, baseURL),
       messages: toOpenAiDialectMessages(req.messages, {
         supportsFiles: this.dialect.supportsFiles !== false
       }) as never,

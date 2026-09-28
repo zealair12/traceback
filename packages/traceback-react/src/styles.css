@@ -156,6 +156,16 @@
   border-bottom: none;
 }
 
+/* Code block with a copy button: the wrapper takes the block margin, and the
+   code gets right padding so the button never covers the first line. */
+.prose-tb .tb-code {
+  margin: 0.6em 0;
+}
+.prose-tb .tb-code > pre {
+  margin: 0;
+  padding-right: 2.75em;
+}
+
 /* KaTeX: follow the surrounding text color so math reads in every theme */
 .katex {
   color: inherit !important;

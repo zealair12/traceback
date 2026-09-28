@@ -12,6 +12,7 @@ export const TRACEBACK_FEATURES = `What traceback can do, and where to find it (
 - Tree view: the panel on the right (tap the graph icon in the top bar on phones) shows the whole chat as a tree; click any node to jump to that branch.
 - Switch models: the model menu at the bottom of the message box; "Auto" chooses one for you. Adding your own API key unlocks that provider's models.
 - Move between branches: when a message has alternatives, use the arrows in the top bar.
+- Copy code or a formula: each code block and equation in a reply has its own copy button (on hover on desktop; tap a formula on phones). Formulas copy as LaTeX.
 - Edit, resend, or copy a message: the small buttons on each message (always shown on phones, on hover on desktop).
 - Import history: bring in exports from ChatGPT, Claude, or Gemini from the sidebar.
 - Incognito: a temporary chat that is deleted when you leave (top bar).

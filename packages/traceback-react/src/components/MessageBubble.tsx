@@ -12,6 +12,8 @@ import { splitAskQuote, type BranchAnchorGroup } from '../lib/branchAnchors';
 import { rehypeBranchAnchors } from '../lib/rehypeBranchAnchors';
 import { isTermHref, stripTermLinks, termTitle } from '../lib/termPreview';
 import { HoverTerm } from './HoverTerm';
+import { CodeBlock, MarkdownSpan } from './CopyBlocks';
+import { rehypeMathCopy } from '../lib/rehypeMathCopy';
 
 interface MessageBubbleProps {
   message: ChatMessage;
@@ -64,7 +66,7 @@ export function MessageBubble({
   // Mark the passages branched from, after math renders so matching sees the
   // same text the user highlighted.
   const rehypePlugins = useMemo(
-    () => [rehypeKatex, [rehypeBranchAnchors, branchAnchors ?? []]] as RehypePlugins,
+    () => [rehypeKatex, rehypeMathCopy, [rehypeBranchAnchors, branchAnchors ?? []]] as RehypePlugins,
     [branchAnchors]
   );
 
@@ -77,6 +79,9 @@ export function MessageBubble({
   });
   const markdownComponents = useMemo<Components>(
     () => ({
+      // Code blocks and formulas get a copy button.
+      pre: CodeBlock,
+      span: MarkdownSpan,
       a: ({ node: _node, href, children, ...props }) =>
         isTermHref(href) ? (
           <HoverTerm title={termTitle(href)} onBranch={(text) => branchRef.current(message.id, text, 'dig')}>

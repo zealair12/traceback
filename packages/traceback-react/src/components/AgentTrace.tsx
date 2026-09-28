@@ -30,7 +30,7 @@ export function AgentTrace({ steps }: { steps: ChatMessage[] }) {
   const stepCount = steps.filter((s) => s.branchLabel === 'tool_call').length;
 
   return (
-    <div className="flex items-start gap-3">
+    <div className="flex items-start gap-2 md:gap-3">
       {/* Spacer to line up with message bubbles (which have a 7x7 avatar). */}
       <div className="w-7 flex-shrink-0" />
       <div className="flex-1 min-w-0">

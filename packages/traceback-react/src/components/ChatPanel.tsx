@@ -47,6 +47,11 @@ interface ChatPanelProps {
   onToggleAgent: () => void;
 }
 
+// One shared column for the thread, composer and notices so they always line up.
+// Nearly the full panel width; capped at 80rem so lines stay readable on very
+// wide monitors.
+const COLUMN = 'w-full max-w-[80rem] mx-auto';
+
 export function ChatPanel({
   threadPath,
   onSendMessage,
@@ -141,7 +146,7 @@ export function ChatPanel({
   // Shown when a guest runs out of free messages: a one-click Google sign-in
   // rather than a wall of text. Signing in keeps their existing chats.
   const limitCta = (
-    <div className="max-w-2xl mx-auto mb-2 flex flex-col items-center gap-1.5 text-center">
+    <div className={`${COLUMN} mb-2 flex flex-col items-center gap-1.5 text-center`}>
       <p className="text-[12px] text-gray-400">You have used today's free messages.</p>
       <button
         type="button"
@@ -178,7 +183,7 @@ export function ChatPanel({
       {isEmpty ? (
         /* Empty state: composer floats in the vertical center */
         <div className="flex-1 flex flex-col items-center justify-center px-4 pb-8">
-          <div className="w-full max-w-2xl">
+          <div className="w-full max-w-3xl">
             {guestLimitReached && limitCta}
             {error && (
               <div className="mb-2 text-xs text-red-400 bg-red-400/10 rounded-md px-3 py-1.5">
@@ -190,8 +195,8 @@ export function ChatPanel({
         </div>
       ) : (
         <>
-          <div ref={scrollRef} className="flex-1 h-0 overflow-y-auto">
-            <div className="max-w-2xl mx-auto px-4 pt-4 pb-2 space-y-5">
+          <div ref={scrollRef} className="flex-1 h-0 overflow-y-auto px-3 md:px-8">
+            <div className={`${COLUMN} pt-4 pb-2 space-y-5`}>
               {renderItems.map((item) =>
                 item.kind === 'trace' ? (
                   <AgentTrace key={item.key} steps={item.steps} />
@@ -211,7 +216,7 @@ export function ChatPanel({
                   show a second empty avatar next to it. */}
               {sending &&
                 (threadPath.length === 0 || threadPath[threadPath.length - 1].role !== 'assistant') && (
-                  <div className="flex items-start gap-3">
+                  <div className="flex items-start gap-2 md:gap-3">
                     <div className="w-7 h-7 rounded-full bg-gray-800 flex items-center justify-center text-blue-400 mt-1 flex-shrink-0">
                       <BrandIcon size={15} />
                     </div>
@@ -221,15 +226,15 @@ export function ChatPanel({
             </div>
           </div>
 
-          <footer className="px-4 py-3 flex-shrink-0">
+          <footer className="px-3 md:px-8 py-3 flex-shrink-0">
             {guestLimitReached && limitCta}
             {error && (
-              <div className="max-w-2xl mx-auto mb-2 text-xs text-red-400 bg-red-400/10 rounded-md px-3 py-1.5">
+              <div className={`${COLUMN} mb-2 text-xs text-red-400 bg-red-400/10 rounded-md px-3 py-1.5`}>
                 {error}
               </div>
             )}
             {showBranchHint && (
-              <div className="max-w-2xl mx-auto mb-2 flex items-center justify-between gap-3 text-[11px] text-gray-400 bg-gray-500/10 rounded-md px-3 py-1.5">
+              <div className={`${COLUMN} mb-2 flex items-center justify-between gap-3 text-[11px] text-gray-400 bg-gray-500/10 rounded-md px-3 py-1.5`}>
                 <span>
                   {/* Laptop: both routes (hover has meaning). Phone: highlight only. */}
                   <span className="hidden md:inline">
@@ -249,14 +254,7 @@ export function ChatPanel({
                 </button>
               </div>
             )}
-            {branchingFromMessageId && branchingFromPreview && (
-              <div className="max-w-2xl mx-auto mb-2 text-xs text-gray-400 flex items-center gap-1.5">
-                <span>⎇</span>
-                <span>Branching from:</span>
-                <span className="text-gray-300 truncate max-w-[300px]">"{branchingFromPreview}"</span>
-              </div>
-            )}
-            <div className="max-w-2xl mx-auto">{composer}</div>
+            <div className={COLUMN}>{composer}</div>
           </footer>
         </>
       )}

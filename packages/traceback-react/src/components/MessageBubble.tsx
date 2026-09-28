@@ -127,7 +127,7 @@ export function MessageBubble({ message, onBranchFromMessage, onResendMessage, o
           </div>
         )}
 
-        <div className="max-w-xl rounded-3xl bg-bubbleUser px-4 py-3 text-sm text-white whitespace-pre-wrap">
+        <div className="max-w-[85%] md:max-w-[70%] rounded-3xl bg-bubbleUser px-4 py-3 text-sm text-white whitespace-pre-wrap">
           {message.attachments && message.attachments.length > 0 && (
             <div className="flex gap-2 flex-wrap mb-2">
               {message.attachments.map((att, i) =>
@@ -234,14 +234,16 @@ export function MessageBubble({ message, onBranchFromMessage, onResendMessage, o
     'px-2.5 py-1 text-[12px] text-gray-100 hover:bg-gray-700/60 transition-colors flex items-center gap-1.5 whitespace-nowrap';
 
   return (
-    <div className="group flex items-start gap-3">
+    // Phone: the text takes the whole row (avatar aside) and the actions wrap
+    // onto their own line beneath it. Desktop: actions sit in a hover column.
+    <div className="group flex flex-wrap md:flex-nowrap items-start gap-2 md:gap-3">
       <div className="w-7 h-7 rounded-full bg-gray-800 flex items-center justify-center text-blue-400 mt-1 flex-shrink-0">
         <BrandIcon size={15} />
       </div>
       <div
         ref={containerRef}
         onMouseUp={handleMouseUp}
-        className="flex-1 text-sm text-gray-100 leading-relaxed min-w-0 prose-tb"
+        className="grow basis-[calc(100%-2.25rem)] md:basis-0 text-sm text-gray-100 leading-relaxed min-w-0 prose-tb"
       >
         <ReactMarkdown
           remarkPlugins={[remarkGfm, remarkMath]}
@@ -266,7 +268,7 @@ export function MessageBubble({ message, onBranchFromMessage, onResendMessage, o
       </div>
 
       {/* Copy + Branch actions */}
-      <div className="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity flex items-center gap-1 mt-1 flex-shrink-0">
+      <div className="w-full pl-9 md:w-auto md:pl-0 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity flex items-center gap-1 md:mt-1 flex-shrink-0">
         <button
           type="button"
           onClick={() => handleCopy(message.content)}

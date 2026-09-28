@@ -8,9 +8,8 @@
 export const TRACEBACK_FEATURES = `What traceback can do, and where to find it (use this to answer "what can you do" and "how do I ..."):
 - Branch a reply: hover a reply and click "Branch", or select any text in a reply, to start a new direction from that exact point.
 - Jump back into a branch: text you branched from stays highlighted in the original reply; click it to open that branch where you left off (if you branched from it more than once, pick which).
-- Look up a key term: terms with a dotted underline in a reply show a quick Wikipedia summary when you hover them (tap on phones), with a button to branch on that term.
+- Link previews: links in a reply have a dotted underline; hover one (tap once on phones) to see a glimpse of the page, and click it (or tap again) to open it. Key terms link to Wikipedia.
 - Tree view: the panel on the right (tap the graph icon in the top bar on phones) shows the whole chat as a tree; click any node to jump to that branch.
-- Switch models: the model menu at the bottom of the message box; "Auto" chooses one for you. Adding your own API key unlocks that provider's models.
 - Move between branches: when a message has alternatives, use the arrows in the top bar.
 - Copy code or a formula: each code block and equation in a reply has its own copy button (on hover on desktop; tap a formula on phones). Formulas copy as LaTeX.
 - Edit, resend, or copy a message: the small buttons on each message (always shown on phones, on hover on desktop).

@@ -140,6 +140,15 @@ export function parseSSEBlock(block: string): { event: string; data: any } | nul
   }
 }
 
+/** Link preview returned by GET /link-preview. */
+export interface LinkPreview {
+  url: string;
+  title: string;
+  description?: string;
+  image?: string;
+  siteName?: string;
+}
+
 export class TracebackClient {
   readonly api: AxiosInstance;
   // Stored for the streaming endpoint, which uses fetch (axios can't stream a
@@ -340,6 +349,12 @@ export class TracebackClient {
   async importConversations(conversations: ImportedConversation[]): Promise<ImportResult> {
     const { data } = await this.api.post<ImportResult>('/import', { conversations });
     return data;
+  }
+
+  /** A glimpse of a linked page (title, description, image) for hover previews. */
+  async previewLink(url: string): Promise<LinkPreview | null> {
+    const { data } = await this.api.get<{ preview: LinkPreview | null }>('/link-preview', { params: { url } });
+    return data.preview;
   }
 
   /** Turn recorded audio (base64 data URL) into text via the server. */

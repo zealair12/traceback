@@ -59,13 +59,9 @@
 }
 .prose-tb {
   --tb-code-fg: #a5f3fc;
-  --tb-link: #60a5fa;
-  --tb-link-hover: #93c5fd;
 }
 [data-theme="light"] .prose-tb {
   --tb-code-fg: #0e7490;
-  --tb-link: #2563eb;
-  --tb-link-hover: #1d4ed8;
 }
 .prose-tb code {
   background: var(--color-gray-800);
@@ -96,13 +92,21 @@
   margin: 0.6em 0;
   color: var(--color-gray-400);
 }
+/* Links read like Wikipedia glosses: body-colored text with a dotted
+   underline; hovering shows a glimpse of the page (see LinkPreview). */
 .prose-tb a {
-  color: var(--tb-link);
-  text-decoration: underline;
-  text-underline-offset: 2px;
+  color: inherit;
+  text-decoration: underline dotted;
+  text-decoration-color: var(--color-gray-500);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
 }
 .prose-tb a:hover {
-  color: var(--tb-link-hover);
+  text-decoration-color: var(--color-gray-200);
+}
+/* A link you already branched from shows the branch highlight instead. */
+.prose-tb a:has(.tb-branch-anchor) {
+  text-decoration: none;
 }
 .prose-tb table {
   width: 100%;
@@ -141,19 +145,6 @@
 .tb-branch-anchor:hover {
   background: rgba(96, 165, 250, 0.26);
   border-bottom-color: rgba(96, 165, 250, 0.95);
-}
-
-/* A key term with a Wikipedia-style preview: dotted underline, like a gloss. */
-.tb-term {
-  border-bottom: 1px dotted var(--color-gray-500);
-  cursor: help;
-}
-.tb-term:hover {
-  border-bottom-color: var(--color-gray-300);
-}
-/* A term you already branched from shows the branch highlight instead. */
-.tb-term:has(.tb-branch-anchor) {
-  border-bottom: none;
 }
 
 /* Code block with a copy button: the wrapper takes the block margin, and the

@@ -16,7 +16,8 @@ import {
   type MessageResponse,
   type ProvidersResponse,
   type AuthMeResponse,
-  type SendMessageResult
+  type SendMessageResult,
+  type LinkPreview
 } from '@traceback/shared';
 
 const SESSION_ID = 'demo-session';
@@ -223,6 +224,9 @@ export class MockTracebackClient extends TracebackClient {
     return { text: '', provider: 'demo', model: 'demo' };
   }
   async signOut(): Promise<void> {}
+  async previewLink(_url: string): Promise<LinkPreview | null> {
+    return null;
+  }
   // The demo's one real action: start Google sign-in on the live backend.
   signIn(): void {
     if (this.authUrl) window.location.href = this.authUrl;

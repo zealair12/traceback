@@ -4,6 +4,7 @@ import { ChatPanel } from './components/ChatPanel';
 import { TreePanel, treeConnectorColor } from './components/TreePanel';
 import { KeyManager } from './components/KeyManager';
 import { ImportPanel } from './components/ImportPanel';
+import { LinkPreviewContext } from './components/LinkPreview';
 import { useTraceback, type UseTracebackReturn } from './useTraceback';
 import type { TracebackClient } from '@traceback/shared';
 
@@ -210,6 +211,8 @@ export function TracebackChat({ apiUrl, client, onEngineReady, initialActiveNode
   }
 
   return (
+    // Link previews in replies ask the server for non-Wikipedia pages.
+    <LinkPreviewContext.Provider value={tb.previewLink}>
     <div className="h-full w-full overflow-hidden bg-background text-gray-100 flex" data-theme={theme}>
       {/* Sidebar — overlays on mobile, in-flow flex child on desktop */}
       {!treeFullscreen && (
@@ -359,5 +362,6 @@ export function TracebackChat({ apiUrl, client, onEngineReady, initialActiveNode
         <ImportPanel onImport={tb.handleImportConversations} onClose={() => setShowImport(false)} />
       )}
     </div>
+    </LinkPreviewContext.Provider>
   );
 }

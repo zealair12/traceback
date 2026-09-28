@@ -269,6 +269,9 @@ export function useTraceback({ apiUrl, client: injectedClient, initialActiveNode
 
   // Turn recorded audio (or an audio file) into text. The user's stored Groq
   // or OpenAI key is sent when present.
+  // A glimpse of a linked page for hover previews (server-side fetch).
+  const previewLink = useCallback((url: string) => client.previewLink(url), [client]);
+
   const handleTranscribeAudio = useCallback(
     async (audioDataUrl: string, mediaType: string): Promise<string> => {
       const key = keyStore.get('groq') ?? keyStore.get('openai') ?? undefined;
@@ -812,6 +815,7 @@ export function useTraceback({ apiUrl, client: injectedClient, initialActiveNode
     clearProviderKey,
     handleImportConversations,
     handleTranscribeAudio,
+    previewLink,
     handleNewSession,
     handleSelectSession,
     handleRenameSession,

@@ -12,7 +12,9 @@ import type { Element, ElementContent, Root, RootContent, Text } from 'hast';
 import type { BranchAnchorGroup } from './branchAnchors';
 
 const BLOCKS = new Set(['p', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'td', 'th', 'dt', 'dd']);
-const OPAQUE = new Set(['pre', 'code', 'a', 'script', 'style', 'svg']);
+// Links are part of the prose (a passage may run through one), so they are
+// not opaque; clicking a branched passage inside a link opens the branch.
+const OPAQUE = new Set(['pre', 'code', 'script', 'style', 'svg']);
 const CONTAINERS = new Set(['ul', 'ol', 'table', 'thead', 'tbody', 'tr', 'blockquote']);
 
 type Parent = Root | Element;
@@ -21,10 +23,7 @@ interface Run {
   parent: Parent;
 }
 
-// Key-term links (term:...) are part of the prose, so passages may run through
-// them; ordinary links stay untouched.
-const isTermLink = (el: Element) => el.tagName === 'a' && String(el.properties?.href ?? '').startsWith('term:');
-const isOpaque = (el: Element) => (OPAQUE.has(el.tagName) && !isTermLink(el)) || isKatex(el);
+const isOpaque = (el: Element) => OPAQUE.has(el.tagName) || isKatex(el);
 
 const isKatex = (el: Element) => {
   const cls = el.properties?.className;

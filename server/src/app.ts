@@ -28,6 +28,7 @@ import { registerOpenAiProxy } from './routes/openaiProxy.js';
 import { registerImportRoutes } from './routes/importRoutes.js';
 import { registerTranscribeRoutes } from './routes/transcribeRoutes.js';
 import { registerAgentRoutes } from './routes/agentRoutes.js';
+import { registerLinkPreviewRoutes } from './routes/linkPreviewRoutes.js';
 import { wrap } from './routes/wrap.js';
 
 export function createApp() {
@@ -117,6 +118,7 @@ export function createApp() {
   registerOpenAiProxy(app);
   registerImportRoutes(app);
   registerTranscribeRoutes(app);
+  registerLinkPreviewRoutes(app);
 
   // --- Auth routes ----------------------------------------------------------
 

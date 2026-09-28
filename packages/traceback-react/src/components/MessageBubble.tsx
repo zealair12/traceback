@@ -10,8 +10,8 @@ import { FileText, Pencil, RotateCcw, Copy, Check } from 'lucide-react';
 import { BrandIcon } from './BrandIcon';
 import { splitAskQuote, type BranchAnchorGroup } from '../lib/branchAnchors';
 import { rehypeBranchAnchors } from '../lib/rehypeBranchAnchors';
-import { isTermHref, stripTermLinks, termTitle } from '../lib/termPreview';
-import { HoverTerm } from './HoverTerm';
+import { isTermHref, stripTermLinks } from '../lib/termPreview';
+import { LinkPreview } from './LinkPreview';
 import { CodeBlock, MarkdownSpan } from './CopyBlocks';
 import { rehypeMathCopy } from '../lib/rehypeMathCopy';
 
@@ -70,30 +70,25 @@ export function MessageBubble({
     [branchAnchors]
   );
 
-  // Links: key terms get a Wikipedia-style preview card; everything else opens
-  // in a new tab so a cited source never replaces the app. Memoized so a
-  // re-render (e.g. another reply streaming) doesn't remount an open card.
-  const branchRef = useRef(onBranchFromMessage);
-  useEffect(() => {
-    branchRef.current = onBranchFromMessage;
-  });
+  // Links (key terms and cited pages alike) get a Wikipedia-style glimpse and
+  // open in a new tab, so a source never replaces the app. Other schemes
+  // (mailto: etc.) stay plain links. Memoized so a re-render (e.g. another
+  // reply streaming) doesn't remount an open preview.
   const markdownComponents = useMemo<Components>(
     () => ({
       // Code blocks and formulas get a copy button.
       pre: CodeBlock,
       span: MarkdownSpan,
       a: ({ node: _node, href, children, ...props }) =>
-        isTermHref(href) ? (
-          <HoverTerm title={termTitle(href)} onBranch={(text) => branchRef.current(message.id, text, 'dig')}>
-            {children}
-          </HoverTerm>
+        href && (isTermHref(href) || /^https?:/i.test(href)) ? (
+          <LinkPreview href={href}>{children}</LinkPreview>
         ) : (
           <a href={href} {...props} target="_blank" rel="noopener noreferrer">
             {children}
           </a>
         )
     }),
-    [message.id]
+    []
   );
 
   // Clicking a marked passage opens its branch (or asks which, if several).

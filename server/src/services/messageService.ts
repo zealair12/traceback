@@ -18,6 +18,7 @@ import { HUMANIZE_WRITING_PROMPT } from '../prompts/humanizeWriting.js';
 import { TRACEBACK_FEATURES } from '../prompts/features.js';
 import { KEY_TERMS_PROMPT } from '../prompts/keyTerms.js';
 import { CITATION_RULE } from '../prompts/citations.js';
+import { modelForMessage } from '../prompts/webSearch.js';
 // Re-exported from their new home (server/src/providers) so existing importers
 // of these error types keep working unchanged after the provider refactor.
 export { ApiRateLimitError, LlmTimeoutError } from '../providers/index.js';
@@ -224,6 +225,11 @@ export async function createMessageWithAutoReply(options: {
           'You are traceback, a branching AI chat assistant made by Zeal, an individual developer (a person, not a company). ' +
           'Answer the user\'s actual message and nothing more. Do NOT introduce yourself, describe your features, or mention your creator unless the user explicitly asks about them. ' +
           // Conversational: a greeting gets a greeting, not a definition.
+          // "You" means this app, even when a search result is about something
+          // else named traceback (the Python module, other companies).
+          'In this chat, "you", "your", and "traceback" mean you, the traceback app the user is talking to. Answer questions about yourself as traceback, in the first person, and never confuse yourself with the Python traceback module, error tracebacks, or other products or companies named traceback. ' +
+          // Follow-ups: "no, not that one" refines the last question.
+          'Read every message in light of the whole conversation so far: a short follow-up like "no, not that one" or "I mean X" corrects or narrows the previous question, so answer the corrected question. ' +
           'Talk like a person in a conversation: if the user greets you or makes small talk (for example "hey", "thanks", or "lol"), reply briefly and naturally and keep the conversation going. Never define or explain the user\'s own words unless they ask what something means. ' +
           'Only if the user asks what you do or how you differ: traceback lets people branch any reply into a new direction, so a conversation grows as an explorable tree instead of one straight thread; it sends the model only the path from the start of the chat to the current message, which keeps answers focused and uses fewer tokens; and it can answer with different models per branch or use a person\'s own API key. That design sets it apart from linear, single-model assistants like ChatGPT or Claude. ' +
           'Only if asked who made or created you: say you were made by Zeal, a developer (a person, never a company). If asked whether Zeal is a full name, nickname, or middle name, do not speculate; just say Zeal is the name the creator goes by. If they want more about Zeal you may share these markdown links: [LinkedIn](https://www.linkedin.com/in/okechukwuzealachonu/) and [GitHub](https://github.com/zealair12). Never volunteer the links. If asked what model you are or which company built you, say you are traceback and do not name or reveal the underlying model or provider.\n\n' +
@@ -261,8 +267,11 @@ export async function createMessageWithAutoReply(options: {
   const chosenProvider = getProvider(provider);
   // Record exactly which backend and model were used, even when the request left
   // them unset, so the UI can show "answered by X" on each tree node.
-  const usedModel = model ?? chosenProvider.defaultModel;
-  const completionOptions = { model, temperature, maxTokens, apiKey };
+  // With the default model, skip the web search for small talk, follow-ups and
+  // questions about traceback itself (see prompts/webSearch.ts). A model the
+  // caller named explicitly is used as is.
+  const usedModel = model ?? modelForMessage(chosenProvider.defaultModel, content);
+  const completionOptions = { model: usedModel, temperature, maxTokens, apiKey };
   let assistantContent: string;
   try {
     // Stream when the caller wants tokens and the provider supports it; else the

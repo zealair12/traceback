@@ -272,7 +272,10 @@ export function useTraceback({ apiUrl, client: injectedClient, initialActiveNode
   const handleTranscribeAudio = useCallback(
     async (audioDataUrl: string, mediaType: string): Promise<string> => {
       const key = keyStore.get('groq') ?? keyStore.get('openai') ?? undefined;
-      const result = await client.transcribeAudio(audioDataUrl, mediaType, { apiKey: key });
+      // The browser's language (e.g. "en-US" -> "en"); the server falls back to
+      // English for anything the transcription model doesn't support.
+      const language = (typeof navigator !== 'undefined' && navigator.language) || 'en';
+      const result = await client.transcribeAudio(audioDataUrl, mediaType, { apiKey: key, language });
       return result.text;
     },
     [client]

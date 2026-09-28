@@ -12,6 +12,23 @@ import { useEffect, useRef, useState, type KeyboardEvent, type ClipboardEvent } 
 import type { ProviderInfo, ImageAttachment } from '@traceback/shared';
 import { ArrowUp, Bot, FileText, Mic, Paperclip, X } from 'lucide-react';
 import { ModelPicker } from './ModelPicker';
+import { audioBlobToWav, blobToDataUrl } from '../lib/wav';
+
+// One mic session: the text before it, the live speech engine (preview), and
+// the recorder whose audio gets the accurate server transcript on stop.
+interface Dictation {
+  base: string;
+  live: any | null;
+  liveText: string;
+  recorder: MediaRecorder | null;
+  stream: MediaStream | null;
+  chunks: Blob[];
+  ended: boolean;
+  onLiveEnd: (() => void) | null;
+}
+
+// Append text with a single separating space.
+const joinText = (base: string, add: string) => base + (base.trim() && add ? ' ' : '') + add;
 
 interface ComposerProps {
   sending: boolean;
@@ -81,9 +98,7 @@ export function Composer({
   })();
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
-  const recognitionRef = useRef<any>(null);
-  const finalTranscriptRef = useRef('');
-  const baseInputRef = useRef('');
+  const dictationRef = useRef<Dictation | null>(null);
 
   // Branching shows the passage as a quote preview above the input (not injected
   // into the textarea), and focuses the input so the user can type their question.
@@ -91,13 +106,29 @@ export function Composer({
     if (branchingFromMessageId) inputRef.current?.focus();
   }, [branchingFromMessageId]);
 
-  const transcribeAndInsert = async (dataUrl: string, mediaType: string) => {
+  // Server transcription (Cohere Transcribe, falling back to Whisper). Audio is
+  // converted to 16 kHz WAV first, which every backend accepts (Cohere rejects
+  // the WebM/MP4 browsers record); if the browser can't decode it, the original
+  // is sent as-is.
+  const serverTranscribe = async (blob: Blob): Promise<string> => {
+    let payload: Blob = blob;
+    try {
+      payload = await audioBlobToWav(blob);
+    } catch {
+      /* send the original */
+    }
+    const text = await onTranscribeAudio(await blobToDataUrl(payload), payload.type || blob.type || 'audio/webm');
+    return text.trim();
+  };
+
+  // An audio file dropped or attached: transcribe it into the input.
+  const transcribeAndInsert = async (blob: Blob) => {
     setMicState('transcribing');
     setMicError(null);
     try {
-      const text = await onTranscribeAudio(dataUrl, mediaType);
-      if (text.trim()) {
-        setInput((prev) => (prev.trim() ? prev + ' ' + text.trim() : text.trim()));
+      const text = await serverTranscribe(blob);
+      if (text) {
+        setInput((prev) => joinText(prev, text));
         inputRef.current?.focus();
       }
     } catch (err: any) {
@@ -107,63 +138,180 @@ export function Composer({
     }
   };
 
-  // Mic: real-time speech-to-text via the Web Speech API (no audio upload needed).
-  const toggleRecording = () => {
-    if (micState === 'recording') {
-      recognitionRef.current?.stop();
-      return;
-    }
+  // Mic dictation runs two things at once:
+  // - the browser's speech engine (Web Speech API) for the live, greyed preview
+  //   while you talk, and
+  // - a recorder capturing the audio, which is sent for the accurate server
+  //   transcript when you stop; that transcript then replaces the preview.
+  // Either one alone still works: no speech engine (e.g. Firefox) means record
+  // then transcribe; no server transcription (signed out, error) keeps the
+  // preview text. A server result never overwrites text you edited meanwhile.
+  const stopDictation = async () => {
+    const d = dictationRef.current;
+    if (!d || d.ended) return;
+    d.ended = true;
+    dictationRef.current = null;
 
-    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SR) {
-      setMicError('Speech recognition not supported. Try Chrome or Edge.');
-      return;
-    }
-
-    finalTranscriptRef.current = '';
-    baseInputRef.current = input;
-
-    const rec = new SR();
-    rec.continuous = true;
-    rec.interimResults = true;
-    rec.lang = 'en-US';
-
-    rec.onresult = (e: any) => {
-      let finals = '';
-      let interimText = '';
-      for (let i = 0; i < e.results.length; i++) {
-        if (e.results[i].isFinal) finals += e.results[i][0].transcript;
-        else interimText += e.results[i][0].transcript;
+    // Let the speech engine deliver its last words before committing.
+    const liveDone = new Promise<void>((resolve) => {
+      if (!d.live) return resolve();
+      d.onLiveEnd = resolve;
+      setTimeout(resolve, 1500);
+      try {
+        d.live.stop();
+      } catch {
+        resolve();
       }
-      finalTranscriptRef.current = finals;
-      // Committed (finalized) speech goes into the editable input; the live,
-      // not-yet-final part shows greyed alongside until it settles.
-      const base = baseInputRef.current;
-      const f = finals.trim();
-      setInput(base + (base.trim() && f ? ' ' : '') + f);
-      setInterim(interimText.trim());
-    };
+    });
+    const recorded = new Promise<Blob | null>((resolve) => {
+      const r = d.recorder;
+      const finish = () => {
+        d.stream?.getTracks().forEach((t) => t.stop());
+        resolve(d.chunks.length ? new Blob(d.chunks, { type: r?.mimeType || 'audio/webm' }) : null);
+      };
+      if (!r || r.state === 'inactive') return finish();
+      r.onstop = finish;
+      r.stop();
+    });
+    await liveDone;
+    setInterim('');
+    const live = d.liveText.trim();
+    const committed = joinText(d.base, live);
+    setInput(committed);
 
-    rec.onerror = (e: any) => {
-      setMicError(e.error === 'not-allowed' ? 'Microphone access denied.' : `Recognition error: ${e.error}`);
-      setInterim('');
-      setMicState('idle');
-    };
-
-    rec.onend = () => {
-      const base = baseInputRef.current;
-      const finals = finalTranscriptRef.current.trim();
-      setInput(base + (base.trim() && finals ? ' ' : '') + finals);
-      setInterim('');
+    const blob = await recorded;
+    if (!blob) {
       setMicState('idle');
       inputRef.current?.focus();
-    };
-
-    recognitionRef.current = rec;
-    rec.start();
-    setMicState('recording');
-    setMicError(null);
+      return;
+    }
+    setMicState('transcribing');
+    try {
+      const text = await serverTranscribe(blob);
+      if (text) {
+        setInput((cur) => {
+          if (!live) return joinText(cur, text); // no preview: just insert
+          if (cur !== committed) return cur; // you edited meanwhile: keep yours
+          // A clipped recording shouldn't replace a fuller live transcript.
+          const words = (x: string) => x.split(/\s+/).filter(Boolean).length;
+          if (words(text) < words(live) * 0.5) return cur;
+          return joinText(d.base, text);
+        });
+      }
+    } catch (err: any) {
+      // The live text stays; only report when there was nothing live.
+      if (!live) setMicError(err?.response?.data?.error ?? err?.message ?? 'Transcription failed.');
+    } finally {
+      setMicState('idle');
+      inputRef.current?.focus();
+    }
   };
+
+  const startDictation = async () => {
+    setMicError(null);
+    const d: Dictation = {
+      base: input,
+      live: null,
+      liveText: '',
+      recorder: null,
+      stream: null,
+      chunks: [],
+      ended: false,
+      onLiveEnd: null
+    };
+    dictationRef.current = d;
+    setMicState('recording');
+
+    // 1) Raw audio for the accurate server transcript.
+    if (navigator.mediaDevices?.getUserMedia && typeof MediaRecorder !== 'undefined') {
+      try {
+        d.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        if (d.ended) {
+          d.stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+        d.recorder = new MediaRecorder(d.stream);
+        d.recorder.ondataavailable = (e) => {
+          if (e.data.size) d.chunks.push(e.data);
+        };
+        d.recorder.start();
+      } catch {
+        d.stream?.getTracks().forEach((t) => t.stop());
+        d.stream = null;
+        d.recorder = null;
+      }
+    }
+    if (d.ended) return;
+
+    // 2) Live preview through the browser's speech engine.
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (SR) {
+      const rec = new SR();
+      rec.continuous = true;
+      rec.interimResults = true;
+      rec.lang = navigator.language || 'en-US';
+      rec.onresult = (e: any) => {
+        let finals = '';
+        let interimText = '';
+        for (let i = 0; i < e.results.length; i++) {
+          if (e.results[i].isFinal) finals += e.results[i][0].transcript;
+          else interimText += e.results[i][0].transcript;
+        }
+        d.liveText = finals;
+        // Finalized speech goes into the editable input; the not-yet-final part
+        // shows greyed alongside until it settles.
+        setInput(joinText(d.base, finals.trim()));
+        setInterim(interimText.trim());
+      };
+      rec.onerror = (e: any) => {
+        if (e.error === 'no-speech' || e.error === 'aborted') return; // onend wraps up
+        if (d.recorder) {
+          // No preview, but the recording carries on and is transcribed on stop.
+          d.live = null;
+          setInterim('');
+          return;
+        }
+        setMicError(e.error === 'not-allowed' ? 'Microphone access denied.' : `Recognition error: ${e.error}`);
+      };
+      rec.onend = () => {
+        d.onLiveEnd?.();
+        if (d.live !== rec) return; // preview dropped; the recording carries on
+        if (!d.ended) void stopDictation(); // the engine stopped on its own (long pause)
+      };
+      d.live = rec;
+      try {
+        rec.start();
+      } catch {
+        d.live = null;
+      }
+    }
+
+    if (!d.live && !d.recorder) {
+      d.ended = true;
+      dictationRef.current = null;
+      setMicState('idle');
+      setMicError('Speech input is not available in this browser.');
+    }
+  };
+
+  const toggleRecording = () => {
+    if (micState === 'recording') void stopDictation();
+    else if (micState === 'idle') void startDictation();
+  };
+
+  // Leaving mid-dictation releases the microphone.
+  useEffect(
+    () => () => {
+      const d = dictationRef.current;
+      try {
+        d?.live?.abort?.();
+      } catch {
+        /* ignore */
+      }
+      d?.stream?.getTracks().forEach((t) => t.stop());
+    },
+    []
+  );
 
   // Compress images before attaching — keeps base64 payloads small enough for the server.
   const compressImage = (file: File): Promise<string> =>
@@ -186,9 +334,7 @@ export function Composer({
   const addFiles = (files: Iterable<File>) => {
     for (const file of files) {
       if (file.type.startsWith('audio/')) {
-        const reader = new FileReader();
-        reader.onload = () => transcribeAndInsert(String(reader.result ?? ''), file.type);
-        reader.readAsDataURL(file);
+        transcribeAndInsert(file);
         continue;
       }
       if (file.type === 'application/pdf') {
@@ -389,13 +535,15 @@ export function Composer({
             <button
               type="button"
               onClick={toggleRecording}
-              disabled={sending}
+              disabled={sending || micState === 'transcribing'}
               className={`h-7 w-7 rounded-full flex items-center justify-center transition-colors disabled:opacity-30 ${
                 micState === 'recording'
                   ? 'text-red-400 bg-red-400/10 animate-pulse'
-                  : 'text-gray-400 hover:text-gray-100 hover:bg-gray-800'
+                  : micState === 'transcribing'
+                    ? 'text-blue-400 animate-pulse disabled:opacity-100'
+                    : 'text-gray-400 hover:text-gray-100 hover:bg-gray-800'
               }`}
-              title={micState === 'recording' ? 'Stop' : 'Dictate'}
+              title={micState === 'recording' ? 'Stop' : micState === 'transcribing' ? 'Transcribing…' : 'Dictate'}
             >
               <Mic size={15} />
             </button>

@@ -12,6 +12,12 @@
 import type { Express, Request, Response, NextFunction } from 'express';
 import OpenAI from 'openai';
 import { resolveApiKey } from '../auth/apiKey.js';
+import {
+  COHERE_TRANSCRIBE_MODEL,
+  cohereAcceptsAudio,
+  cohereLanguage,
+  transcribeWithCohere
+} from '../providers/cohereTranscribe.js';
 
 // Roughly 25MB of audio once base64-decoded.
 const MAX_AUDIO_CHARS = 35_000_000;
@@ -51,12 +57,35 @@ export function registerTranscribeRoutes(app: Express) {
 
       const groqKey = userKey ?? process.env.GROQ_API_KEY;
       const openaiKey = userKey ?? process.env.OPENAI_API_KEY;
+      // Cohere Transcribe is the preferred server backend when configured. A
+      // caller's own key is for Groq/OpenAI, so it keeps that path.
+      const cohereKey = userKey ? undefined : process.env.COHERE_API_KEY;
 
-      // Decode the data URL into a File the transcription SDKs accept.
+      // Decode the data URL into bytes. Whisper infers the format from the
+      // file name, so give it a real extension.
       const base64 = audio.slice(audio.indexOf(',') + 1);
       const bytes = Buffer.from(base64, 'base64');
-      const ext = mediaType.includes('webm') ? 'webm' : mediaType.includes('mp4') ? 'mp4' : 'audio';
+      const ext =
+        mediaType.match(/(webm|mp4|m4a|wav|ogg|flac|mp3)/)?.[1] ?? (/(mpeg|mpga)/.test(mediaType) ? 'mp3' : 'webm');
       const file = new File([bytes], `recording.${ext}`, { type: mediaType });
+
+      if (cohereKey && cohereAcceptsAudio(mediaType)) {
+        try {
+          const text = await transcribeWithCohere({
+            bytes,
+            mediaType,
+            language: cohereLanguage(req.body?.language),
+            apiKey: cohereKey,
+            baseURL: process.env.COHERE_BASE_URL
+          });
+          res.json({ text, provider: 'cohere', model: COHERE_TRANSCRIBE_MODEL });
+          return;
+        } catch (err) {
+          // Trial-key rate limits or an outage: fall back to Whisper if we can.
+          if (!groqKey && !openaiKey) throw err;
+          console.warn('[transcribe] Cohere failed, falling back to Whisper:', (err as Error).message);
+        }
+      }
 
       let text: string;
       let provider: string;
@@ -86,7 +115,7 @@ export function registerTranscribeRoutes(app: Express) {
       } else {
         res.status(400).json({
           error:
-            'No transcription backend available: add a Groq or OpenAI key (server .env or your own key) to use speech input.'
+            'No transcription backend available: add a Cohere, Groq, or OpenAI key (server .env or your own key) to use speech input.'
         });
         return;
       }

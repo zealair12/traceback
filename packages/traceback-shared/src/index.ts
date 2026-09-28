@@ -346,11 +346,13 @@ export class TracebackClient {
   async transcribeAudio(
     audioDataUrl: string,
     mediaType: string,
-    options?: { apiKey?: string }
+    // language: the speaker's language as an ISO-639-1 code (e.g. "en"). Cohere
+    // Transcribe needs it; Whisper ignores it and auto-detects.
+    options?: { apiKey?: string; language?: string }
   ): Promise<{ text: string; provider: string; model: string }> {
     const { data } = await this.api.post<{ text: string; provider: string; model: string }>(
       '/transcribe',
-      { audio: audioDataUrl, mediaType },
+      { audio: audioDataUrl, mediaType, language: options?.language },
       this.auth(options?.apiKey)
     );
     return data;

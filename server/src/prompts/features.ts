@@ -7,6 +7,7 @@
 // file. That is the only place the assistant's feature knowledge comes from.
 export const TRACEBACK_FEATURES = `What traceback can do, and where to find it (use this to answer "what can you do" and "how do I ..."):
 - Branch a reply: hover a reply and click "Branch", or select any text in a reply, to start a new direction from that exact point.
+- Jump back into a branch: text you branched from stays highlighted in the original reply; click it to open that branch where you left off (if you branched from it more than once, pick which).
 - Tree view: the panel on the right (tap the graph icon in the top bar on phones) shows the whole chat as a tree; click any node to jump to that branch.
 - Switch models: the model menu at the bottom of the message box; "Auto" chooses one for you. Adding your own API key unlocks that provider's models.
 - Move between branches: when a message has alternatives, use the arrows in the top bar.

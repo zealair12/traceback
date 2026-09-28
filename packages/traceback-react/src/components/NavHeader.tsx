@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, PanelLeft, Ghost, GitBranch } from 'lucide-r
 import type { ChatMessage } from '../types';
 import type { SiblingInfo } from '../lib/conversationTree';
 import { stripMarkdown } from '../utils/text';
+import { splitAskQuote } from '../lib/branchAnchors';
 
 interface NavHeaderProps {
   threadPath: ChatMessage[];
@@ -82,7 +83,8 @@ export function NavHeader({
           ) : (
             pairs.map((pair, i) => {
               const isLast = i === pairs.length - 1;
-              const clean = stripMarkdown(pair.content);
+              // An Ask branch reads as its question, not the quoted passage above it.
+              const clean = stripMarkdown(splitAskQuote(pair.content).body);
               const label = clean.length > 24 ? clean.slice(0, 24) + '…' : clean;
               return (
                 <span key={pair.id} className="flex items-center gap-1 min-w-0">

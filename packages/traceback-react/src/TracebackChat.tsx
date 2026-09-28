@@ -280,6 +280,8 @@ export function TracebackChat({ apiUrl, client, onEngineReady, initialActiveNode
           onNavigateToParent={tb.handleNavigateToParent}
           onNavigateToSibling={tb.handleNavigateToSibling}
           onNavigateToNode={tb.handleNavigateToNode}
+          branchAnchors={tb.branchAnchors}
+          onOpenBranch={tb.handleOpenBranch}
           sidebarOpen={sidebarOpen}
           onToggleSidebar={() => setSidebarOpen((v) => !v)}
           treePanelVisible={treePanelVisible}

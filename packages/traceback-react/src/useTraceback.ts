@@ -24,6 +24,7 @@ import { ConversationTree } from './lib/conversationTree';
 import { ModelRouter } from './lib/modelRouter';
 import { keyStore } from './lib/keyStore';
 import { isUntitledSessionName, summarizeTopic } from './lib/naming';
+import { digPrompt, groupAnchorsByParent } from './lib/branchAnchors';
 
 export interface UseTracebackOptions {
   // Base URL of the Traceback server (e.g. "http://localhost:4000").
@@ -613,7 +614,7 @@ export function useTraceback({ apiUrl, client: injectedClient, initialActiveNode
       setBranchingFromMessageId(messageId);
       setBranchingFromText(selectedText);
       try {
-        await send(activeSessionId, `Explain this in more detail: "${selectedText}"`, messageId);
+        await send(activeSessionId, digPrompt(selectedText), messageId);
       } catch (err: any) {
         console.error('Branch send failed:', err);
         setError(friendlyError(err));
@@ -673,6 +674,25 @@ export function useTraceback({ apiUrl, client: injectedClient, initialActiveNode
       clearBranching();
     },
     [tree, clearBranching]
+  );
+
+  // Passages that branches grew from, per reply, so the reply can link them.
+  const branchAnchors = useMemo(() => groupAnchorsByParent(allMessages), [allMessages]);
+
+  // Open a branch where it left off: from its first message, keep following the
+  // newest child down to the tip, so you land on the latest reply in it.
+  const handleOpenBranch = useCallback(
+    (childId: string) => {
+      let id = childId;
+      for (;;) {
+        const kids = allMessages.filter((m) => m.parentId === id);
+        if (kids.length === 0) break;
+        id = kids.reduce((a, b) => (a.createdAt >= b.createdAt ? a : b)).id;
+      }
+      setActiveNodeId(id);
+      clearBranching();
+    },
+    [allMessages, clearBranching]
   );
 
   const handleNavigateToNode = useCallback(
@@ -800,6 +820,8 @@ export function useTraceback({ apiUrl, client: injectedClient, initialActiveNode
     handleNavigateToParent,
     handleNavigateToSibling,
     handleNavigateToNode,
+    branchAnchors,
+    handleOpenBranch,
     handleSelectModel,
     handleToggleIncognito,
     handleResendMessage,

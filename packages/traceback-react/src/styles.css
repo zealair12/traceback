@@ -129,6 +129,20 @@
   margin: 1em 0;
 }
 
+/* A passage the user branched from: a soft highlight + underline that opens the
+   branch on click, like a link into the tree. */
+.tb-branch-anchor {
+  background: rgba(96, 165, 250, 0.14);
+  border-bottom: 1.5px solid rgba(96, 165, 250, 0.55);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background-color .15s ease, border-color .15s ease;
+}
+.tb-branch-anchor:hover {
+  background: rgba(96, 165, 250, 0.26);
+  border-bottom-color: rgba(96, 165, 250, 0.95);
+}
+
 /* KaTeX: follow the surrounding text color so math reads in every theme */
 .katex {
   color: inherit !important;

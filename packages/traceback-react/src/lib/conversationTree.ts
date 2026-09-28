@@ -10,6 +10,7 @@
 
 import type { Edge, Node } from '@xyflow/react';
 import type { MessageResponse } from '@traceback/shared';
+import { splitAskQuote } from './branchAnchors';
 import type { ChatMessage } from '../types';
 import { stripMarkdown } from '../utils/text';
 
@@ -43,7 +44,8 @@ function nodeLabel(m: MessageResponse): string {
     // final answer node
     return stripMarkdown(m.content);
   }
-  return stripMarkdown(m.content);
+  // An Ask branch reads as its question, not the quoted passage above it.
+  return stripMarkdown(splitAskQuote(m.content).body);
 }
 
 export class ConversationTree {

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo, type ComponentProps, type MouseEvent } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -8,6 +8,8 @@ import type { ChatMessage } from '../types';
 import { normalizeLatex } from '../utils/text';
 import { FileText, Pencil, RotateCcw, Copy, Check } from 'lucide-react';
 import { BrandIcon } from './BrandIcon';
+import { splitAskQuote, type BranchAnchorGroup } from '../lib/branchAnchors';
+import { rehypeBranchAnchors } from '../lib/rehypeBranchAnchors';
 
 interface MessageBubbleProps {
   message: ChatMessage;
@@ -18,6 +20,9 @@ interface MessageBubbleProps {
   // for a backend the user explicitly chose, and hidden for the built-in
   // default (whatever provider powers "Auto").
   keyedProviders: Set<string>;
+  // Passages in this reply that branches grew from; clicking one opens its branch.
+  branchAnchors?: BranchAnchorGroup[];
+  onOpenBranch?: (childId: string) => void;
 }
 
 interface PopoverState {
@@ -27,17 +32,70 @@ interface PopoverState {
   text: string;
 }
 
-// An "Ask" message is stored as: > "quoted passage"\n\nthe question.
-// Split it so the bubble can show the passage as a quote chip (matching the
-// composer preview) rather than raw "> ..." markdown. Non-matching content,
-// including plain messages and the "Explain this..." dig form, passes through.
-function splitAskQuote(content: string): { quote: string | null; body: string } {
-  const m = /^> "([\s\S]*?)"\n\n([\s\S]*)$/.exec(content);
-  return m ? { quote: m[1], body: m[2] } : { quote: null, body: content };
+// Where to show the "which branch?" menu when one passage has several branches.
+interface AnchorMenuState {
+  x: number;
+  top: number;
+  bottom: number;
+  branches: BranchAnchorGroup['branches'];
 }
 
-export function MessageBubble({ message, onBranchFromMessage, onResendMessage, onEditMessage, keyedProviders }: MessageBubbleProps) {
+type RehypePlugins = NonNullable<ComponentProps<typeof ReactMarkdown>['rehypePlugins']>;
+
+export function MessageBubble({
+  message,
+  onBranchFromMessage,
+  onResendMessage,
+  onEditMessage,
+  keyedProviders,
+  branchAnchors,
+  onOpenBranch
+}: MessageBubbleProps) {
   const [popover, setPopover] = useState<PopoverState | null>(null);
+  const [anchorMenu, setAnchorMenu] = useState<AnchorMenuState | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Mark the passages branched from, after math renders so matching sees the
+  // same text the user highlighted.
+  const rehypePlugins = useMemo(
+    () => [rehypeKatex, [rehypeBranchAnchors, branchAnchors ?? []]] as RehypePlugins,
+    [branchAnchors]
+  );
+
+  // Clicking a marked passage opens its branch (or asks which, if several).
+  const handleAnchorClick = (e: MouseEvent<HTMLDivElement>) => {
+    const el = (e.target as HTMLElement).closest<HTMLElement>('[data-branch-children]');
+    if (!el || !onOpenBranch) return;
+    // A drag that ends on a marked passage is a new selection, not a click.
+    if (window.getSelection()?.isCollapsed === false) return;
+    const ids = (el.dataset.branchChildren ?? '').split(' ').filter(Boolean);
+    if (ids.length === 1) {
+      onOpenBranch(ids[0]);
+      return;
+    }
+    const group = branchAnchors?.find((g) => g.branches.some((b) => ids.includes(b.childId)));
+    if (!group) return;
+    const r = el.getBoundingClientRect();
+    setAnchorMenu({ x: r.left + r.width / 2, top: r.top, bottom: r.bottom, branches: group.branches });
+  };
+
+  // Close the branch menu on an outside click, Escape, or scroll.
+  useEffect(() => {
+    if (!anchorMenu) return;
+    const close = (e: Event) => {
+      if (e.type === 'mousedown' && menuRef.current?.contains(e.target as Node)) return;
+      if (e.type === 'keydown' && (e as KeyboardEvent).key !== 'Escape') return;
+      setAnchorMenu(null);
+    };
+    document.addEventListener('mousedown', close);
+    document.addEventListener('keydown', close);
+    window.addEventListener('scroll', close, true);
+    return () => {
+      document.removeEventListener('mousedown', close);
+      document.removeEventListener('keydown', close);
+      window.removeEventListener('scroll', close, true);
+    };
+  }, [anchorMenu]);
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState('');
   const [copied, setCopied] = useState(false);
@@ -243,11 +301,12 @@ export function MessageBubble({ message, onBranchFromMessage, onResendMessage, o
       <div
         ref={containerRef}
         onMouseUp={handleMouseUp}
+        onClick={handleAnchorClick}
         className="grow basis-[calc(100%-2.25rem)] md:basis-0 text-sm text-gray-100 leading-relaxed min-w-0 prose-tb"
       >
         <ReactMarkdown
           remarkPlugins={[remarkGfm, remarkMath]}
-          rehypePlugins={[rehypeKatex]}
+          rehypePlugins={rehypePlugins}
           components={{
             // Open links in a new tab so a cited source never replaces the app.
             // Drop react-markdown's internal `node` prop so it isn't rendered as
@@ -287,6 +346,35 @@ export function MessageBubble({ message, onBranchFromMessage, onResendMessage, o
           <span>Branch</span>
         </button>
       </div>
+
+      {/* Several branches grew from this passage: pick one */}
+      {anchorMenu && (
+        <div
+          ref={menuRef}
+          className="fixed z-[100] w-64 rounded-lg shadow-2xl border border-gray-600/60 bg-gray-800 py-1"
+          style={{
+            left: Math.min(Math.max(anchorMenu.x - 128, 8), window.innerWidth - 264),
+            ...(anchorMenu.bottom > window.innerHeight - 200
+              ? { bottom: window.innerHeight - anchorMenu.top + 6 }
+              : { top: anchorMenu.bottom + 6 })
+          }}
+        >
+          <div className="px-3 py-1 text-[10px] uppercase tracking-wide text-gray-500">Branches from here</div>
+          {anchorMenu.branches.map((b) => (
+            <button
+              key={b.childId}
+              type="button"
+              onClick={() => {
+                setAnchorMenu(null);
+                onOpenBranch?.(b.childId);
+              }}
+              className="w-full text-left px-3 py-1.5 text-[12px] text-gray-200 hover:bg-gray-700 truncate"
+            >
+              {b.label || 'Untitled branch'}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Floating selection toolbar */}
       {popover && (

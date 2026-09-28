@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { ChatMessage } from '../types';
 import type { ProviderInfo, ImageAttachment } from '@traceback/shared';
 import type { SiblingInfo } from '../lib/conversationTree';
+import type { BranchAnchorGroup } from '../lib/branchAnchors';
 import { MessageBubble } from './MessageBubble';
 import { AgentTrace } from './AgentTrace';
 import { NavHeader } from './NavHeader';
@@ -31,6 +32,9 @@ interface ChatPanelProps {
   onNavigateToParent: () => void;
   onNavigateToSibling: (offset: number) => void;
   onNavigateToNode: (nodeId: string) => void;
+  // Per reply: passages that branches grew from, and how to open one.
+  branchAnchors: Map<string, BranchAnchorGroup[]>;
+  onOpenBranch: (childId: string) => void;
   sidebarOpen: boolean;
   onToggleSidebar: () => void;
   treePanelVisible: boolean;
@@ -71,6 +75,8 @@ export function ChatPanel({
   onNavigateToParent,
   onNavigateToSibling,
   onNavigateToNode,
+  branchAnchors,
+  onOpenBranch,
   sidebarOpen,
   onToggleSidebar,
   treePanelVisible,
@@ -208,6 +214,8 @@ export function ChatPanel({
                     onResendMessage={onResendMessage}
                     onEditMessage={onEditMessage}
                     keyedProviders={keyedProviders}
+                    branchAnchors={branchAnchors.get(item.message.id)}
+                    onOpenBranch={onOpenBranch}
                   />
                 )
               )}

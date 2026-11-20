@@ -1,0 +1,380 @@
+<title>Only Path That Matters</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column of figures, each with claim title, chart, source line and a table view; theory follows as numbered propositions. */
+:root {
+  --bg: #f9f9f7; --surface: #fcfcfb; --ink: #0b0b0b; --ink2: #52514e; --muted: #77756f;
+  --grid: #e1e0d9; --axis: #c3c2b7; --ring: rgba(11,11,11,0.10); --accent: #1c5cab; --note-bg: #eef4fc;
+  --c-anc: #2a78d6; --c-full: #eb6834; --c-win: #1baf7a;
+  --o1: #0d366b; --o2: #1c5cab; --o3: #3987e5; --o4: #86b6ef; --o-ink1: #ffffff; --o-ink4: #0b0b0b;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --chart-font: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink2: #c3c2b7; --muted: #9a988f;
+  --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,0.10); --accent: #6da7ec; --note-bg: #14202f;
+  --c-anc: #3987e5; --c-full: #d95926; --c-win: #199e70;
+  --o1: #b7d3f6; --o2: #6da7ec; --o3: #2a78d6; --o4: #184f95; --o-ink1: #0b0b0b; --o-ink4: #ffffff;
+  color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink2: #c3c2b7; --muted: #9a988f;
+  --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,0.10); --accent: #6da7ec; --note-bg: #14202f;
+  --c-anc: #3987e5; --c-full: #d95926; --c-win: #199e70;
+  --o1: #b7d3f6; --o2: #6da7ec; --o3: #2a78d6; --o4: #184f95; --o-ink1: #0b0b0b; --o-ink4: #ffffff;
+  color-scheme: dark; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.55; }
+.wrap { max-width: 860px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 40px 72px; display: grid; gap: 40px; }
+header { display: grid; gap: 12px; }
+.eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+h1 { font-size: clamp(28px, 4.4vw, 40px); line-height: 1.15; margin: 0; font-weight: 600; text-wrap: balance; letter-spacing: -0.01em; }
+h2 { font-size: 21px; line-height: 1.3; margin: 0; font-weight: 600; text-wrap: balance; }
+h3 { font-size: 16px; margin: 0; font-weight: 600; }
+p { margin: 0; max-width: 68ch; }
+.lede { color: var(--ink2); font-size: 16px; }
+.status { display: flex; flex-wrap: wrap; gap: 8px; }
+.pill { font-family: var(--font-mono); font-size: 12px; border: 1px solid var(--ring); border-radius: 999px; padding: 3px 10px; color: var(--ink2); background: var(--surface); font-variant-numeric: tabular-nums; }
+.pill b { color: var(--ink); font-weight: 500; }
+.note { background: var(--note-bg); border-radius: 8px; padding: 12px 14px; color: var(--ink2); font-size: 14px; max-width: none; }
+.fig { display: grid; gap: 10px; background: var(--surface); border: 1px solid var(--ring); border-radius: 10px; padding: 20px; min-width: 0; }
+.fig .num { font-family: var(--font-mono); font-size: 12px; color: var(--muted); letter-spacing: 0.04em; }
+.fig .sub { color: var(--ink2); font-size: 14px; }
+.fig > svg { width: 100%; height: auto; display: block; overflow: visible; }
+.src { font-size: 12.5px; color: var(--muted); max-width: none; }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-family: var(--chart-font); font-size: 13px; color: var(--ink2); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.sw.ghost { background: transparent !important; border: 1.5px dashed var(--muted); }
+details { font-size: 13.5px; }
+summary { cursor: pointer; color: var(--accent); width: fit-content; }
+summary:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+.tablewrap { overflow-x: auto; margin-top: 8px; }
+table { border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 13px; min-width: 100%; }
+th, td { text-align: left; padding: 5px 10px 5px 0; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+th { color: var(--muted); font-weight: 500; }
+.matrix { display: grid; grid-template-columns: auto 1fr 1fr; gap: 8px; align-items: stretch; }
+.matrix .h { font-size: 12px; color: var(--muted); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.05em; align-self: end; }
+.matrix .rowh { font-size: 13px; color: var(--ink2); align-self: center; padding-right: 6px; }
+.cell { border: 1px solid var(--ring); border-radius: 8px; padding: 10px 12px; display: grid; gap: 6px; min-width: 0; }
+.cell .k { font-size: 12.5px; color: var(--muted); display: flex; justify-content: space-between; gap: 8px; font-variant-numeric: tabular-nums; }
+.cell .k b { color: var(--ink); font-weight: 600; font-size: 15px; }
+.bar { height: 6px; border-radius: 3px; background: var(--grid); overflow: hidden; }
+.bar i { display: block; height: 100%; border-radius: 3px; }
+.theory { display: grid; gap: 18px; }
+.prop { border-left: 2px solid var(--axis); padding-left: 16px; display: grid; gap: 8px; min-width: 0; }
+.prop .lab { font-family: var(--font-mono); font-size: 12px; color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; }
+.prop .stmt { max-width: 68ch; }
+.prop .proof { color: var(--ink2); font-size: 14.5px; max-width: 68ch; }
+.prop .proof::before { content: "Proof. "; font-style: italic; color: var(--ink); }
+.prop .proof::after { content: " \220E"; }
+.math-scroll { overflow-x: auto; max-width: 100%; }
+mjx-container { max-width: 100%; }
+mjx-container[display="true"] { overflow-x: auto; overflow-y: hidden; padding: 2px 0; }
+.ok { color: var(--ink); font-weight: 500; }
+#tip { position: fixed; pointer-events: none; z-index: 20; background: var(--surface); color: var(--ink); border: 1px solid var(--ring); border-radius: 6px; padding: 6px 9px; font-family: var(--chart-font); font-size: 12.5px; line-height: 1.4; box-shadow: 0 4px 14px rgba(0,0,0,0.12); font-variant-numeric: tabular-nums; max-width: 260px; }
+@media (max-width: 520px) { .fig { padding: 14px; } .matrix { grid-template-columns: 1fr; } .matrix .h.blank { display: none; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']], displayMath: [['\\[', '\\]']],
+    macros: { A: '{A(a)}', Sib: '{S(a)}', w: '{w}', anc: '{\\mathrm{anc}}', full: '{\\mathrm{full}}', win: '{\\mathrm{win}}' }
+  },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg-full.js" async></script>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">Honors thesis &middot; results preview</div>
+  <h1>The Only Path That Matters? Preliminary figures and formal framework</h1>
+  <p class="lede">Traceback sends a model only the root-to-node path of a branched chat. These figures compare that ancestor-only rule with sending the full tree and with an equal-budget sliding window, on 720 frozen scenarios answered by three models.</p>
+  <div class="status" id="status"></div>
+  <p class="note"><b>Preliminary.</b> Leakage counts use the finished leak judge, which separates answers that <em>used</em> a sibling detail from answers that only mentioned or rejected it. Quality scores from the judge are still being collected and are not shown yet. Confidence intervals are Wilson 95% for rates and normal 95% for means. All counts use the first run of each scenario.</p>
+</header>
+
+<section class="fig" aria-labelledby="f1">
+  <div class="num">Figure 1</div>
+  <h2 id="f1">Ancestor-only never leaks; full tree and window leak most from consistent and conflicting siblings</h2>
+  <p class="sub">Share of answers that used a detail found only in a sibling branch, by sibling type. Solid bars are judge-confirmed use; dashed outlines are raw string matches, which also count mentions and rejections.</p>
+  <div class="legend" id="lg1"></div>
+  <svg id="c1" viewBox="0 0 760 330" role="img" aria-label="Grouped bar chart of leakage by sibling type and condition"></svg>
+  <p class="src" id="s1"></p>
+  <details><summary>Show table</summary><div class="tablewrap" id="t1"></div></details>
+</section>
+
+<section class="fig" aria-labelledby="f2">
+  <div class="num">Figure 2</div>
+  <h2 id="f2">String matching alone overstates leakage: most full-tree mentions were alternatives or rejections</h2>
+  <p class="sub">How the judge labelled each sibling term found in an answer (counts of terms, all three models).</p>
+  <div class="legend" id="lg2"></div>
+  <svg id="c2" viewBox="0 0 760 150" role="img" aria-label="Stacked bars of how flagged terms were used"></svg>
+  <p class="src" id="s2"></p>
+  <details><summary>Show table</summary><div class="tablewrap" id="t2"></div></details>
+</section>
+
+<section class="fig" aria-labelledby="f3">
+  <div class="num">Figure 3</div>
+  <h2 id="f3">Token savings grow with sibling count and shrink with depth</h2>
+  <p class="sub">Token efficiency \(E = 1 - w(C_\anc)/w(C_\full)\) by number of sibling branches, one line per active-path depth. It equals the siblings' share of the tree exactly (Proposition 1).</p>
+  <div class="legend" id="lg3"></div>
+  <svg id="c3" viewBox="0 0 760 320" role="img" aria-label="Line chart of token efficiency"></svg>
+  <p class="src" id="s3"></p>
+  <details><summary>Show table</summary><div class="tablewrap" id="t3"></div></details>
+</section>
+
+<section class="fig" aria-labelledby="f4">
+  <div class="num">Figure 4</div>
+  <h2 id="f4">Ancestor-only answers are almost always correct; the window drops to about half</h2>
+  <p class="sub">Answer states the required value and asserts no conflicting sibling value, by model and condition.</p>
+  <div class="legend" id="lg4"></div>
+  <svg id="c4" viewBox="0 0 760 330" role="img" aria-label="Grouped bar chart of correctness by model and condition"></svg>
+  <p class="src" id="s4"></p>
+  <details><summary>Show table</summary><div class="tablewrap" id="t4"></div></details>
+</section>
+
+<section class="fig" aria-labelledby="f5">
+  <div class="num">Figure 5</div>
+  <h2 id="f5">The window loses root-side facts every time, as the theory predicts</h2>
+  <p class="sub">Sliding window only, all models. Share of answers whose prompt still contained the required fact, and share answered correctly.</p>
+  <div class="matrix" id="m5"></div>
+  <p class="src" id="s5"></p>
+</section>
+
+<section class="theory" aria-labelledby="th">
+  <div class="eyebrow">Formal framework</div>
+  <h2 id="th">Why these results follow from the tree</h2>
+  <p>A session is a rooted tree \(T=(V,E)\) of messages with root \(r\) and parent map \(p\). A logical clock \(\tau\) is injective and increases along every edge, and each message has a token weight \(w(v)>0\); for a set \(U\), \(w(U)=\sum_{u\in U} w(u)\). The question \(q\) is asked under the ask node \(a\) at a time \(\tau_q\) later than every message. The active path is \(\A=\{a,p(a),\dots,r\}\) and the sibling content is \(\Sib=V\setminus\A\). The rules are \(C_\anc=\A\) (root to node), \(C_\full=V\) (by time), and \(C_\win\), the longest run of newest messages whose weight stays within \(B=w(\A)\), never splitting a message.</p>
+
+  <div class="prop"><div class="lab">Proposition 1 &middot; containment and efficiency</div>
+    <div class="stmt">\(C_\anc\subseteq C_\full\), and the token efficiency equals the siblings' share of the tree:
+    \[E \;=\; 1-\frac{w(C_\anc)}{w(C_\full)} \;=\; \frac{w(\Sib)}{w(V)}.\]</div>
+    <div class="proof">Every element of \(\A\) is in \(V\), and \(w\) is a sum of positive terms, so it is monotone. Because \(V=\A\,\dot\cup\,\Sib\), \(w(V)=w(\A)+w(\Sib)\), which rearranges to the formula.</div>
+  </div>
+
+  <div class="prop"><div class="lab">Proposition 2 &middot; growth over a session</div>
+    <div class="stmt">If a session grows one message at a time and every step re-sends its context, with \(w_{\min}\le w(v)\le w_{\max}\) and answered depth \(d_t\le D\), then
+    \[\sum_{t=1}^{n} w(V_t)\;\ge\;w_{\min}\,\frac{n(n+1)}{2}=\Theta(n^2), \qquad \sum_{t=1}^{n} w(A_t)\;\le\;w_{\max}\,n\,(D+1)=O(nD).\]</div>
+    <div class="proof">\(|V_t|=t\) gives \(w(V_t)\ge t\,w_{\min}\); sum over \(t\). A root-to-node path at depth \(d_t\) has \(d_t+1\) nodes, so \(w(A_t)\le (d_t+1)\,w_{\max}\le (D+1)\,w_{\max}\).</div>
+  </div>
+
+  <div class="prop"><div class="lab">Proposition 3 &middot; ancestor-only cannot contain sibling facts</div>
+    <div class="stmt">If every message containing a fact \(f\) lies in \(\Sib\) and \(q\) does not contain \(f\), then \(f\) does not occur in the ancestor-only prompt.</div>
+    <div class="proof">That prompt is the text of \(\A\) followed by \(q\). No message of \(\A\) contains \(f\), since all such messages lie in the disjoint set \(\Sib\), and \(q\) does not contain \(f\).</div>
+  </div>
+
+  <div class="prop"><div class="lab">Proposition 4 &middot; exposure times uptake</div>
+    <div class="stmt">Let \(X_c(f)=\mathbf 1[f \text{ is in the prompt of } C_c]\), \(\pi_f\) the chance rate of mentioning \(f\) without seeing it, and \(u_c(f)\) the mention rate when exposed. Then \(X_c(f)\) is computable from the tree without a model, and for a sibling-only fact
+    \[\Pr(M\mid c)-\Pr(M\mid \anc)\;=\;X_c(f)\,\bigl(u_c(f)-\pi_f\bigr).\]</div>
+    <div class="proof">Each rule is defined from \(T,\tau,w,a\) alone, so exposure is determined by them. By Proposition 3, \(\Pr(M\mid\anc)=\pi_f\). Under rule \(c\) the mention rate is \(\pi_f\) when \(X_c(f)=0\) and \(u_c(f)\) when \(X_c(f)=1\); subtract.</div>
+  </div>
+
+  <div class="prop"><div class="lab">Proposition 5 &middot; which messages the window keeps</div>
+    <div class="stmt">A message \(m\) is in \(C_\win\) if and only if \(\displaystyle\sum_{u:\ \tau(u)\ge\tau(m)} w(u)\le B\). Consequently, whenever siblings exist, the root is never in the window, because that sum for \(r\) is \(w(V)=B+w(\Sib)>B\).</div>
+    <div class="proof">The window is the longest newest-first prefix whose weight stays within \(B\). Weights are positive, so prefix sums strictly increase, and \(m\) is included exactly when the prefix ending at \(m\), namely \(\{u:\tau(u)\ge\tau(m)\}\), fits.</div>
+  </div>
+
+  <div class="prop"><div class="lab">Proposition 6 &middot; one-for-one displacement</div>
+    <div class="stmt">If \(\sigma=w(C_\win\cap\Sib)\) sibling tokens enter the window, then \(w(\A)-w(C_\win\cap\A)\ge\sigma\), and the active messages lost are the oldest ones. With late siblings, a fact in message \(m\) survives if and only if \(w(\Sib)\le w(\{u\in\A:\tau(u)<\tau(m)\})\).</div>
+    <div class="proof">\(w(C_\win\cap\A)+\sigma=w(C_\win)\le B=w(\A)\). If an active \(m\) is kept, any newer active \(m'\) has a smaller suffix sum and is kept too. For late siblings, the suffix from \(m\) is \(\Sib\) plus the active messages from \(m\) on; apply Proposition 5 with \(B=w(\A)\).</div>
+  </div>
+
+  <div class="prop"><div class="lab">Checked against the full run</div>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Statement</th><th>Prediction</th><th>Observed</th></tr></thead>
+      <tbody>
+        <tr><td>Proposition 1</td><td>\(E = w(\Sib)/w(V)\)</td><td class="ok">exact in all 720 scenarios</td></tr>
+        <tr><td>Proposition 3</td><td>no canary under ancestor-only</td><td class="ok">0 of 2,598 answers</td></tr>
+        <tr><td>Proposition 5</td><td>which facts the window keeps</td><td class="ok">correct in 720 of 720</td></tr>
+        <tr><td>Proposition 5</td><td>root fact never kept</td><td class="ok">0 of 360 root cells</td></tr>
+        <tr><td>Proposition 6</td><td>late-sibling survival condition</td><td class="ok">correct in 360 of 360</td></tr>
+        <tr><td>Window budget</td><td>\(1-w_{\max}/B &lt; w(C_\win)/B \le 1\)</td><td class="ok">mean 0.94, min 0.62</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+  <p class="src">The full LaTeX source, with definitions and corollaries, is in <span style="font-family:var(--font-mono)">thesis-experiments/docs/theory.tex</span> on the <span style="font-family:var(--font-mono)">thesis/experiment</span> branch.</p>
+</section>
+</div>
+<div id="tip" hidden></div>
+
+<script>
+const DATA = {"generated_from": {"responses": 7794, "base_rep0_answered": 6479, "leak_judged": 1464, "quality_judged": 2370}, "model_names": {"frontier": "Gemini 4 Argon", "mid": "GPT-6.2 Sol", "open_weights": "Mistral Large 4"}, "leak": [{"condition": "ancestor", "type": "consistent", "n": 540, "raw": [0.0, 0.0, 0.0071], "used": [0.0, 0.0, 0.0071], "n_judged": 540}, {"condition": "ancestor", "type": "conflicting", "n": 540, "raw": [0.0, 0.0, 0.0071], "used": [0.0, 0.0, 0.0071], "n_judged": 540}, {"condition": "ancestor", "type": "irrelevant", "n": 540, "raw": [0.0, 0.0, 0.0071], "used": [0.0, 0.0, 0.0071], "n_judged": 540}, {"condition": "ancestor", "type": "misleading", "n": 540, "raw": [0.0, 0.0, 0.0071], "used": [0.0, 0.0, 0.0071], "n_judged": 540}, {"condition": "full_tree", "type": "consistent", "n": 540, "raw": [0.3296, 0.2913, 0.3704], "used": [0.3241, 0.286, 0.3647], "n_judged": 540}, {"condition": "full_tree", "type": "conflicting", "n": 540, "raw": [0.5556, 0.5134, 0.5969], "used": [0.1556, 0.1274, 0.1885], "n_judged": 540}, {"condition": "full_tree", "type": "irrelevant", "n": 539, "raw": [0.0, 0, 0.0071], "used": [0.0, 0, 0.0071], "n_judged": 539}, {"condition": "full_tree", "type": "misleading", "n": 540, "raw": [0.2741, 0.2381, 0.3132], "used": [0.0333, 0.0212, 0.0521], "n_judged": 540}, {"condition": "window", "type": "consistent", "n": 540, "raw": [0.2556, 0.2206, 0.294], "used": [0.2537, 0.2188, 0.2921], "n_judged": 540}, {"condition": "window", "type": "conflicting", "n": 540, "raw": [0.4426, 0.4013, 0.4847], "used": [0.3852, 0.3451, 0.4269], "n_judged": 540}, {"condition": "window", "type": "irrelevant", "n": 540, "raw": [0.0407, 0.0271, 0.0609], "used": [0.0, 0.0, 0.0071], "n_judged": 540}, {"condition": "window", "type": "misleading", "n": 540, "raw": [0.3481, 0.3092, 0.3893], "used": [0.0852, 0.0645, 0.1118], "n_judged": 540}], "leak_model": [{"model": "frontier", "condition": "ancestor", "n": 720, "used": [0.0, 0, 0.0053]}, {"model": "frontier", "condition": "full_tree", "n": 720, "used": [0.2958, 0.2636, 0.3302]}, {"model": "frontier", "condition": "window", "n": 720, "used": [0.2708, 0.2397, 0.3044]}, {"model": "mid", "condition": "ancestor", "n": 720, "used": [0.0, 0, 0.0053]}, {"model": "mid", "condition": "full_tree", "n": 720, "used": [0.0528, 0.0387, 0.0716]}, {"model": "mid", "condition": "window", "n": 720, "used": [0.1236, 0.1015, 0.1497]}, {"model": "open_weights", "condition": "ancestor", "n": 720, "used": [0.0, 0, 0.0053]}, {"model": "open_weights", "condition": "full_tree", "n": 719, "used": [0.0362, 0.0248, 0.0525]}, {"model": "open_weights", "condition": "window", "n": 720, "used": [0.1486, 0.1245, 0.1765]}], "efficiency": [{"depth": 2, "siblings": 1, "mean": 0.5955, "lo": 0.59, "hi": 0.6011, "n": 80}, {"depth": 2, "siblings": 3, "mean": 0.8166, "lo": 0.8137, "hi": 0.8194, "n": 80}, {"depth": 2, "siblings": 5, "mean": 0.8794, "lo": 0.8774, "hi": 0.8813, "n": 80}, {"depth": 4, "siblings": 1, "mean": 0.4251, "lo": 0.4203, "hi": 0.4299, "n": 80}, {"depth": 4, "siblings": 3, "mean": 0.6934, "lo": 0.6905, "hi": 0.6962, "n": 80}, {"depth": 4, "siblings": 5, "mean": 0.7844, "lo": 0.782, "hi": 0.7868, "n": 80}, {"depth": 8, "siblings": 1, "mean": 0.2699, "lo": 0.2665, "hi": 0.2734, "n": 80}, {"depth": 8, "siblings": 3, "mean": 0.525, "lo": 0.5221, "hi": 0.528, "n": 80}, {"depth": 8, "siblings": 5, "mean": 0.6502, "lo": 0.6476, "hi": 0.6527, "n": 80}], "correct": [{"model": "frontier", "condition": "ancestor", "n": 720, "correct": [0.9931, 0.9838, 0.997]}, {"model": "frontier", "condition": "full_tree", "n": 720, "correct": [0.8292, 0.7999, 0.8549]}, {"model": "frontier", "condition": "window", "n": 720, "correct": [0.525, 0.4885, 0.5612]}, {"model": "mid", "condition": "ancestor", "n": 720, "correct": [0.9958, 0.9878, 0.9986]}, {"model": "mid", "condition": "full_tree", "n": 720, "correct": [0.9417, 0.9221, 0.9566]}, {"model": "mid", "condition": "window", "n": 720, "correct": [0.4778, 0.4415, 0.5143]}, {"model": "open_weights", "condition": "ancestor", "n": 720, "correct": [0.9847, 0.9729, 0.9914]}, {"model": "open_weights", "condition": "full_tree", "n": 719, "correct": [0.8317, 0.8026, 0.8573]}, {"model": "open_weights", "condition": "window", "n": 720, "correct": [0.5111, 0.4746, 0.5475]}], "window": [{"recency": "early", "fact_position": "root", "n": 540, "fact_in_context": [0.0, 0.0, 0.0071], "correct": [0.2463, 0.2118, 0.2843]}, {"recency": "early", "fact_position": "current", "n": 540, "fact_in_context": [1.0, 0.9929, 1], "correct": [0.9759, 0.9593, 0.9859]}, {"recency": "late", "fact_position": "root", "n": 540, "fact_in_context": [0.0, 0.0, 0.0071], "correct": [0.3741, 0.3343, 0.4156]}, {"recency": "late", "fact_position": "current", "n": 540, "fact_in_context": [0.1611, 0.1325, 0.1945], "correct": [0.4222, 0.3813, 0.4643]}], "usage": [{"condition": "full_tree", "used": 342, "alternative": 716, "rejected": 378, "incidental": 19}, {"condition": "window", "used": 544, "alternative": 101, "rejected": 154, "incidental": 38}], "calibration": {"n": 2160, "canary_hits": 0, "chance_value_hits": 17}};
+const NS = 'http://www.w3.org/2000/svg';
+const COND = { ancestor: 'Ancestor-only', full_tree: 'Full tree', window: 'Sliding window' };
+const CVAR = { ancestor: 'var(--c-anc)', full_tree: 'var(--c-full)', window: 'var(--c-win)' };
+const pct = (x, d = 1) => (x == null ? 'n/a' : (100 * x).toFixed(d) + '%');
+const el = (tag, attrs = {}, parent) => { const n = document.createElementNS(NS, tag); for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v); if (parent) parent.appendChild(n); return n; };
+const txt = (parent, x, y, s, attrs = {}) => { const t = el('text', { x, y, fill: 'var(--ink2)', 'font-size': 12, 'font-family': 'var(--chart-font)', ...attrs }, parent); t.textContent = s; return t; };
+
+// tooltip
+const tip = document.getElementById('tip');
+document.addEventListener('pointermove', (e) => {
+  const t = e.target.closest && e.target.closest('[data-tip]');
+  if (!t) { tip.hidden = true; return; }
+  tip.innerHTML = t.getAttribute('data-tip');
+  tip.hidden = false;
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  let x = e.clientX + 14, y = e.clientY + 14;
+  if (x + w > innerWidth - 8) x = e.clientX - w - 14;
+  if (y + h > innerHeight - 8) y = e.clientY - h - 14;
+  tip.style.left = x + 'px'; tip.style.top = y + 'px';
+});
+document.addEventListener('pointerleave', () => (tip.hidden = true));
+
+function legend(id, items) {
+  document.getElementById(id).innerHTML = items.map(([label, color, ghost]) => `<span><i class="sw${ghost ? ' ghost' : ''}" style="background:${color}"></i>${label}</span>`).join('');
+}
+function table(id, head, rows) {
+  document.getElementById(id).innerHTML = `<table><thead><tr>${head.map((h) => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+}
+function axes(svg, { x0, x1, y0, y1, max, ticks }) {
+  for (const t of ticks) {
+    const y = y1 - (t / max) * (y1 - y0);
+    el('line', { x1: x0, x2: x1, y1: y, y2: y, stroke: t === 0 ? 'var(--axis)' : 'var(--grid)', 'stroke-width': 1 }, svg);
+    txt(svg, x0 - 8, y + 4, pct(t, 0), { 'text-anchor': 'end', fill: 'var(--muted)' });
+  }
+}
+// rounded-top bar path anchored at the baseline
+function barPath(x, y, w, h, r = 4) {
+  if (h <= 0) return `M${x},${y} h${w}`;
+  r = Math.min(r, h, w / 2);
+  return `M${x},${y + h} V${y + r} Q${x},${y} ${x + r},${y} H${x + w - r} Q${x + w},${y} ${x + w},${y + r} V${y + h} Z`;
+}
+
+function groupedBars(svg, { groups, series, get, ghost, max, ticks, labelOf }) {
+  const W = 760, H = +svg.getAttribute('viewBox').split(' ')[3];
+  const x0 = 56, x1 = W - 8, y0 = 14, y1 = H - 40;
+  axes(svg, { x0, x1, y0, y1, max, ticks });
+  const gw = (x1 - x0) / groups.length, inner = gw * 0.74, bw = Math.min(46, (inner - (series.length - 1) * 4) / series.length);
+  const span = series.length * bw + (series.length - 1) * 4;
+  const Y = (v) => y1 - (v / max) * (y1 - y0);
+  groups.forEach((g, gi) => {
+    const gx = x0 + gi * gw + (gw - span) / 2;
+    txt(svg, x0 + gi * gw + gw / 2, y1 + 22, labelOf(g), { 'text-anchor': 'middle', fill: 'var(--ink)', 'font-size': 13 });
+    series.forEach((s, si) => {
+      const x = gx + si * (bw + 4);
+      const v = get(g, s); if (!v || v.p == null) return;
+      if (ghost) {
+        const gv = ghost(g, s);
+        if (gv != null && gv > v.p + 0.002) el('path', { d: barPath(x, Y(gv), bw, y1 - Y(gv)), fill: 'none', stroke: 'var(--muted)', 'stroke-width': 1.5, 'stroke-dasharray': '4 3' }, svg);
+      }
+      el('path', { d: barPath(x, Y(v.p), bw, y1 - Y(v.p)), fill: s.color }, svg);
+      if (v.lo != null && v.hi > v.lo) {
+        const cx = x + bw / 2;
+        el('line', { x1: cx, x2: cx, y1: Y(v.hi), y2: Y(v.lo), stroke: 'var(--ink)', 'stroke-width': 1.5 }, svg);
+        el('line', { x1: cx - 4, x2: cx + 4, y1: Y(v.hi), y2: Y(v.hi), stroke: 'var(--ink)', 'stroke-width': 1.5 }, svg);
+        el('line', { x1: cx - 4, x2: cx + 4, y1: Y(v.lo), y2: Y(v.lo), stroke: 'var(--ink)', 'stroke-width': 1.5 }, svg);
+      }
+      // Label the solid bar's value just above its interval, never above the raw-match outline.
+      txt(svg, x + bw / 2, Math.max(y0 + 10, Y(v.hi ?? v.p) - 6), pct(v.p, 0), { 'text-anchor': 'middle', fill: 'var(--ink)', 'font-size': 11.5, 'font-weight': 600 });
+      el('rect', { x: x - 2, y: y0, width: bw + 4, height: y1 - y0, fill: 'transparent', 'data-tip': v.tip }, svg);
+    });
+  });
+}
+
+// status pills
+const G = DATA.generated_from;
+document.getElementById('status').innerHTML = [
+  ['Answers scored', G.responses.toLocaleString()],
+  ['Leak judge', `${G.leak_judged.toLocaleString()} / 1,464`],
+  ['Quality judge', `${G.quality_judged.toLocaleString()} / 7,793 (running)`],
+  ['Models', '3'], ['Scenarios', '720']
+].map(([k, v]) => `<span class="pill">${k} <b>${v}</b></span>`).join('');
+
+// ---------- Figure 1 ----------
+{
+  const types = ['consistent', 'conflicting', 'misleading', 'irrelevant'];
+  const conds = ['ancestor', 'full_tree', 'window'];
+  const L = (c, t) => DATA.leak.find((r) => r.condition === c && r.type === t);
+  legend('lg1', [...conds.map((c) => [COND[c], CVAR[c]]), ['Raw string match', '', true]]);
+  groupedBars(document.getElementById('c1'), {
+    groups: types, series: conds.map((c) => ({ key: c, color: CVAR[c] })),
+    get: (t, s) => { const r = L(s.key, t); return { p: r.used[0], lo: r.used[1], hi: r.used[2], tip: `<b>${COND[s.key]}</b> &middot; ${t} siblings<br>used: ${pct(r.used[0])} (95% CI ${pct(r.used[1])}&ndash;${pct(r.used[2])})<br>raw match: ${pct(r.raw[0])}<br>n = ${r.n_judged}` }; },
+    ghost: (t, s) => L(s.key, t).raw[0], max: 0.6, ticks: [0, 0.2, 0.4, 0.6], labelOf: (t) => t[0].toUpperCase() + t.slice(1)
+  });
+  document.getElementById('s1').textContent = `First run of each scenario, all three models pooled; about 540 answers per bar. Ancestor-only is zero by construction (Proposition 3); its detector found 0 canaries in ${DATA.calibration.n.toLocaleString()} answers.`;
+  table('t1', ['Condition', 'Sibling type', 'Used (judge)', '95% CI', 'Raw match', 'n'], conds.flatMap((c) => types.map((t) => { const r = L(c, t); return [COND[c], t, pct(r.used[0]), `${pct(r.used[1])} – ${pct(r.used[2])}`, pct(r.raw[0]), r.n_judged]; })));
+}
+
+// ---------- Figure 2 ----------
+{
+  const svg = document.getElementById('c2');
+  const cats = [['used', 'Used', 'var(--o1)', 'var(--o-ink1)'], ['alternative', 'Mentioned as alternative', 'var(--o2)', 'var(--o-ink1)'], ['rejected', 'Rejected', 'var(--o3)', 'var(--o-ink1)'], ['incidental', 'Incidental', 'var(--o4)', 'var(--o-ink4)']];
+  legend('lg2', cats.map(([, l, c]) => [l, c]));
+  const x0 = 120, x1 = 752;
+  DATA.usage.forEach((u, i) => {
+    const total = cats.reduce((a, [k]) => a + u[k], 0);
+    const y = 18 + i * 62;
+    txt(svg, x0 - 12, y + 22, COND[u.condition], { 'text-anchor': 'end', fill: 'var(--ink)', 'font-size': 13 });
+    let x = x0;
+    cats.forEach(([k, label, color, ink], ci) => {
+      const w = ((x1 - x0) * u[k]) / total;
+      const gap = ci < cats.length - 1 ? 2 : 0;
+      el('rect', { x, y, width: Math.max(0, w - gap), height: 34, rx: 3, fill: color, 'data-tip': `<b>${COND[u.condition]}</b><br>${label}: ${u[k]} terms (${pct(u[k] / total)})` }, svg);
+      if (w > 46) txt(svg, x + 8, y + 22, pct(u[k] / total, 0), { fill: ink, 'font-size': 12, 'pointer-events': 'none' });
+      x += w;
+    });
+    txt(svg, x1, y + 50, `${total.toLocaleString()} terms`, { 'text-anchor': 'end', fill: 'var(--muted)', 'font-size': 11.5 });
+  });
+  document.getElementById('s2').textContent = 'Labels from the leak judge (Claude Opus 5.5), which saw only the answer and the flagged terms. Ancestor-only has no flagged terms.';
+  table('t2', ['Condition', 'Used', 'Alternative', 'Rejected', 'Incidental'], DATA.usage.map((u) => [COND[u.condition], u.used, u.alternative, u.rejected, u.incidental]));
+}
+
+// ---------- Figure 3 ----------
+{
+  const svg = document.getElementById('c3');
+  const W = 760, H = 320, x0 = 56, x1 = W - 120, y0 = 14, y1 = H - 40, max = 1;
+  axes(svg, { x0, x1, y0, y1, max, ticks: [0, 0.25, 0.5, 0.75, 1] });
+  const ks = [1, 3, 5];
+  const X = (k) => x0 + 30 + ((k - 1) / 4) * (x1 - x0 - 60);
+  const Y = (v) => y1 - (v / max) * (y1 - y0);
+  ks.forEach((k) => txt(svg, X(k), y1 + 22, `${k} sibling${k > 1 ? 's' : ''}`, { 'text-anchor': 'middle', fill: 'var(--ink)', 'font-size': 13 }));
+  const depths = [[2, 'var(--c-anc)'], [4, 'var(--c-full)'], [8, 'var(--c-win)']];
+  legend('lg3', depths.map(([d, c]) => [`Depth ${d}`, c]));
+  depths.forEach(([d, color]) => {
+    const pts = ks.map((k) => DATA.efficiency.find((e) => e.depth === d && e.siblings === k));
+    el('path', { d: pts.map((p, i) => `${i ? 'L' : 'M'}${X(p.siblings)},${Y(p.mean)}`).join(' '), fill: 'none', stroke: color, 'stroke-width': 2, 'stroke-linejoin': 'round' }, svg);
+    pts.forEach((p) => {
+      el('circle', { cx: X(p.siblings), cy: Y(p.mean), r: 5, fill: color, stroke: 'var(--surface)', 'stroke-width': 2 }, svg);
+      el('circle', { cx: X(p.siblings), cy: Y(p.mean), r: 14, fill: 'transparent', 'data-tip': `<b>Depth ${d}</b>, ${p.siblings} sibling${p.siblings > 1 ? 's' : ''}<br>E = ${pct(p.mean)} (95% CI ${pct(p.lo)}&ndash;${pct(p.hi)})<br>n = ${p.n} scenarios` }, svg);
+    });
+    const last = pts[pts.length - 1];
+    txt(svg, X(5) + 14, Y(last.mean) + 4, `Depth ${d}: ${pct(last.mean, 0)}`, { fill: 'var(--ink)', 'font-size': 12.5 });
+  });
+  document.getElementById('s3').textContent = 'Reference tokenizer o200k_base; 80 scenarios per point. Shallow active paths with many siblings save the most, because the siblings make up more of the tree.';
+  table('t3', ['Depth', 'Siblings', 'Mean E', '95% CI', 'n'], DATA.efficiency.map((e) => [e.depth, e.siblings, pct(e.mean), `${pct(e.lo)} – ${pct(e.hi)}`, e.n]));
+}
+
+// ---------- Figure 4 ----------
+{
+  const models = ['frontier', 'mid', 'open_weights'];
+  const conds = ['ancestor', 'full_tree', 'window'];
+  const C = (m, c) => DATA.correct.find((r) => r.model === m && r.condition === c);
+  legend('lg4', conds.map((c) => [COND[c], CVAR[c]]));
+  groupedBars(document.getElementById('c4'), {
+    groups: models, series: conds.map((c) => ({ key: c, color: CVAR[c] })),
+    get: (m, s) => { const r = C(m, s.key); return { p: r.correct[0], lo: r.correct[1], hi: r.correct[2], tip: `<b>${DATA.model_names[m]}</b> &middot; ${COND[s.key]}<br>correct: ${pct(r.correct[0])} (95% CI ${pct(r.correct[1])}&ndash;${pct(r.correct[2])})<br>n = ${r.n}` }; },
+    max: 1, ticks: [0, 0.25, 0.5, 0.75, 1], labelOf: (m) => DATA.model_names[m]
+  });
+  document.getElementById('s4').textContent = 'Deterministic check: the required value appears and no conflicting sibling value does. About 720 answers per bar. The window is low mainly because it lost the required fact (Figure 5).';
+  table('t4', ['Model', 'Condition', 'Correct', '95% CI', 'n'], models.flatMap((m) => conds.map((c) => { const r = C(m, c); return [DATA.model_names[m], COND[c], pct(r.correct[0]), `${pct(r.correct[1])} – ${pct(r.correct[2])}`, r.n]; })));
+}
+
+// ---------- Figure 5 ----------
+{
+  const m = document.getElementById('m5');
+  const cell = (r) => `<div class="cell" data-tip="<b>${r.recency} siblings, fact near ${r.fact_position === 'root' ? 'the root' : 'the current turn'}</b><br>fact in prompt: ${pct(r.fact_in_context[0])}<br>correct: ${pct(r.correct[0])}<br>n = ${r.n}">
+      <div class="k"><span>Fact still in prompt</span><b>${pct(r.fact_in_context[0], 0)}</b></div>
+      <div class="bar"><i style="width:${100 * r.fact_in_context[0]}%;background:var(--c-win)"></i></div>
+      <div class="k"><span>Answered correctly</span><b>${pct(r.correct[0], 0)}</b></div>
+      <div class="bar"><i style="width:${100 * r.correct[0]}%;background:var(--ink2)"></i></div></div>`;
+  const W = (rec, fp) => DATA.window.find((r) => r.recency === rec && r.fact_position === fp);
+  m.innerHTML = `<div class="h blank"></div><div class="h">Fact near the root</div><div class="h">Fact near the current turn</div>` +
+    ['early', 'late'].map((rec) => `<div class="rowh">${rec === 'early' ? 'Siblings explored early' : 'Siblings explored late'}</div>${cell(W(rec, 'root'))}${cell(W(rec, 'current'))}`).join('');
+  document.getElementById('s5').textContent = 'About 540 window answers per cell. Some answers are correct without the fact because a consistent sibling repeated the right value, which is itself leakage.';
+}
+</script>

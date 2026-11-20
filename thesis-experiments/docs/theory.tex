@@ -1,0 +1,232 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs}
+\usepackage[hidelinks]{hyperref}
+
+\newtheorem{proposition}{Proposition}
+\newtheorem{corollary}{Corollary}[proposition]
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+\theoremstyle{remark}
+\newtheorem*{remark}{Remark}
+
+\newcommand{\A}{A(a)}
+\newcommand{\Sib}{S(a)}
+\newcommand{\w}{w}
+\newcommand{\anc}{\mathrm{anc}}
+\newcommand{\full}{\mathrm{full}}
+\newcommand{\win}{\mathrm{win}}
+
+\title{Ancestor-Only Context Selection: Formal Framework}
+\author{Okechukwu Zeal Achonu}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Setting}
+
+\begin{definition}[Branched session]
+A session is a rooted tree $T=(V,E)$ of messages with root $r$. Every
+$v\neq r$ has a parent $p(v)$. A logical clock $\tau:V\to\mathbb{N}$ is
+injective and increases along every edge: $\tau(p(v))<\tau(v)$. Each message
+has a token weight $\w(v)>0$ under a fixed reference tokenizer, and for
+$U\subseteq V$ we write $\w(U)=\sum_{u\in U}\w(u)$.
+\end{definition}
+
+\begin{definition}[Active path and siblings]
+The user asks a question $q$ as a child of an \emph{ask node} $a\in V$, at time
+$\tau_q>\max_{v\in V}\tau(v)$. The \emph{active path} is the set of $a$ and
+its ancestors,
+\[
+  \A=\{a,\,p(a),\,p(p(a)),\,\dots,\,r\},
+\]
+and the \emph{sibling content} is $\Sib=V\setminus\A$.
+\end{definition}
+
+\begin{definition}[Context rules]
+Each rule returns a set of messages, sent in the stated order, followed by $q$.
+\begin{itemize}
+  \item Ancestor-only: $C_\anc=\A$, ordered root to node.
+  \item Full tree: $C_\full=\{v\in V:\tau(v)<\tau_q\}=V$, ordered by $\tau$.
+  \item Sliding window with budget $B=\w(\A)$: list $V$ by decreasing $\tau$ as
+        $v_1,v_2,\dots,v_{|V|}$ and let $C_\win=\{v_1,\dots,v_m\}$ with $m$ the
+        largest index such that $\sum_{i\le m}\w(v_i)\le B$.
+\end{itemize}
+The window is a \emph{suffix} of the session in time, it never splits a
+message, and it is \emph{maximal}: if $m<|V|$ then $\w(C_\win)+\w(v_{m+1})>B$.
+\end{definition}
+
+\section{Token efficiency}
+
+\begin{proposition}[Containment and efficiency]\label{prop:eff}
+$C_\anc\subseteq C_\full$, so $\w(C_\anc)\le\w(C_\full)$, and the token
+efficiency of ancestor-only over full tree equals the siblings' share of the
+tree:
+\[
+  E \;=\; 1-\frac{\w(C_\anc)}{\w(C_\full)} \;=\; \frac{\w(\Sib)}{\w(V)} .
+\]
+\end{proposition}
+\begin{proof}
+Every element of $\A$ is in $V$, so $C_\anc=\A\subseteq V=C_\full$, and
+$\w$ is a sum of positive terms, hence monotone. Since $V=\A\,\dot\cup\,\Sib$
+is a disjoint union, $\w(V)=\w(\A)+\w(\Sib)$, so
+$1-\w(\A)/\w(V)=\w(\Sib)/\w(V)$.
+\end{proof}
+
+\begin{remark}
+$E$ needs no model; it follows from the tree shape alone. In the frozen
+dataset the measured $E$ equals $\w(\Sib)/\w(V)$ to machine precision in
+every scenario, as the proposition requires.
+\end{remark}
+
+\begin{proposition}[Growth over a session]\label{prop:growth}
+Suppose a session grows one message at a time, $V_1\subset V_2\subset\cdots\subset V_n$
+with $|V_t|=t$, and each new message triggers one model call whose prompt is
+the current context. Let $0<w_{\min}\le\w(v)\le w_{\max}$ and let $d_t$ be the
+depth of the node being answered at step $t$. Then the cumulative prompt cost
+satisfies
+\[
+  \sum_{t=1}^{n}\w(V_t)\;\ge\;w_{\min}\,\frac{n(n+1)}{2}
+  \qquad\text{and}\qquad
+  \sum_{t=1}^{n}\w\bigl(A_t\bigr)\;\le\;w_{\max}\sum_{t=1}^{n}(d_t+1).
+\]
+If depth is bounded, $d_t\le D$, full-tree cost grows as $\Theta(n^2)$ while
+ancestor-only cost grows as $O(nD)$, i.e.\ linearly in $n$.
+\end{proposition}
+\begin{proof}
+$\w(V_t)\ge t\,w_{\min}$ because $|V_t|=t$; summing gives the first bound.
+$|A_t|=d_t+1$ because a root-to-node path at depth $d_t$ has $d_t+1$ nodes,
+so $\w(A_t)\le (d_t+1)w_{\max}$; summing gives the second. With $d_t\le D$
+the right-hand side is at most $nw_{\max}(D+1)$. The full-tree sum is also at
+most $w_{\max}n(n+1)/2$, so it is $\Theta(n^2)$.
+\end{proof}
+
+\section{Leakage is only possible through exposure}
+
+\begin{definition}[Sibling-only fact]
+A fact $f$ (a string, e.g.\ a canary) is \emph{sibling-only} if every message
+whose text contains $f$ lies in $\Sib$, and $f$ does not occur in $q$.
+\end{definition}
+
+\begin{proposition}[Ancestor-only cannot contain sibling facts]\label{prop:nosib}
+If $f$ is sibling-only, then $f$ does not occur in the prompt of $C_\anc$.
+\end{proposition}
+\begin{proof}
+The prompt of $C_\anc$ is the text of the messages in $\A$ followed by $q$.
+No message of $\A$ contains $f$ (all such messages lie in $\Sib$, which is
+disjoint from $\A$), and $q$ does not contain $f$.
+\end{proof}
+
+\begin{definition}[Exposure, chance rate, uptake]
+For a rule $c$, let $X_c(f)=\mathbf 1[f\text{ occurs in the prompt of }C_c]$.
+Let $M$ be the event that the model's answer contains $f$. Let
+$\pi_f=\Pr(M\mid f\text{ absent from the prompt})$ be the chance rate, and
+$u_c(f)=\Pr(M\mid X_c(f)=1)$ the uptake under rule $c$.
+\end{definition}
+
+\begin{proposition}[Exposure--uptake decomposition]\label{prop:decomp}
+$X_c(f)$ is a deterministic function of $(T,\tau,\w,a)$ and can be computed
+without calling a model. For a sibling-only $f$, the excess mention rate of
+rule $c$ over ancestor-only is
+\[
+  \Pr(M\mid c)-\Pr(M\mid\anc)\;=\;X_c(f)\,\bigl(u_c(f)-\pi_f\bigr).
+\]
+\end{proposition}
+\begin{proof}
+$C_c$ is defined from $T$, $\tau$, $\w$ and $a$ alone (Definition 3), so
+whether $f$ occurs in its text is determined by them. By
+Proposition~\ref{prop:nosib}, $f$ is absent under ancestor-only, so
+$\Pr(M\mid\anc)=\pi_f$. Under rule $c$, if $X_c(f)=0$ the prompt does not contain
+$f$ and $\Pr(M\mid c)=\pi_f$; if $X_c(f)=1$ then $\Pr(M\mid c)=u_c(f)$. In both
+cases $\Pr(M\mid c)-\pi_f=X_c(f)(u_c(f)-\pi_f)$.
+\end{proof}
+
+\begin{remark}
+Two consequences shape the measurement. (i) For random canaries
+$\pi_f\approx 0$: in the full run, 0 of 2,598 ancestor-only answers contained a
+canary. For forced-choice values (e.g.\ ``LRU''), $\pi_f$ can be large and must
+be measured on ancestor-only answers; 17 of 2,160 were chance hits. (ii) The
+experiment therefore logs $X_c(f)$ for every call and estimates leakage among
+exposed calls, which is the uptake $u_c(f)$.
+\end{remark}
+
+\section{What the sliding window displaces}
+
+\begin{proposition}[Membership test]\label{prop:member}
+A message $m$ is in $C_\win$ if and only if
+\[
+  \sum_{u\in V:\ \tau(u)\ge\tau(m)} \w(u)\;\le\;B .
+\]
+\end{proposition}
+\begin{proof}
+$C_\win$ is the longest prefix of the list ordered by decreasing $\tau$ whose
+total weight is at most $B$. Since all weights are positive, the prefix sums
+increase strictly, so $m$ belongs to that prefix exactly when the prefix ending
+at $m$, which is $\{u:\tau(u)\ge\tau(m)\}$, has weight at most $B$.
+\end{proof}
+
+\begin{corollary}[The root never survives]\label{cor:root}
+If $\Sib\neq\varnothing$, the root $r$ is not in $C_\win$.
+\end{corollary}
+\begin{proof}
+$\tau(r)$ is the minimum of $\tau$ over $V$, so the sum in
+Proposition~\ref{prop:member} for $m=r$ is
+$\w(V)=\w(\A)+\w(\Sib)=B+\w(\Sib)>B$.
+\end{proof}
+
+\begin{proposition}[One-for-one displacement]\label{prop:displace}
+Let $\sigma=\w(C_\win\cap\Sib)$ be the sibling tokens admitted to the window.
+Then
+\[
+  \w(\A)-\w(C_\win\cap\A)\;\ge\;\sigma ,
+\]
+so every admitted sibling token displaces at least one active-path token.
+Moreover $C_\win\cap\A$ is a suffix of the path in time: the active messages
+lost are always the oldest, root-side ones.
+\end{proposition}
+\begin{proof}
+$\w(C_\win\cap\A)+\sigma=\w(C_\win)\le B=\w(\A)$; rearrange. For the second
+claim, if $m\in\A$ is in the window and $m'\in\A$ has $\tau(m')>\tau(m)$, then
+the sum in Proposition~\ref{prop:member} for $m'$ is at most the sum for $m$,
+which is at most $B$, so $m'$ is in the window too.
+\end{proof}
+
+\begin{corollary}[Late siblings]\label{cor:late}
+If every sibling message is newer than the ask node and the required fact sits
+in message $m\in\A$, then $m\in C_\win$ if and only if
+$\w(\Sib)\le\w(\{u\in\A:\tau(u)<\tau(m)\})$.
+\end{corollary}
+\begin{proof}
+With late siblings, $\{u:\tau(u)\ge\tau(m)\}=\Sib\ \dot\cup\ \{u\in\A:\tau(u)\ge\tau(m)\}$.
+Applying Proposition~\ref{prop:member} and $B=\w(\A)$:
+$\w(\Sib)+\w(\A)-\w(\{u\in\A:\tau(u)<\tau(m)\})\le\w(\A)$, which is the stated condition.
+\end{proof}
+
+\begin{proposition}[Budget use]\label{prop:ratio}
+If $C_\win\neq V$, then $1-\dfrac{w_{\max}}{B}<\dfrac{\w(C_\win)}{B}\le 1$.
+\end{proposition}
+\begin{proof}
+The upper bound is the budget constraint. By maximality,
+$\w(C_\win)>B-\w(v_{m+1})\ge B-w_{\max}$; divide by $B$.
+\end{proof}
+
+\section{Predictions checked against the data}
+
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+\toprule
+Statement & Prediction & Observed (full run) \\
+\midrule
+Prop.~\ref{prop:eff} & $E=\w(\Sib)/\w(V)$ & exact in all 720 scenarios \\
+Prop.~\ref{prop:nosib} & no canaries under ancestor-only & 0 of 2{,}598 answers \\
+Prop.~\ref{prop:member} & which facts the window keeps & correct in 720 of 720 \\
+Cor.~\ref{cor:root} & root fact never in window & 0 of 360 root cells kept it \\
+Cor.~\ref{cor:late} & late siblings: kept iff $\w(\Sib)\le$ older path & correct in 360 of 360 \\
+Prop.~\ref{prop:ratio} & window/budget ratio $>1-w_{\max}/B$ & mean 0.94, min 0.62 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\end{document}

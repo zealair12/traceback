@@ -1,0 +1,548 @@
+{
+ "generated_from": {
+  "responses": 7794,
+  "base_rep0_answered": 6479,
+  "leak_judged": 1464,
+  "quality_judged": 2370
+ },
+ "model_names": {
+  "frontier": "Gemini 4 Argon",
+  "mid": "GPT-6.2 Sol",
+  "open_weights": "Mistral Large 4"
+ },
+ "leak": [
+  {
+   "condition": "ancestor",
+   "type": "consistent",
+   "n": 540,
+   "raw": [
+    0.0,
+    0.0,
+    0.0071
+   ],
+   "used": [
+    0.0,
+    0.0,
+    0.0071
+   ],
+   "n_judged": 540
+  },
+  {
+   "condition": "ancestor",
+   "type": "conflicting",
+   "n": 540,
+   "raw": [
+    0.0,
+    0.0,
+    0.0071
+   ],
+   "used": [
+    0.0,
+    0.0,
+    0.0071
+   ],
+   "n_judged": 540
+  },
+  {
+   "condition": "ancestor",
+   "type": "irrelevant",
+   "n": 540,
+   "raw": [
+    0.0,
+    0.0,
+    0.0071
+   ],
+   "used": [
+    0.0,
+    0.0,
+    0.0071
+   ],
+   "n_judged": 540
+  },
+  {
+   "condition": "ancestor",
+   "type": "misleading",
+   "n": 540,
+   "raw": [
+    0.0,
+    0.0,
+    0.0071
+   ],
+   "used": [
+    0.0,
+    0.0,
+    0.0071
+   ],
+   "n_judged": 540
+  },
+  {
+   "condition": "full_tree",
+   "type": "consistent",
+   "n": 540,
+   "raw": [
+    0.3296,
+    0.2913,
+    0.3704
+   ],
+   "used": [
+    0.3241,
+    0.286,
+    0.3647
+   ],
+   "n_judged": 540
+  },
+  {
+   "condition": "full_tree",
+   "type": "conflicting",
+   "n": 540,
+   "raw": [
+    0.5556,
+    0.5134,
+    0.5969
+   ],
+   "used": [
+    0.1556,
+    0.1274,
+    0.1885
+   ],
+   "n_judged": 540
+  },
+  {
+   "condition": "full_tree",
+   "type": "irrelevant",
+   "n": 539,
+   "raw": [
+    0.0,
+    0,
+    0.0071
+   ],
+   "used": [
+    0.0,
+    0,
+    0.0071
+   ],
+   "n_judged": 539
+  },
+  {
+   "condition": "full_tree",
+   "type": "misleading",
+   "n": 540,
+   "raw": [
+    0.2741,
+    0.2381,
+    0.3132
+   ],
+   "used": [
+    0.0333,
+    0.0212,
+    0.0521
+   ],
+   "n_judged": 540
+  },
+  {
+   "condition": "window",
+   "type": "consistent",
+   "n": 540,
+   "raw": [
+    0.2556,
+    0.2206,
+    0.294
+   ],
+   "used": [
+    0.2537,
+    0.2188,
+    0.2921
+   ],
+   "n_judged": 540
+  },
+  {
+   "condition": "window",
+   "type": "conflicting",
+   "n": 540,
+   "raw": [
+    0.4426,
+    0.4013,
+    0.4847
+   ],
+   "used": [
+    0.3852,
+    0.3451,
+    0.4269
+   ],
+   "n_judged": 540
+  },
+  {
+   "condition": "window",
+   "type": "irrelevant",
+   "n": 540,
+   "raw": [
+    0.0407,
+    0.0271,
+    0.0609
+   ],
+   "used": [
+    0.0,
+    0.0,
+    0.0071
+   ],
+   "n_judged": 540
+  },
+  {
+   "condition": "window",
+   "type": "misleading",
+   "n": 540,
+   "raw": [
+    0.3481,
+    0.3092,
+    0.3893
+   ],
+   "used": [
+    0.0852,
+    0.0645,
+    0.1118
+   ],
+   "n_judged": 540
+  }
+ ],
+ "leak_model": [
+  {
+   "model": "frontier",
+   "condition": "ancestor",
+   "n": 720,
+   "used": [
+    0.0,
+    0,
+    0.0053
+   ]
+  },
+  {
+   "model": "frontier",
+   "condition": "full_tree",
+   "n": 720,
+   "used": [
+    0.2958,
+    0.2636,
+    0.3302
+   ]
+  },
+  {
+   "model": "frontier",
+   "condition": "window",
+   "n": 720,
+   "used": [
+    0.2708,
+    0.2397,
+    0.3044
+   ]
+  },
+  {
+   "model": "mid",
+   "condition": "ancestor",
+   "n": 720,
+   "used": [
+    0.0,
+    0,
+    0.0053
+   ]
+  },
+  {
+   "model": "mid",
+   "condition": "full_tree",
+   "n": 720,
+   "used": [
+    0.0528,
+    0.0387,
+    0.0716
+   ]
+  },
+  {
+   "model": "mid",
+   "condition": "window",
+   "n": 720,
+   "used": [
+    0.1236,
+    0.1015,
+    0.1497
+   ]
+  },
+  {
+   "model": "open_weights",
+   "condition": "ancestor",
+   "n": 720,
+   "used": [
+    0.0,
+    0,
+    0.0053
+   ]
+  },
+  {
+   "model": "open_weights",
+   "condition": "full_tree",
+   "n": 719,
+   "used": [
+    0.0362,
+    0.0248,
+    0.0525
+   ]
+  },
+  {
+   "model": "open_weights",
+   "condition": "window",
+   "n": 720,
+   "used": [
+    0.1486,
+    0.1245,
+    0.1765
+   ]
+  }
+ ],
+ "efficiency": [
+  {
+   "depth": 2,
+   "siblings": 1,
+   "mean": 0.5955,
+   "lo": 0.59,
+   "hi": 0.6011,
+   "n": 80
+  },
+  {
+   "depth": 2,
+   "siblings": 3,
+   "mean": 0.8166,
+   "lo": 0.8137,
+   "hi": 0.8194,
+   "n": 80
+  },
+  {
+   "depth": 2,
+   "siblings": 5,
+   "mean": 0.8794,
+   "lo": 0.8774,
+   "hi": 0.8813,
+   "n": 80
+  },
+  {
+   "depth": 4,
+   "siblings": 1,
+   "mean": 0.4251,
+   "lo": 0.4203,
+   "hi": 0.4299,
+   "n": 80
+  },
+  {
+   "depth": 4,
+   "siblings": 3,
+   "mean": 0.6934,
+   "lo": 0.6905,
+   "hi": 0.6962,
+   "n": 80
+  },
+  {
+   "depth": 4,
+   "siblings": 5,
+   "mean": 0.7844,
+   "lo": 0.782,
+   "hi": 0.7868,
+   "n": 80
+  },
+  {
+   "depth": 8,
+   "siblings": 1,
+   "mean": 0.2699,
+   "lo": 0.2665,
+   "hi": 0.2734,
+   "n": 80
+  },
+  {
+   "depth": 8,
+   "siblings": 3,
+   "mean": 0.525,
+   "lo": 0.5221,
+   "hi": 0.528,
+   "n": 80
+  },
+  {
+   "depth": 8,
+   "siblings": 5,
+   "mean": 0.6502,
+   "lo": 0.6476,
+   "hi": 0.6527,
+   "n": 80
+  }
+ ],
+ "correct": [
+  {
+   "model": "frontier",
+   "condition": "ancestor",
+   "n": 720,
+   "correct": [
+    0.9931,
+    0.9838,
+    0.997
+   ]
+  },
+  {
+   "model": "frontier",
+   "condition": "full_tree",
+   "n": 720,
+   "correct": [
+    0.8292,
+    0.7999,
+    0.8549
+   ]
+  },
+  {
+   "model": "frontier",
+   "condition": "window",
+   "n": 720,
+   "correct": [
+    0.525,
+    0.4885,
+    0.5612
+   ]
+  },
+  {
+   "model": "mid",
+   "condition": "ancestor",
+   "n": 720,
+   "correct": [
+    0.9958,
+    0.9878,
+    0.9986
+   ]
+  },
+  {
+   "model": "mid",
+   "condition": "full_tree",
+   "n": 720,
+   "correct": [
+    0.9417,
+    0.9221,
+    0.9566
+   ]
+  },
+  {
+   "model": "mid",
+   "condition": "window",
+   "n": 720,
+   "correct": [
+    0.4778,
+    0.4415,
+    0.5143
+   ]
+  },
+  {
+   "model": "open_weights",
+   "condition": "ancestor",
+   "n": 720,
+   "correct": [
+    0.9847,
+    0.9729,
+    0.9914
+   ]
+  },
+  {
+   "model": "open_weights",
+   "condition": "full_tree",
+   "n": 719,
+   "correct": [
+    0.8317,
+    0.8026,
+    0.8573
+   ]
+  },
+  {
+   "model": "open_weights",
+   "condition": "window",
+   "n": 720,
+   "correct": [
+    0.5111,
+    0.4746,
+    0.5475
+   ]
+  }
+ ],
+ "window": [
+  {
+   "recency": "early",
+   "fact_position": "root",
+   "n": 540,
+   "fact_in_context": [
+    0.0,
+    0.0,
+    0.0071
+   ],
+   "correct": [
+    0.2463,
+    0.2118,
+    0.2843
+   ]
+  },
+  {
+   "recency": "early",
+   "fact_position": "current",
+   "n": 540,
+   "fact_in_context": [
+    1.0,
+    0.9929,
+    1
+   ],
+   "correct": [
+    0.9759,
+    0.9593,
+    0.9859
+   ]
+  },
+  {
+   "recency": "late",
+   "fact_position": "root",
+   "n": 540,
+   "fact_in_context": [
+    0.0,
+    0.0,
+    0.0071
+   ],
+   "correct": [
+    0.3741,
+    0.3343,
+    0.4156
+   ]
+  },
+  {
+   "recency": "late",
+   "fact_position": "current",
+   "n": 540,
+   "fact_in_context": [
+    0.1611,
+    0.1325,
+    0.1945
+   ],
+   "correct": [
+    0.4222,
+    0.3813,
+    0.4643
+   ]
+  }
+ ],
+ "usage": [
+  {
+   "condition": "full_tree",
+   "used": 342,
+   "alternative": 716,
+   "rejected": 378,
+   "incidental": 19
+  },
+  {
+   "condition": "window",
+   "used": 544,
+   "alternative": 101,
+   "rejected": 154,
+   "incidental": 38
+  }
+ ],
+ "calibration": {
+  "n": 2160,
+  "canary_hits": 0,
+  "chance_value_hits": 17
+ }
+}

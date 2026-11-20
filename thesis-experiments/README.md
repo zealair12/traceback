@@ -133,3 +133,19 @@ npm run verify-load -- --file data/scenarios.jsonl
 npx tsx runner/run.ts --model <role> --file data/scenarios.jsonl --out results/raw/<role>.jsonl \
   --repeat-fraction 0.1 --repeats 3                    # resumes; stops at the cost cap
 ```
+
+## Phase 6: scoring
+
+```bash
+npx tsx scoring/score.ts                         # deterministic scoring -> results/scored/deterministic.jsonl
+npx tsx scoring/judge.ts --task quality [--pilot 30] [--dry]   # blind quality judge (active path + answer only)
+npx tsx scoring/judge.ts --task leak    [--pilot 18] [--dry]   # used / alternative / rejected for flagged terms
+npx tsx scoring/human_sample.ts --n 150          # blind, stratified sample for human scoring -> results/human/
+```
+
+`scoring/merge.ts` applies DEVIATIONS.md (D1 re-runs replace the originals).
+Leakage counts only items present in the built context; items found but not in
+the context are chance hits. The quality judge sees only the active path, the
+final message and the answer, so it cannot tell which condition produced the
+answer. The transcript uses plain speaker labels because OpenRouter's guardrail
+blocks bracketed role tags such as `[USER]` ("bracketed_role_spoofing").

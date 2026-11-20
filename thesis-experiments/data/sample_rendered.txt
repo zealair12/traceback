@@ -1,0 +1,91 @@
+====================================================================================================
+cache-conflicting-d4-k3-early-root-00
+domain=cache depth=4 siblings=3 type=conflicting recency=early fact=root
+fork=m4 ask_node=m26 ask_t=26 required=LRU (in m1)
+----------------------------------------------------------------------------------------------------
+t= 0 [ACTIVE] m1 <- root  USER: Our product catalog API is slow under load, so I want to put an in-process cache in front of the database. For the eviction policy on the product cache, let's go with LRU.
+t= 1 [ACTIVE] m2 <- m1  ASSISTANT: LRU is a reasonable fit for the catalog. We can cap the cache by entry count and revisit the size after watching hit rates. We can revisit this once we have real traffic numbers. Let me know if you want a short code sample for this part. This also keeps the code easy to read for someone new to the project.
+t= 2 [ACTIVE] m3 <- m2  USER: Should we cache negative lookups for missing products? Please be concrete, I am going to implement this today. Shipping soon matters more than perfection right now.
+t= 3 [ACTIVE] m4 <- m3  ASSISTANT: Yes, but with a much shorter lifetime than real entries. That blocks repeated scans for ids that do not exist without hiding new products for long. I would add a short comment in the code that explains why it is done this way. We can revisit this once we have real traffic numbers. I would keep the first version boring and well tested.
+t= 4 [  S1  ] m5 <- m4  USER: What if we used LFU for the product cache eviction instead? We can always change it later if needed. Please be concrete, I am going to implement this today.
+t= 5 [  S1  ] m6 <- m5  ASSISTANT: LFU could work too. I'd put the policy behind a setting called `orbit_y5y` so we can switch it without a deploy. If it turns out to be a problem, it is an easy change to make later.
+t= 6 [  S1  ] m7 <- m6  USER: How do we invalidate when a product changes? I want to keep this simple for the first version. I have read a few blog posts but they all disagree.
+t= 7 [  S1  ] m8 <- m7  ASSISTANT: Publish a change notice from the admin service and delete the matching keys on every instance. The time to live covers any notice that gets lost. A small test around this will catch regressions early. None of this needs to be perfect in the first version.
+t= 8 [  S1  ] m9 <- m8  USER: Should the cache be per instance or shared? I want to keep this simple for the first version. We can always change it later if needed. Please be concrete, I am going to implement this today.
+t= 9 [  S1  ] m10 <- m9  ASSISTANT: Start per instance since it needs no new infrastructure. If the hit rate suffers as we scale out, add a shared layer behind it later. We can revisit this once we have real traffic numbers. I would keep the first version boring and well tested. If it turns out to be a problem, it is an easy change to make later.
+t=10 [  S2  ] m11 <- m4  USER: Would ARC eviction suit the catalog better? I would rather not add new infrastructure if we can avoid it. We can always change it later if needed. Shipping soon matters more than perfection right now.
+t=11 [  S2  ] m12 <- m11  ASSISTANT: ARC eviction suits read-heavy catalogs well. I'd expose it through a config flag `lume_64b` so we can compare policies. None of this needs to be perfect in the first version. This also keeps the code easy to read for someone new to the project.
+t=12 [  S2  ] m13 <- m12  USER: Do we need to warm the cache on deploy? I have read a few blog posts but they all disagree. I want to keep this simple for the first version. Keep in mind we deploy a few times a day.
+t=13 [  S2  ] m14 <- m13  ASSISTANT: Warming the top few hundred products on startup avoids a slow first minute after each deploy. Keep it bounded so startup stays quick. Let me know if you want a short code sample for this part. None of this needs to be perfect in the first version. It is worth writing this down in the README so the next person does not have to rediscover it.
+t=14 [  S2  ] m15 <- m14  USER: What about the thundering herd when a hot key expires? I have read a few blog posts but they all disagree. I would rather not add new infrastructure if we can avoid it.
+t=15 [  S2  ] m16 <- m15  ASSISTANT: Let one request rebuild the entry while the others wait on the same promise. Serving the stale value during the rebuild is fine for catalog data. The main thing is to make the choice explicit so the team does not drift. None of this needs to be perfect in the first version. This also keeps the code easy to read for someone new to the project.
+t=16 [  S3  ] m17 <- m4  USER: What if we used FIFO for the product cache eviction instead? I would rather not add new infrastructure if we can avoid it. I have read a few blog posts but they all disagree.
+t=17 [  S3  ] m18 <- m17  ASSISTANT: FIFO could work too. I'd put the policy behind a setting called `orbit_q8y` so we can switch it without a deploy. None of this needs to be perfect in the first version. This also keeps the code easy to read for someone new to the project.
+t=18 [  S3  ] m19 <- m18  USER: What should the cache key look like? I would rather not add new infrastructure if we can avoid it. I want to keep this simple for the first version. I have read a few blog posts but they all disagree.
+t=19 [  S3  ] m20 <- m19  ASSISTANT: Use the product id plus the region and currency of the request. Put a version prefix in front so a format change can invalidate everything at once. None of this needs to be perfect in the first version. This also keeps the code easy to read for someone new to the project. It is worth writing this down in the README so the next person does not have to rediscover it.
+t=20 [  S3  ] m21 <- m20  USER: How much memory can we give the cache? I would rather not add new infrastructure if we can avoid it. Shipping soon matters more than perfection right now. We can always change it later if needed.
+t=21 [  S3  ] m22 <- m21  ASSISTANT: Leave enough headroom for the rest of the process under peak load. Measure the average entry size first and set the limit from that instead of guessing. It is worth writing this down in the README so the next person does not have to rediscover it. A small test around this will catch regressions early. We can revisit this once we have real traffic numbers.
+t=22 [ACTIVE] m23 <- m4  USER: How do we measure whether the cache helps? I want to keep this simple for the first version. Please be concrete, I am going to implement this today. I would rather not add new infrastructure if we can avoid it.
+t=23 [ACTIVE] m24 <- m23  ASSISTANT: Export hit rate, miss rate and eviction count as metrics. Compare the p95 latency of the catalog endpoint before and after turning it on. I would add a short comment in the code that explains why it is done this way. We can revisit this once we have real traffic numbers.
+t=24 [ACTIVE] m25 <- m24  USER: How long should entries live? Please be concrete, I am going to implement this today. I have read a few blog posts but they all disagree. We are a team of three, so maintenance cost matters.
+t=25 [ACTIVE] m26 <- m25  ASSISTANT: Give entries a time to live of a few minutes as a safety net even with eviction in place. Price changes should also invalidate the affected keys directly. Let me know if you want a short code sample for this part. A small test around this will catch regressions early. None of this needs to be perfect in the first version.
+t=26 [QUESTION] (child of m26) USER: I'm about to write the cache setup: which eviction policy did we choose for the product cache? Give me the config line that sets it.
+----------------------------------------------------------------------------------------------------
+planted s1: type=conflicting value=LFU canaries=orbit_y5y
+planted s2: type=conflicting value=ARC canaries=lume_64b
+planted s3: type=conflicting value=FIFO canaries=orbit_q8y
+answer_key: correct=["LRU"] leak=["LFU","ARC","FIFO","orbit_y5y","lume_64b","orbit_q8y"]
+
+====================================================================================================
+flaky-irrelevant-d2-k1-early-current-00
+domain=flaky depth=2 siblings=1 type=irrelevant recency=early fact=current
+fork=m2 ask_node=m10 ask_t=10 required=stale-snapshot (in m9)
+----------------------------------------------------------------------------------------------------
+t= 0 [ACTIVE] m1 <- root  USER: Our checkout integration test fails maybe one run in ten on CI and never locally, and I want to track it down properly. How do we stop new flaky tests from creeping in?
+t= 1 [ACTIVE] m2 <- m1  ASSISTANT: Track pass rates per test over the last few hundred runs and flag anything below a threshold. Make the owner fix it within a week or delete it. I would add a short comment in the code that explains why it is done this way. I would keep the first version boring and well tested.
+t= 2 [  S1  ] m3 <- m2  USER: Random one: the restaurant gave our team lunch order the reference number 9651. Should I put it in the calendar invite?
+t= 3 [  S1  ] m4 <- m3  ASSISTANT: Yes, put it in the invite description so whoever picks up the order has it. Add the phone number of the restaurant too. It is a small step that saves time later. It is worth checking once more before changing anything else. If that does not work, let me know and we can dig further.
+t= 4 [  S1  ] m5 <- m4  USER: Should we set up a recurring order? No rush on this one. I asked around but nobody was sure. It is a small thing but it keeps bugging me. I would like to sort it out this week.
+t= 5 [  S1  ] m6 <- m5  ASSISTANT: A recurring order makes sense if the team agrees on the place. Rotate the menu choice so nobody gets bored. It is a small step that saves time later. If that does not work, let me know and we can dig further. Try the simplest option first and see if it sticks.
+t= 6 [  S1  ] m7 <- m6  USER: How do we handle dietary restrictions? It is a small thing but it keeps bugging me. I asked around but nobody was sure. I would like to sort it out this week.
+t= 7 [  S1  ] m8 <- m7  ASSISTANT: Collect them once in a shared form and attach it to the order. Ask people to update it rather than reminding the organizer each week. Most people run into this at some point. Try the simplest option first and see if it sticks. It is a small step that saves time later. That is usually enough to sort it out. If that does not work, let me know and we can dig further.
+t= 8 [ACTIVE] m9 <- m2  USER: I dug through the failing runs and tagged the root cause as `stale-snapshot`. Please be concrete, I am going to implement this today.
+t= 9 [ACTIVE] m10 <- m9  ASSISTANT: That fits the pattern of failures. With the root cause tagged as `stale-snapshot`, we can write a targeted fix and add a guard so it does not come back. This also keeps the code easy to read for someone new to the project. The main thing is to make the choice explicit so the team does not drift.
+t=10 [QUESTION] (child of m10) USER: For the postmortem note: what root cause did we tag for the flaky checkout test? Write the one-line summary I should put in the ticket.
+----------------------------------------------------------------------------------------------------
+planted s1: type=irrelevant topic=lunch canaries=9651
+answer_key: correct=["stale-snapshot"] leak=["9651"]
+
+====================================================================================================
+queue-misleading-d2-k3-early-root-00
+domain=queue depth=2 siblings=3 type=misleading recency=early fact=root
+fork=m2 ask_node=m22 ask_t=22 required=NATS (in m1)
+----------------------------------------------------------------------------------------------------
+t= 0 [ACTIVE] m1 <- root  USER: We are splitting order processing out of the monolith and need a way to publish order events to the new services. For the message broker for order events, let's use NATS.
+t= 1 [ACTIVE] m2 <- m1  ASSISTANT: NATS works for the order events. We should define the event schema first so producers and consumers agree on the payload. The main thing is to make the choice explicit so the team does not drift. None of this needs to be perfect in the first version. It is worth writing this down in the README so the next person does not have to rediscover it.
+t= 2 [  S1  ] m3 <- m2  USER: I heard NATS silently drops messages larger than 2324 bytes unless you split them. Is that true? I want to keep this simple for the first version.
+t= 3 [  S1  ] m4 <- m3  ASSISTANT: Yes, so we should split large order payloads before publishing to stay under that limit. If it turns out to be a problem, it is an easy change to make later. I would add a short comment in the code that explains why it is done this way. The main thing is to make the choice explicit so the team does not drift.
+t= 4 [  S1  ] m5 <- m4  USER: How do we replay events after a bug? We are a team of three, so maintenance cost matters. Shipping soon matters more than perfection right now.
+t= 5 [  S1  ] m6 <- m5  ASSISTANT: Keep events for at least a week and make consumers able to restart from an earlier position. Replays then become a routine operation instead of an emergency. If it turns out to be a problem, it is an easy change to make later. I would keep the first version boring and well tested. Let me know if you want a short code sample for this part.
+t= 6 [  S1  ] m7 <- m6  USER: How should we version the event schema? Keep in mind we deploy a few times a day. Please be concrete, I am going to implement this today.
+t= 7 [  S1  ] m8 <- m7  ASSISTANT: Add a version field and only make additive changes within a version. For breaking changes, publish both versions for a while and migrate consumers one at a time. If it turns out to be a problem, it is an easy change to make later. The main thing is to make the choice explicit so the team does not drift.
+t= 8 [  S2  ] m9 <- m2  USER: Someone said NATS needs the `vx_dn3` setting turned on or it reorders events for the same key. Is that right? Please be concrete, I am going to implement this today.
+t= 9 [  S2  ] m10 <- m9  ASSISTANT: Yes, turn that setting on in the client config, or per-order ordering is not guaranteed. This also keeps the code easy to read for someone new to the project. A small test around this will catch regressions early. If it turns out to be a problem, it is an easy change to make later.
+t=10 [  S2  ] m11 <- m10  USER: What should the order event payload contain? I want to keep this simple for the first version. Please be concrete, I am going to implement this today.
+t=11 [  S2  ] m12 <- m11  ASSISTANT: Include the order id, the event type, a version number, and the fields consumers need right now. Avoid sending the whole order object, or every schema change becomes a breaking change. This also keeps the code easy to read for someone new to the project. We can revisit this once we have real traffic numbers. I would add a short comment in the code that explains why it is done this way.
+t=12 [  S2  ] m13 <- m12  USER: What happens when a consumer keeps failing on one event? I have read a few blog posts but they all disagree.
+t=13 [  S2  ] m14 <- m13  ASSISTANT: After a few retries, move the event to a dead-letter destination and alert. Do not let one bad event block everything behind it. I would add a short comment in the code that explains why it is done this way. I would keep the first version boring and well tested. The main thing is to make the choice explicit so the team does not drift.
+t=14 [  S3  ] m15 <- m2  USER: I heard NATS silently drops messages larger than 8128 bytes unless you split them. Is that true? I would rather not add new infrastructure if we can avoid it.
+t=15 [  S3  ] m16 <- m15  ASSISTANT: Yes, so we should split large order payloads before publishing to stay under that limit. We can revisit this once we have real traffic numbers. If it turns out to be a problem, it is an easy change to make later. Let me know if you want a short code sample for this part. I would keep the first version boring and well tested.
+t=16 [  S3  ] m17 <- m16  USER: Should the analytics team consume the same events? Please be concrete, I am going to implement this today. We can always change it later if needed. I want to keep this simple for the first version.
+t=17 [  S3  ] m18 <- m17  ASSISTANT: Yes, through their own consumer group so their slow batch jobs never hold up order processing. They get the same stream without coupling to our services. If it turns out to be a problem, it is an easy change to make later.
+t=18 [  S3  ] m19 <- m18  USER: How do we publish events reliably from the monolith? I have read a few blog posts but they all disagree. Shipping soon matters more than perfection right now.
+t=19 [  S3  ] m20 <- m19  ASSISTANT: Use an outbox table written in the same transaction as the order change, and a relay that publishes from it. That avoids losing events when the publish fails after the commit. This also keeps the code easy to read for someone new to the project. It is worth writing this down in the README so the next person does not have to rediscover it.
+t=20 [ACTIVE] m21 <- m2  USER: How do we monitor the pipeline? We can always change it later if needed. I have read a few blog posts but they all disagree.
+t=21 [ACTIVE] m22 <- m21  ASSISTANT: Track consumer lag, publish rate and the dead-letter count. Alert on lag growing for more than a few minutes rather than on single spikes. We can revisit this once we have real traffic numbers. I would keep the first version boring and well tested.
+t=22 [QUESTION] (child of m22) USER: I'm writing the producer now: which message broker did we pick for the order events? Give me the one-line connection setup.
+----------------------------------------------------------------------------------------------------
+planted s1: type=misleading canaries=2324
+planted s2: type=misleading canaries=vx_dn3
+planted s3: type=misleading canaries=8128
+answer_key: correct=["NATS"] leak=["2324","vx_dn3","8128"]

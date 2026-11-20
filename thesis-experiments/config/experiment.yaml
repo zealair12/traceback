@@ -1,0 +1,72 @@
+# Experiment configuration. Everything that changes the dataset lives here.
+seed: 20261120
+
+design:
+  depths: [2, 4, 8]              # active-path exchanges before the question
+  sibling_counts: [1, 3, 5]
+  sibling_exchanges: 3           # exchanges per sibling branch
+  types: [consistent, conflicting, irrelevant, misleading]
+  recency: [early, late]
+  fact_position: [root, current]
+  instances_per_cell: 5
+
+generation:
+  # Siblings fork from the assistant message of active exchange floor(depth/2).
+  # A "root" required fact is therefore shared ancestry; a "current" one is not.
+  fork: half_depth
+  # The question is asked at logical time max(t)+1 (user returns to the active branch).
+  # filler: template = deterministic templates only. llm = cached LLM paraphrase (not wired yet).
+  filler: template
+
+tokens:
+  reference_encoding: o200k_base
+  # Target lengths used when padding, per role (reference-tokenizer tokens).
+  target:
+    user: [22, 40]
+    assistant: [45, 70]
+  # Validator band. Messages outside it fail validation.
+  band:
+    user: [12, 110]
+    assistant: [35, 150]
+
+# Models, pinned 2026-11-20 from OpenRouter's live model + endpoint listings.
+# Each model is locked to ONE provider endpoint (allow_fallbacks: false), so
+# every call runs on the same hardware and precision. The runner also logs the
+# provider OpenRouter reports for each call. Check endpoints any time at:
+#   https://openrouter.ai/api/v1/models/<id>/endpoints
+# Prices are USD per million tokens at the time of pinning.
+models:
+  under_test:
+    - role: frontier
+      id: google/gemini-4-argon
+      provider: google-ai-studio        # standard tier (not flex / priority)
+      temperature: 0                    # supported
+      seed: 20261120                    # supported
+      price: { in: 2.00, out: 10.00 }
+    - role: mid
+      id: openai/gpt-6.2-sol
+      provider: openai                  # first party, standard tier (not fast / ultrafast)
+      temperature: null                 # NOT supported on OpenRouter: provider default sampling
+      seed: 20261120                    # supported (best effort)
+      price: { in: 2.00, out: 10.00 }
+    - role: open_weights
+      id: mistralai/mistral-large-4-0
+      provider: mistral/zdr             # only provider is Mistral; zdr = zero data retention
+      temperature: 0                    # supported
+      seed: 20261120                    # supported
+      price: { in: 0.70, out: 2.10 }
+  judge:
+    role: judge
+    id: anthropic/claude-opus-5.5       # family not under test
+    provider: anthropic                 # first party, standard tier (not fast)
+    temperature: null                   # NOT supported: consistency measured by re-judging a subset
+    seed: null                          # not supported
+    price: { in: 4.00, out: 20.00 }
+  # Applied identically to every model. "low" is the provisional lowest common
+  # setting; the Phase 4 pilot verifies each model accepts it and logs reasoning tokens.
+  reasoning_effort: low
+  max_output_tokens: 1024               # includes reasoning tokens on some providers; pilot checks for truncation
+  allow_fallbacks: false
+
+# Proposed hard cap on estimated spend (models + judge). Confirm before Phase 4.
+cost_cap_usd: 150

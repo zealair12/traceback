@@ -1,0 +1,7 @@
+node_modules/
+# Secrets: experiment database URL and API keys. Never commit.
+.env.experiment
+.env.experiment.*
+!.env.experiment.example
+# LLM filler cache can hold provider responses; keep it local unless frozen deliberately.
+cache/

@@ -1,0 +1,20 @@
+{
+  "name": "traceback-thesis-experiments",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "gen": "tsx generator/build_scenarios.ts",
+    "validate": "tsx generator/validate.ts",
+    "render": "tsx generator/render.ts",
+    "test": "tsx --test tests/*.test.ts"
+  },
+  "dependencies": {
+    "js-tiktoken": "1.0.21",
+    "yaml": "2.8.1"
+  },
+  "devDependencies": {
+    "@types/node": "22.7.4",
+    "tsx": "4.21.0",
+    "typescript": "5.6.3"
+  }
+}

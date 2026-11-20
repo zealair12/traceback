@@ -70,3 +70,15 @@ models:
 
 # Proposed hard cap on estimated spend (models + judge). Confirm before Phase 4.
 cost_cap_usd: 150
+
+# Analysis decisions.
+analysis:
+  # Decided 2026-11-20 after the Phase 3 dry run (window held sibling messages in
+  # 100% of sample scenarios but only 18% of canaries; required fact displaced in
+  # every "root" cell). Planting stays in each sibling's first exchange. Window
+  # leakage is analysed conditional on the canary/value being present in the
+  # built context (exposure is logged per call), i.e. leakage = exposure x uptake.
+  window_leakage: conditional_on_exposure
+  # Correctness is reported together with whether the required-fact message was
+  # in the context, so a displaced fact is not scored as a quality failure.
+  report_required_fact_displaced: true

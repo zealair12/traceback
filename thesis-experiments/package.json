@@ -6,7 +6,12 @@
     "gen": "tsx generator/build_scenarios.ts",
     "validate": "tsx generator/validate.ts",
     "render": "tsx generator/render.ts",
-    "test": "tsx --test tests/*.test.ts"
+    "test": "tsx --test tests/*.test.ts",
+    "test:db": "tsx --test tests/db/*.test.ts",
+    "dryrun": "tsx builders/dry_run.ts",
+    "migrate": "tsx loader/migrate.ts",
+    "load": "tsx loader/load_to_db.ts",
+    "verify-load": "tsx loader/verify_load.ts"
   },
   "dependencies": {
     "js-tiktoken": "1.0.21",

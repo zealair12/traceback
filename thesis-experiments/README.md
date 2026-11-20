@@ -98,3 +98,25 @@ kept as designed. Window leakage is analysed conditional on exposure (the
 canary or conflicting value actually being in the built context), and
 correctness is reported alongside `required_fact_present`. See `analysis` in
 `config/experiment.yaml`.
+
+## Phase 4: runner and pilot
+
+```bash
+npx tsx runner/run.ts --model open_weights --out results/raw/pilot-mistral.jsonl --dry   # contexts + cost projection, no API calls
+npx tsx runner/run.ts --model open_weights --out results/raw/pilot-mistral.jsonl         # resumes; skips calls already logged ok
+npx tsx scoring/pilot_report.ts --log results/raw/pilot-mistral.jsonl --full <all-scenarios.jsonl>
+```
+
+`--model` takes a role from `config/experiment.yaml` (`frontier`, `mid`,
+`open_weights`) or a model id. Every call uses the same system prompt
+(`runner/system_prompt.ts`, sha256 logged), the pinned provider with fallbacks
+off, and is logged as one JSON line with the exact messages, response, usage,
+OpenRouter-reported cost, reference-tokenizer tokens, window/budget ratio and
+exposure. The cost cap counts all spend already in `results/raw/`; a run refuses
+to start if spend + projection exceeds it and stops scheduling before crossing it.
+
+Pilot (2026-11-20, Mistral Large 4, 20 scenarios x 3 conditions): 60/60 calls
+ok, $0.081 total, canary false-positive rate on ancestor-only 0/20, window/budget
+mean 0.944, actual/estimated cost 1.06. String matching over-counts leaks when an
+answer lists or debunks sibling items, so flagged leaks that also state the
+correct value are marked ambiguous for the Phase 6 judge.

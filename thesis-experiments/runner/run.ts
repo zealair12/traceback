@@ -57,6 +57,13 @@ await guarded(async () => {
   const repeats = Number(flag('--repeats') ?? 1);
   let scenarios = readJsonl(file);
   if (flag('--limit')) scenarios = scenarios.slice(0, Number(flag('--limit')));
+  // Targeted re-run: only these job keys ("scenario|condition|rep"), with an
+  // optional higher output cap. Each re-run line records what it supersedes.
+  const maxTokens = Number(flag('--max-tokens') ?? m.max_output_tokens);
+  const onlyKeysFile = flag('--only-keys');
+  const onlyKeys = onlyKeysFile ? new Set<string>(JSON.parse(readFileSync(onlyKeysFile, 'utf8'))) : null;
+  const rerunReason = flag('--rerun-reason') ?? null;
+  if (onlyKeys) scenarios = scenarios.filter((s) => [...onlyKeys].some((k) => k.startsWith(`${s.id}|`)));
 
   // ---- resume + global spend ----
   const done = new Set(readLines(out).filter((r) => r.ok).map((r) => jobKey(r.scenario, r.condition, r.model, r.rep)));
@@ -69,7 +76,7 @@ await guarded(async () => {
   const { prisma } = await import('../../server/src/prismaClient.js');
   const { buildAll } = await import('../builders/context.js');
   const sysTokens = countTokens(SYSTEM_PROMPT, cfg.tokens.reference_encoding);
-  const EST_OUT = 300;      // planning estimate for output tokens (incl. reasoning)
+  const EST_OUT = Math.min(maxTokens, onlyKeys ? 3000 : 300); // planning estimate for output tokens (incl. reasoning)
   const IN_MARGIN = 1.15;   // tokenizer differences vs the reference tokenizer
 
   type Job = { s: any; ctx: any; rep: number; estUsd: number };
@@ -82,6 +89,7 @@ await guarded(async () => {
         if (!conditions.includes(ctx.condition)) continue;
         for (let rep = 0; rep < nReps; rep++) {
           if (done.has(jobKey(s.id, ctx.condition, spec.id, rep))) continue;
+          if (onlyKeys && !onlyKeys.has(`${s.id}|${ctx.condition}|${rep}`)) continue;
           const inTok = (sysTokens + ctx.tokens + ctx.question_tokens) * IN_MARGIN;
           jobs.push({ s, ctx, rep, estUsd: costOf(spec, inTok, EST_OUT) });
         }
@@ -92,14 +100,14 @@ await guarded(async () => {
   }
 
   const projected = jobs.reduce((a, j) => a + j.estUsd, 0);
-  console.log(`model ${spec.id} @ ${spec.provider} | temperature ${spec.temperature ?? 'provider default'} | reasoning ${m.reasoning_effort} | max_tokens ${m.max_output_tokens}`);
+  console.log(`model ${spec.id} @ ${spec.provider} | temperature ${spec.temperature ?? 'provider default'} | reasoning ${m.reasoning_effort} | max_tokens ${maxTokens}${onlyKeys ? ` | re-run of ${onlyKeys.size} keys (${rerunReason})` : ''}`);
   console.log(`${scenarios.length} scenarios, conditions ${conditions.join('/')}: ${jobs.length} calls to make, ${done.size} already done (resume)`);
   console.log(`spend so far (all results/raw): $${spentBefore.toFixed(4)} | projected for this run: $${projected.toFixed(4)} | cap: $${cap}`);
   if (DRY) {
     const ex = jobs[0];
     if (ex) {
       const body = requestBody({
-        model: spec, maxTokens: m.max_output_tokens, reasoningEffort: m.reasoning_effort, allowFallbacks: m.allow_fallbacks,
+        model: spec, maxTokens, reasoningEffort: m.reasoning_effort, allowFallbacks: m.allow_fallbacks,
         messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...ex.ctx.messages]
       });
       console.log(`dry run: no API calls. Example request (first job, messages elided):`);
@@ -129,7 +137,7 @@ await guarded(async () => {
       const messages = [{ role: 'system' as const, content: SYSTEM_PROMPT }, ...job.ctx.messages];
       const started = new Date();
       const r = await callOpenRouter({
-        model: spec, messages, maxTokens: m.max_output_tokens,
+        model: spec, messages, maxTokens,
         reasoningEffort: m.reasoning_effort, allowFallbacks: m.allow_fallbacks
       });
       const ended = new Date();
@@ -149,7 +157,7 @@ await guarded(async () => {
         provider_reported: r.provider,
         model_reported: r.model_reported,
         generation_id: r.generation_id,
-        params: { temperature: spec.temperature, seed: spec.seed, max_tokens: m.max_output_tokens, reasoning_effort: m.reasoning_effort, allow_fallbacks: m.allow_fallbacks },
+        params: { temperature: spec.temperature, seed: spec.seed, max_tokens: maxTokens, reasoning_effort: m.reasoning_effort, allow_fallbacks: m.allow_fallbacks },
         system_prompt_sha256: SYSTEM_PROMPT_SHA256,
         messages,
         message_ids: c.message_ids,
@@ -163,6 +171,7 @@ await guarded(async () => {
         window_ratio: c.ratio_to_budget,
         starts_with_assistant: c.starts_with_assistant,
         exposure: c.exposure,
+        rerun: onlyKeys ? { supersedes_key: `${job.s.id}|${c.condition}|${job.rep}`, reason: rerunReason } : null,
         started_at: started.toISOString(),
         ended_at: ended.toISOString(),
         latency_ms: ended.getTime() - started.getTime(),

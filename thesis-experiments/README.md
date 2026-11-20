@@ -120,3 +120,16 @@ ok, $0.081 total, canary false-positive rate on ancestor-only 0/20, window/budge
 mean 0.944, actual/estimated cost 1.06. String matching over-counts leaks when an
 answer lists or debunks sibling items, so flagged leaks that also state the
 correct value are marked ambiguous for the Phase 6 judge.
+
+## Phase 5: freeze and full run
+
+The dataset is frozen at git tag `thesis-freeze-v1`; see `data/FREEZE.md` for the
+hashes of the dataset and every input that shapes it.
+
+```bash
+shasum -a 256 -c data/scenarios.sha256                 # verify the frozen dataset
+npm run load -- --file data/scenarios.jsonl            # load all 720 into the experiment DB
+npm run verify-load -- --file data/scenarios.jsonl
+npx tsx runner/run.ts --model <role> --file data/scenarios.jsonl --out results/raw/<role>.jsonl \
+  --repeat-fraction 0.1 --repeats 3                    # resumes; stops at the cost cap
+```

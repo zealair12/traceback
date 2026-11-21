@@ -1,0 +1,103 @@
+\documentclass[11pt,letterpaper,oneside]{report}
+\usepackage[margin=1.1in]{geometry}
+\usepackage{amsmath,amsthm}
+\usepackage{newtxtext,newtxmath}
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{xltabular}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage[most]{tcolorbox}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta}
+\usepackage{listings}
+\usepackage[hidelinks]{hyperref}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+
+\graphicspath{{../../results/figures/paper/}}
+\setlist{itemsep=2pt,topsep=4pt}
+\setlength{\parskip}{5pt}
+\setlength{\parindent}{0pt}
+\linespread{1.08}
+\setlength{\emergencystretch}{2.5em}
+
+\titleformat{\chapter}[display]{\normalfont\bfseries\Large}{\large Chapter \thechapter}{4pt}{\LARGE}
+\titlespacing*{\chapter}{0pt}{-10pt}{18pt}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\itshape Reader's companion}
+\fancyhead[R]{\small\itshape \leftmark}
+\fancyfoot[C]{\small\thepage}
+\renewcommand{\chaptermark}[1]{\markboth{#1}{}}
+
+\definecolor{paperbg}{HTML}{F2F1EC}
+\definecolor{plainbg}{HTML}{EAF1FB}
+\definecolor{plainfr}{HTML}{2A78D6}
+\definecolor{exbg}{HTML}{E8F5EE}
+\definecolor{exfr}{HTML}{13804F}
+\definecolor{askbg}{HTML}{FBF2DF}
+\definecolor{askfr}{HTML}{B7791F}
+\definecolor{whybg}{HTML}{F1EEF9}
+\definecolor{whyfr}{HTML}{6250D6}
+\definecolor{ancblue}{HTML}{2A78D6}
+\definecolor{sibor}{HTML}{EB6834}
+\definecolor{offgray}{HTML}{C3C2B7}
+
+\tcbset{boxsep=3pt,left=6pt,right=6pt,top=4pt,bottom=4pt,arc=2pt,breakable,fonttitle=\bfseries\small,coltitle=black}
+\newtcolorbox{paper}{colback=paperbg,colframe=paperbg!70!black,title=From the paper,colbacktitle=paperbg!85!black,fontupper=\small\itshape}
+\newtcolorbox{plain}{colback=plainbg,colframe=plainfr,title=In plain words,colbacktitle=plainbg!80!plainfr}
+\newtcolorbox{example}[1][]{colback=exbg,colframe=exfr,title={With real numbers#1},colbacktitle=exbg!80!exfr}
+\newtcolorbox{ask}{colback=askbg,colframe=askfr,title=If an examiner asks,colbacktitle=askbg!80!askfr}
+\newtcolorbox{why}{colback=whybg,colframe=whyfr,title=Why it was done this way,colbacktitle=whybg!80!whyfr}
+
+\lstset{basicstyle=\ttfamily\small,columns=fullflexible,keepspaces=true,frame=single,rulecolor=\color{black!25},backgroundcolor=\color{paperbg},xleftmargin=4pt,xrightmargin=4pt,breaklines=true}
+
+\newcommand{\A}{A(a)}
+\newcommand{\Sib}{S(a)}
+\newcommand{\anc}{\mathrm{anc}}
+\newcommand{\full}{\mathrm{full}}
+\newcommand{\win}{\mathrm{win}}
+\newcommand{\term}[1]{\textbf{#1}}
+
+\begin{document}
+
+\begin{titlepage}
+\centering
+\vspace*{1.6in}
+{\Huge\bfseries The Only Path That Matters?\par}
+\vspace{10pt}
+{\Large Ancestor-Only Context Selection in Branched LLM Conversations\par}
+\vspace{28pt}
+{\LARGE A reader's companion\par}
+\vspace{10pt}
+{\large Every term, formula, decision and figure, explained line by line\par}
+\vspace{48pt}
+{\large Prepared for Okechukwu Zeal Achonu\par}
+\vfill
+{\small Companion to the paper draft \texttt{docs/paper/paper.pdf}. All numbers come from the frozen\\ dataset (tag \texttt{thesis-freeze-v1}) and \texttt{results/analysis/stats.txt}.\par}
+\end{titlepage}
+
+\tableofcontents
+\clearpage
+
+\input{ch00-how}
+\input{ch01-bigpicture}
+\input{ch02-vocabulary}
+\input{ch03-three-rules}
+\input{ch04-formulas}
+\input{ch05-design}
+\input{ch06-running}
+\input{ch07-scoring}
+\input{ch08-statistics}
+\input{ch09-results}
+\input{ch10-discussion}
+\input{ch11-defense}
+\input{ch12-decisions}
+\appendix
+\input{appA-glossary}
+\input{appB-reproduce}
+
+\end{document}

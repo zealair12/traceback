@@ -1,0 +1,46 @@
+\chapter{Reproducing everything}
+
+Everything lives on the \texttt{thesis/experiment} branch in \texttt{thesis-experiments/}. Each phase has commands that regenerate its output from the frozen data.
+
+\section{Where things are}
+
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{@{}lX@{}}
+\toprule
+Path & What it holds \\
+\midrule
+\texttt{config/experiment.yaml} & Design levels, seed, models, cost cap, analysis decisions \\
+\texttt{generator/} & Scenario templates, generator and validator \\
+\texttt{data/scenarios.jsonl} & The 720 frozen scenarios (sha256 in \texttt{scenarios.sha256}) \\
+\texttt{loader/} & Safety guard, migrations, loading into Traceback's database \\
+\texttt{builders/context.ts} & The three context rules \\
+\texttt{runner/} & Model calls, cost cap, resume, replay for D1 \\
+\texttt{results/raw/} & Every model call: prompt, answer, tokens, cost, exposure \\
+\texttt{scoring/} & Leak detection, judge prompts and runner, human sample \\
+\texttt{results/scored/} & Deterministic scores and all judge outputs \\
+\texttt{analysis/} & Results table, statistics (R) and figures (R) \\
+\texttt{results/analysis/} & \texttt{answers.csv}, \texttt{stats.txt}, \texttt{stats.json} \\
+\texttt{results/figures/} & Figures (titled and IEEE-column versions) \\
+\texttt{docs/paper/} & The IEEE paper \\
+\texttt{docs/companion/} & This book \\
+\texttt{DEVIATIONS.md} & Every change to the plan after the freeze \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Commands}
+
+\begin{lstlisting}
+# verify the frozen dataset
+shasum -a 256 -c data/scenarios.sha256
+# rebuild the results table, statistics and figures
+python3 -I analysis/build_table.py
+Rscript analysis/models.R
+Rscript analysis/figures.R
+# rebuild the paper and this book
+cd docs/paper && tectonic -X compile paper.tex
+cd ../companion && tectonic -X compile companion.tex
+\end{lstlisting}
+
+Model calls and judgments are not re-run by these commands: they cost money and are saved in \texttt{results/raw} and \texttt{results/scored}. Re-running them would produce close but not identical answers, which is why the saved files are the record.

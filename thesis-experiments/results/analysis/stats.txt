@@ -1,0 +1,89 @@
+== 1. Leakage (judge-confirmed use of an exposed sibling-only detail) ==
+  ancestor  consistent    0.0%  [ 0.0,  0.7]  (0/540)
+  full_tree consistent   32.4%  [28.5, 36.5]  (175/540)
+  window    consistent   25.4%  [21.8, 29.3]  (137/540)
+  ancestor  conflicting   0.0%  [ 0.0,  0.7]  (0/540)
+  full_tree conflicting  15.6%  [12.6, 18.9]  (84/540)
+  window    conflicting  38.5%  [34.4, 42.8]  (208/540)
+  ancestor  misleading    0.0%  [ 0.0,  0.7]  (0/540)
+  full_tree misleading    3.3%  [ 2.0,  5.2]  (18/540)
+  window    misleading    8.5%  [ 6.3, 11.2]  (46/540)
+  ancestor  irrelevant    0.0%  [ 0.0,  0.7]  (0/540)
+  full_tree irrelevant    0.0%  [ 0.0,  0.7]  (0/539)
+  window    irrelevant    0.0%  [ 0.0,  0.7]  (0/540)
+  ancestor-only overall: 0/2160, exact 95% CI upper bound 0.17%
+  GLMM leak_used ~ condition*type + depth + siblings + recency + fact_position + model + (1|scenario); n = 3240
+    (Intercept)                                OR    0.41 [  0.28,    0.60]  p = 7.61e-06
+    conditionwindow                            OR    0.62 [  0.45,    0.85]  p = 0.00278
+    typeconflicting                            OR    0.26 [  0.18,    0.38]  p = 1.36e-12
+    typemisleading                             OR    0.04 [  0.02,    0.07]  p = 4.61e-30
+    depth_f4                                   OR    3.52 [  2.57,    4.83]  p = 6.19e-15
+    depth_f8                                   OR    7.96 [  5.79,   10.95]  p = 2.71e-37
+    siblings_f3                                OR    0.69 [  0.52,    0.91]  p = 0.00841
+    siblings_f5                                OR    0.66 [  0.50,    0.87]  p = 0.00344
+    recencylate                                OR    2.70 [  2.13,    3.42]  p = 2.06e-16
+    fact_positioncurrent                       OR    0.82 [  0.66,    1.04]  p = 0.0984
+    model_rolemid                              OR    0.12 [  0.09,    0.16]  p = 7.02e-49
+    model_roleopen_weights                     OR    0.13 [  0.10,    0.17]  p = 3.81e-47
+    conditionwindow:typeconflicting            OR    8.80 [  5.46,   14.17]  p = 3.63e-19
+    conditionwindow:typemisleading             OR    5.02 [  2.56,    9.83]  p = 2.57e-06
+    window - full tree, consistent  model RD  -8.2 pts [-13.6,  -2.8]  p_holm = 0.00275 | raw RD  -7.0 [-11.7,  -2.2] (cluster bootstrap)
+    window - full tree, conflicting model RD +25.5 pts [+20.2, +30.7]  p_holm = 4.98e-21 | raw RD +23.0 [+15.4, +30.6] (cluster bootstrap)
+    window - full tree, misleading  model RD  +2.7 pts [ +1.2,  +4.2]  p_holm = 0.000795 | raw RD  +5.2 [ +2.0,  +8.3] (cluster bootstrap)
+  Uptake (prompt contained a planted item):
+    full_tree consistent  uptake  26.0% [21.3, 31.4]
+    window    consistent  uptake  54.4% [45.6, 63.0]
+    full_tree conflicting uptake   7.5% [ 5.3, 10.4]
+    window    conflicting uptake  86.9% [81.3, 91.0]
+    full_tree misleading  uptake   1.0% [ 0.6,  1.9]
+    window    misleading  uptake   9.3% [ 6.0, 14.1]
+== 2. Sliding window: recency x fact position ==
+  early / root    fact in prompt   0.0%   correct  25.4%
+  late  / root    fact in prompt   0.0%   correct  37.8%
+  early / current fact in prompt 100.0%   correct 100.0%
+  late  / current fact in prompt  16.1%   correct  44.8%
+  recency x fact position, difference-in-differences of correctness: -67.6 pts [-78.8, -56.4]
+  late - early siblings, fact near root   : +12.4 pts [+3.8, +21.3]
+  late - early siblings, fact near current: -55.2 pts [-61.9, -48.4]
+  window, fact displaced: correct 32.4% [30.1, 34.8] (n = 1533)
+  window, fact in prompt : correct 99.8% [99.1, 100.0] (n = 627)
+== 3. Quality: paired by scenario x model (Wilcoxon signed-rank; cluster-bootstrap mean difference) ==
+  window - ancestor    correct      ancestor 0.999 vs 0.520  diff -0.479 [-0.517, -0.444]  p_holm = 7.24e-226  (n = 2160)
+  window - ancestor    correct_strict ancestor 0.991 vs 0.505  diff -0.487 [-0.521, -0.451]  p_holm = 7.6e-229  (n = 2160)
+  window - ancestor    faithfulness ancestor 4.783 vs 2.271  diff -2.512 [-2.627, -2.392]  p_holm = 4.1e-286  (n = 2160)
+  window - ancestor    instruction  ancestor 4.724 vs 2.959  diff -1.765 [-1.865, -1.666]  p_holm = 3.51e-251  (n = 2160)
+  window - ancestor    task         ancestor 4.361 vs 2.424  diff -1.938 [-2.047, -1.830]  p_holm = 7.1e-257  (n = 2160)
+  full_tree - ancestor correct      ancestor 0.999 vs 0.986  diff -0.013 [-0.019, -0.007]  p_holm = 7.85e-07  (n = 2159)
+  full_tree - ancestor correct_strict ancestor 0.991 vs 0.868  diff -0.124 [-0.145, -0.104]  p_holm = 2.6e-57  (n = 2159)
+  full_tree - ancestor faithfulness ancestor 4.783 vs 3.938  diff -0.845 [-0.916, -0.781]  p_holm = 7.81e-134  (n = 2159)
+  full_tree - ancestor instruction  ancestor 4.724 vs 4.543  diff -0.181 [-0.216, -0.146]  p_holm = 1.22e-26  (n = 2159)
+  full_tree - ancestor task         ancestor 4.361 vs 4.058  diff -0.303 [-0.342, -0.266]  p_holm = 8.54e-52  (n = 2159)
+== 4. Consistent siblings: does using the sibling detail change quality? (full tree + window) ==
+  correct | fact displaced, detail not used: 43.2% [37.2, 49.3] (n = 271)
+  correct | fact in prompt, detail not used: 100.0% [99.3, 100.0] (n = 497)
+  correct | fact displaced, detail used    : 100.0% [96.6, 100.0] (n = 107)
+  correct | fact in prompt, detail used    : 100.0% [98.2, 100.0] (n = 205)
+  fact displaced: Fisher exact test of correctness by use, p = 5.01e-31
+  task completion when the detail was used: -0.36 points [-0.51, -0.22], p = 7e-07 (adjusted for condition, fact in prompt, model)
+  faithfulness when the detail was used:    -1.28 points [-1.43, -1.12], p = 3.22e-58
+== 5. Token efficiency ==
+  overall mean E = 62.7%; max |E - sibling share| = 1.11e-16
+  depth 2, 1 siblings: 59.6% [59.0, 60.1]
+  depth 2, 3 siblings: 81.7% [81.4, 81.9]
+  depth 2, 5 siblings: 87.9% [87.7, 88.1]
+  depth 4, 1 siblings: 42.5% [42.0, 43.0]
+  depth 4, 3 siblings: 69.3% [69.0, 69.6]
+  depth 4, 5 siblings: 78.4% [78.2, 78.7]
+  depth 8, 1 siblings: 27.0% [26.7, 27.3]
+  depth 8, 3 siblings: 52.5% [52.2, 52.8]
+  depth 8, 5 siblings: 65.0% [64.8, 65.3]
+== 6. Run-to-run variance (73 scenarios run 3 times) ==
+  frontier     ancestor  leak identical across runs 100.0%, correct identical 100.0%, mean SD of task score 0.08 (n = 73)
+  mid          ancestor  leak identical across runs 100.0%, correct identical  98.6%, mean SD of task score 0.17 (n = 73)
+  open_weights ancestor  leak identical across runs 100.0%, correct identical 100.0%, mean SD of task score 0.26 (n = 73)
+  frontier     full_tree leak identical across runs 100.0%, correct identical  98.6%, mean SD of task score 0.09 (n = 73)
+  mid          full_tree leak identical across runs  98.6%, correct identical 100.0%, mean SD of task score 0.23 (n = 73)
+  open_weights full_tree leak identical across runs  91.8%, correct identical 100.0%, mean SD of task score 0.28 (n = 73)
+  frontier     window    leak identical across runs 100.0%, correct identical 100.0%, mean SD of task score 0.02 (n = 73)
+  mid          window    leak identical across runs  98.6%, correct identical  91.8%, mean SD of task score 0.17 (n = 73)
+  open_weights window    leak identical across runs  93.2%, correct identical  91.8%, mean SD of task score 0.21 (n = 73)

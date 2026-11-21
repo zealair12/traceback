@@ -1,0 +1,122 @@
+\chapter{The three ways of building a prompt}
+
+The whole experiment compares three rules for deciding which messages go into the prompt. In the paper they are called \term{conditions} or \term{context rules}. In every condition the final question is added at the end, and the same system prompt is added at the start.
+
+\section{The rules in plain words}
+
+\begin{enumerate}
+\item \term{Ancestor-only.} Send the active path: the first message, then each message down to the current one. Nothing from any other branch. This is what Traceback does.
+\item \term{Full tree.} Send every message in the conversation, in the order they were written, as if the tree were a normal flat chat log. This mirrors an ordinary chat app and is the reference point.
+\item \term{Sliding window.} Start from the newest message and walk backwards in time, adding whole messages until the next one would push you over a size limit. The limit is set to exactly the size of the ancestor-only prompt for that same question. So the window always gets the same budget as ancestor-only, but chooses by recency instead of by the tree.
+\end{enumerate}
+
+\begin{why}
+The window's budget equals the ancestor-only size because the research question is about \emph{which} messages are chosen at a \emph{fixed} size. If the window were allowed more or fewer tokens, any difference could be blamed on size. Matching the budget removes that explanation. The window only adds \emph{whole} messages, so it usually lands slightly under the budget; the average was 94\% of it.
+\end{why}
+
+\section{A small picture}
+
+The paper's Fig.~1 shows the three rules on a seven-message tree. The numbers inside the circles are the order in which the messages were written (the \term{logical clock}).
+
+\begin{center}
+\begin{tikzpicture}[
+  msg/.style={circle, draw, minimum size=6.4mm, inner sep=0pt, font=\scriptsize, line width=0.6pt},
+  on/.style={msg, fill=ancblue!85, draw=ancblue!85, text=white},
+  sib/.style={msg, fill=sibor!85, draw=sibor!85, text=white},
+  off/.style={msg, draw=offgray, text=offgray, fill=white},
+  q/.style={msg, draw=black!70, fill=white},
+  edge/.style={-, line width=0.6pt, color=black!45},
+  lab/.style={font=\footnotesize, align=center}]
+\newcommand{\tree}[8]{%
+  \begin{scope}[shift={(#1,0)}]
+    \node[#2] (r) at (0,0) {0}; \node[#3] (m) at (0,-0.85) {1}; \node[#4] (f) at (0,-1.7) {2};
+    \node[#5] (s1) at (0.9,-2.55) {3}; \node[#6] (s2) at (0.9,-3.4) {4};
+    \node[#7] (a1) at (-0.9,-2.55) {5}; \node[#8] (a) at (-0.9,-3.4) {6}; \node[q] (qq) at (-0.9,-4.25) {$q$};
+    \draw[edge] (r)--(m) (m)--(f) (f)--(s1) (s1)--(s2) (f)--(a1) (a1)--(a) (a)--(qq);
+  \end{scope}}
+\tree{0}{on}{on}{on}{off}{off}{on}{on}
+\tree{4.4}{on}{on}{on}{sib}{sib}{on}{on}
+\tree{8.8}{off}{off}{on}{sib}{sib}{on}{on}
+\node[lab] at (0,-5.0) {(a) Ancestor-only};
+\node[lab] at (4.4,-5.0) {(b) Full tree};
+\node[lab] at (8.8,-5.0) {(c) Window, budget 5};
+\end{tikzpicture}
+\end{center}
+
+How to read it:
+\begin{itemize}
+\item Messages 0, 1, 2 come first. At message 2 the conversation branches.
+\item Messages 3 and 4 are a side exploration (the orange sibling branch).
+\item The user then returns to message 2 and continues the main line with messages 5 and 6. Message 6 is the \term{ask node}: the question $q$ is asked as its reply.
+\item Blue means ``on the active path and sent''. Orange means ``sibling content and sent''. Grey outline means ``not sent''.
+\end{itemize}
+
+What each rule sends, if every message is the same size:
+\begin{itemize}
+\item Ancestor-only sends 0, 1, 2, 5, 6. That is five messages, so the budget for the window is 5.
+\item Full tree sends all seven, in time order 0, 1, 2, 3, 4, 5, 6.
+\item The window walks back from the newest: 6, 5, 4, 3, 2. Five messages fill the budget, so it stops. Messages 0 and 1 are dropped, even though they are on the active path, and the sibling messages 3 and 4 are sent instead.
+\end{itemize}
+
+\begin{plain}
+The window is the same size as ancestor-only, but it spends part of its space on the abandoned branch and pays for it by forgetting the start of the conversation. If the decision you are asking about was made at the start, the window has thrown it away.
+\end{plain}
+
+\section{The running example, message by message}
+
+Now the real scenario. The developer chooses LRU in the very first message (m1). After four messages, three sibling branches explore LFU, ARC and FIFO (m5 to m22). Then the developer returns to the main line (m23 to m26) and asks the question. Each message's token weight $w$ is from the reference tokenizer.
+
+\begin{center}
+\small
+\begin{tabular}{@{}llllrl@{}}
+\toprule
+Message & Time $t$ & Branch & Role & $w$ & Content (start) \\
+\midrule
+m1 & 0 & active & user & 39 & ``\dots let's go with LRU.'' \\
+m2 & 1 & active & assistant & 67 & ``LRU is a reasonable fit \dots'' \\
+m3 & 2 & active & user & 31 & negative lookups? \\
+m4 & 3 & active & assistant & 69 & (answer; the fork point) \\
+m5--m10 & 4--9 & s1 & both & 273 & ``What if we used LFU \dots'' \\
+m11--m16 & 10--15 & s2 & both & 320 & ``Would ARC eviction \dots'' \\
+m17--m22 & 16--21 & s3 & both & 326 & ``What if we used FIFO \dots'' \\
+m23 & 22 & active & user & 45 & measuring the cache \\
+m24 & 23 & active & assistant & 57 & (answer) \\
+m25 & 24 & active & user & 42 & entry lifetime \\
+m26 & 25 & active & assistant & 67 & (answer; the ask node) \\
+\midrule
+\multicolumn{4}{@{}l}{Total of all 26 messages} & 1{,}336 & \\
+\multicolumn{4}{@{}l}{Active path (m1--m4, m23--m26)} & 417 & \\
+\multicolumn{4}{@{}l}{Siblings (m5--m22)} & 919 & \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{example}
+\textbf{Ancestor-only} sends m1, m2, m3, m4, m23, m24, m25, m26: 417 tokens.
+
+\textbf{Full tree} sends all 26 messages: 1,336 tokens.
+
+\textbf{Window} has a budget of 417. Walking back from the newest:
+m26 (67, running total 67), m25 (42, 109), m24 (57, 166), m23 (45, 211), m22 (73, 284), m21 (40, 324), m20 (77, 401). The next one, m19, is 44 tokens; $401 + 44 = 445 > 417$, so the window stops. It sends m20 to m26: 401 tokens, which is $401/417 = 96.2\%$ of the budget.
+
+The window kept the last four active messages and three messages from the FIFO branch. It dropped m1, the message where LRU was chosen.
+\end{example}
+
+\section{What the models said}
+
+Here is what GPT-6.2 Sol answered to ``which eviction policy did we choose for the product cache? Give me the config line'' under each rule.
+
+\begin{example}[: GPT-6.2 Sol]
+\textbf{Ancestor-only:} ``We chose \textbf{LRU} (least recently used).'' followed by \texttt{evictionPolicy: LRU}. Correct, faithful, complete.
+
+\textbf{Full tree:} ``We chose \textbf{LRU}. Using \texttt{eviction\_policy} as the config key:'' followed by \texttt{eviction\_policy: lru}. Correct. The siblings were in front of it, but it was not misled.
+
+\textbf{Window:} ``We didn't choose an eviction policy earlier. I'd use \textbf{LRU} for the first version.'' The decision was no longer in its prompt, so it said no decision had been made, then happened to recommend LRU anyway.
+\end{example}
+
+The window answer is a good warning about measurement. It contains the word ``LRU'', so a simple check would mark it correct. But it is right for the wrong reason: it says the decision was never made. The quality judge caught this and gave it 2 out of 5 for faithfulness. Chapter 7 explains how the scoring handles cases like this.
+
+\begin{ask}
+\textbf{``Isn't the window just a strawman? Nobody would build it that way.''}\par
+Sliding windows are a standard, widely used way to keep chat prompts short, and the paper's related work cites them. The window here is the most common form (newest messages first, whole messages only), and it was given exactly the same token budget as ancestor-only, which is the fairest possible comparison. Its failure is not a quirk of implementation; Propositions 5 and 6 prove it must drop the oldest active messages whenever siblings take up space.
+\end{ask}

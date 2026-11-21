@@ -1,0 +1,88 @@
+\chapter{Defending it: questions and answers}
+
+These are the questions an examiner or advisor is most likely to ask, with answers you can give in your own words. Practise saying them aloud; do not memorise them word for word.
+
+\section*{About the idea}
+
+\textbf{Q1. What problem does your thesis solve?}\par
+When people explore alternatives in a chat with an AI, the abandoned explorations stay in the prompt. That wastes tokens and can mislead the model. I tested whether sending only the conversation's active path, as Traceback does, fixes this better than the common alternative of sending the most recent messages, at the same prompt size.
+
+\textbf{Q2. Isn't it obvious that sending less irrelevant text is better?}\par
+That part was already shown by earlier work. What was not known is whether the benefit comes from \emph{choosing} the right messages or simply from sending fewer. My equal-budget window separates those: it sends exactly as many tokens as ancestor-only but chooses by recency, and it did much worse.
+
+\textbf{Q3. What is new compared with the earlier branching study?}\par
+Three things: an equal-budget comparison, sibling type as a controlled variable (including consistent and misleading siblings, which they did not test), and a short formal analysis whose predictions I checked scenario by scenario.
+
+\section*{About the method}
+
+\textbf{Q4. Why synthetic conversations?}\par
+So that every fact is planted on purpose and the correct answer and every possible leak are known exactly. With real chats I could not tell which facts only lived in abandoned branches. The cost is realism, which I list as a limitation.
+
+\textbf{Q5. How do you know a leak really came from the sibling?}\par
+Every sibling-only detail carries a random canary, such as \texttt{orbit\_y5y}, that no model could guess. On ancestor-only prompts, which never contain sibling content, the detector found 0 canaries in 2,598 answers, so false alarms are essentially zero. For forced-choice values like ``LRU'', which a model could guess, I only count a leak when the value was actually in the prompt.
+
+\textbf{Q6. Why did you need a judge for leakage at all?}\par
+Because finding a term is not the same as using it. Many full-tree answers said things like ``we chose LRU; LFU was only explored''. The judge labelled each term as used, mentioned as an alternative, rejected or incidental. Only 23.5\% of the terms found in full-tree answers were actually used.
+
+\textbf{Q7. Why trust an AI judge?}\par
+It is from a different model family than any model tested, it never sees the condition or model, and answers are judged in shuffled order. I also scored 150 answers myself, blind, and report Cohen's kappa between my scores and the judge's. I acknowledge its rubric penalizes true details not on the active path.
+
+\textbf{Q8. Why only three models?}\par
+Budget and scope. I chose one frontier, one mid-size and one open-weights model from three different companies so the result is not about one family. The pattern was the same for all three.
+
+\textbf{Q9. GPT could not be run at temperature 0. Is that a problem?}\par
+It reduces repeatability, which I measured directly with three runs of 73 scenarios. GPT's leakage outcome was identical across runs in at least 98.6\% of cases. The conclusions hold for the two models that were run at temperature 0 as well.
+
+\textbf{Q10. Why did you change the correctness measure?}\par
+I did not change the definition. My brief defines correct as ``the required value is present and no conflicting value is asserted''. The first implementation counted any mention of a conflicting value as asserting it. Reading answers showed this was wrong, so I used the leak judge's labels to separate assertions from mentions. I report both. The change helped the full tree, a baseline, not my method, and ancestor-only is most correct under both.
+
+\textbf{Q11. Some Mistral answers were re-run. Isn't that cherry-picking?}\par
+No. 107 Mistral answers were cut off because the model used up its output allowance on reasoning, slightly more often under ancestor-only. I re-sent exactly those prompts, byte for byte, with a bigger allowance, and recorded it as a documented deviation. Leaving them as failures would have biased the results \emph{against} ancestor-only.
+
+\textbf{Q12. How do I know you didn't adjust the dataset after seeing results?}\par
+The dataset was hashed and tagged in git before the full run, and it regenerates from its seed with the identical hash. Every model response and judgment is saved in the repository.
+
+\section*{About the results}
+
+\textbf{Q13. What was your most important result?}\par
+At the same size, the recency window was correct only 52.0\% of the time, while ancestor-only was correct 99.9\% of the time and never leaked. The window fails because it always drops the oldest messages first, which is exactly where early decisions live.
+
+\textbf{Q14. The full tree was 98.6\% correct. So why not just send everything?}\par
+Because it costs three times the tokens, and that grows over a session; 12.8\% of its answers used abandoned-branch details; and its answers were judged less faithful (3.94 against 4.78). Ancestor-only matched its correctness without any of those costs.
+
+\textbf{Q15. Why did the window leak conflicting values so much more than the full tree?}\par
+When the full tree sees ``we chose LRU'' and ``what about LFU?'', it usually picks the real decision. The window often no longer contains ``we chose LRU'', so LFU is the only option in front of it. Given exposure, it adopted the conflicting value 86.9\% of the time, against 7.5\% for the full tree.
+
+\textbf{Q16. Why did deeper conversations leak more?}\par
+A deeper active path makes the ancestor-only prompt bigger, which gives the window a bigger budget with more room for sibling messages, and makes the full tree longer. Ancestor-only stays at zero regardless.
+
+\textbf{Q17. Is there any case where ancestor-only is worse?}\par
+In principle yes: if a side branch contains useful information that was never stated on the main line, ancestor-only cannot use it. My consistent-sibling analysis shows such information can rescue an answer, but in my benchmark that only happened after the window had lost the fact, which never happens under ancestor-only. That case motivates future work on retrieving from siblings.
+
+\section*{About the theory}
+
+\textbf{Q18. Explain Proposition 1 in one sentence.}\par
+The share of tokens ancestor-only saves is exactly the share of the conversation taken up by side branches, because the conversation is just the active path plus the side branches.
+
+\textbf{Q19. Why is the first message never in the window?}\par
+The window keeps a message only if it and everything newer fit in the budget. For the first message, ``everything newer'' is the whole conversation, which is bigger than the active path whenever side branches exist, and the budget equals the active path.
+
+\textbf{Q20. What does ``exposure times uptake'' mean?}\par
+A model can only use a sibling fact beyond chance if the fact is in its prompt. Whether it is in the prompt (exposure) is decided by the tree and the rule, without any model. What the model does with it (uptake) is what the experiment measures.
+
+\textbf{Q21. Did you test the theory?}\par
+Yes. The token saving matched the formula in all 720 scenarios. The test for which messages the window keeps was right in 720 of 720. The root fact was never in the window (0 of 360). The late-sibling survival condition was right in 360 of 360.
+
+\section*{About Traceback and practice}
+
+\textbf{Q22. Does the experiment really test Traceback's code?}\par
+Yes. The scenarios were loaded into Traceback's own database schema, and a test reads the exact recursive SQL from Traceback's source and confirms the experiment's ancestor-only prompts are identical to what Traceback produces, and to its own lineage function.
+
+\textbf{Q23. What should builders of branching chat tools take from this?}\par
+Choose context by the conversation tree, not by recency. Recency windows drop early decisions and then adopt whatever alternatives are left. If you need information from side branches, retrieve it deliberately rather than including it by recency.
+
+\textbf{Q24. What would you do next?}\par
+Test real conversations rather than templates; add free-form answers; measure cost over whole sessions; and test combining the active path with selective retrieval from sibling branches.
+
+\textbf{Q25. What would change your conclusion?}\par
+If, on real conversations, useful information lived in side branches often enough that ancestor-only lost more answers than it saved. The consistent-sibling analysis is the start of testing that.

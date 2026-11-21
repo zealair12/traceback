@@ -1,0 +1,122 @@
+\chapter{How the answers were scored}
+
+Every answer gets three kinds of score: whether it is \term{correct}, whether it \term{leaked} a sibling detail, and how good it is (\term{quality}). This chapter explains each one and why it was done that way.
+
+\section{Correctness}
+
+\begin{paper}
+Correctness requires the answer to state the required value and not assert a conflicting sibling value; a conflicting value that the leak judge labels as only mentioned or rejected is not an assertion. A stricter string-only variant, which counts any mention, is reported as a check.
+\end{paper}
+
+\begin{plain}
+An answer is correct if it gives the right option and does not claim a wrong option is the decision. Saying ``we chose LRU; LFU was only explored'' is correct. Saying ``we chose LFU'' is not.
+\end{plain}
+
+There are two versions:
+\begin{itemize}
+\item \textbf{Strict (string-only).} Correct if the right value appears and no conflicting value appears \emph{anywhere} in the answer. Simple, but harsh: it marks ``we chose LRU; LFU was only explored'' as wrong.
+\item \textbf{Judged (the main measure).} The same, except a conflicting value only counts against the answer if the leak judge (below) says the answer \emph{used} it. Mentions as alternatives or rejections do not count.
+\end{itemize}
+
+\begin{example}
+\begin{center}
+\small
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Condition & Strict & Judged \\
+\midrule
+Ancestor-only & 99.1\% & 99.9\% \\
+Full tree & 86.8\% & 98.6\% \\
+Window & 50.5\% & 52.0\% \\
+\bottomrule
+\end{tabular}
+\end{center}
+The big gap is in the full tree. Most of its ``errors'' under the strict rule were answers like Mistral's in the running example: ``LRU'', with LFU, ARC and FIFO named as options that had been explored.
+\end{example}
+
+\begin{why}
+Your brief defines correctness as ``the required value is present and no conflicting sibling value is \emph{asserted}''. The strict version was the first implementation. Reading the answers showed it counted mentions as assertions, which does not match the definition, so the judged version became the main measure. Both are reported, so a reader can see the difference.
+\end{why}
+
+\begin{ask}
+\textbf{``Isn't it suspicious that you changed the correctness measure after seeing results?''}\par
+The definition did not change; the first implementation did not match it, and the change was made because answers were read, not because a number was disliked. The change made the \emph{baseline} (the full tree) look better, not ancestor-only, and both versions are reported side by side. Ancestor-only is the most correct under both.
+\end{ask}
+
+\section{Leakage, step 1: string matching}
+
+For every answer, the scorer searches for every canary and every conflicting value planted in that scenario. A match only counts if the item was actually in that condition's prompt (exposure, Proposition 4). An item found in an answer but \emph{not} in the prompt is a \term{chance hit}, not leakage: for example, a model that never saw the decision guessing ``LRU'' because it is a common default.
+
+\begin{example}
+Detector check on ancestor-only answers, where nothing sibling-only is ever in the prompt: 0 canaries found in 2,598 answers. 17 of the 2,160 first-run answers named a conflicting option by chance, which the exposure rule correctly excludes.
+\end{example}
+
+\section{Leakage, step 2: the leak judge}
+
+String matching finds the sibling term but cannot tell \emph{how} it was used. So for each of the 1,464 flagged answers, a second model (Claude Opus 5.5) was given the answer and the flagged terms, and told the terms came from a separate discussion. It labelled each term:
+
+\begin{itemize}
+\item \textbf{used}: adopted as part of the answer (stated as the decision, put in the code, relied on);
+\item \textbf{alternative}: mentioned only as an option that was considered;
+\item \textbf{rejected}: mentioned in order to dismiss or correct it;
+\item \textbf{incidental}: any other passing mention.
+\end{itemize}
+
+An answer \term{leaks} if at least one term is labelled \emph{used}.
+
+\begin{example}[: Gemini, full tree, running example]
+Terms found: \texttt{orbit\_y5y}, \texttt{lume\_64b}, \texttt{orbit\_q8y}, LFU, ARC, FIFO. Labels: \texttt{orbit\_q8y} \textbf{used} (it was put in the config line as the setting name); all others \textbf{alternative}. So this answer leaks.\par
+Mistral's full-tree answer mentioned LFU, ARC and FIFO, all labelled alternative. It does not leak.
+\end{example}
+
+\begin{why}
+The judge sees only the answer and the terms, not the condition or the conversation, so it cannot be swayed by knowing which rule produced the answer. The pilot showed why this step was needed: of 18 flagged answers, only 10 actually used the term. Across the full run, only 23.5\% of the terms found in full-tree answers were used.
+\end{why}
+
+\section{Quality: the quality judge}
+
+Every answered response (7,793) was also scored from 1 to 5 on three criteria by the same judge model:
+\begin{itemize}
+\item \textbf{Contextual faithfulness:} is the answer consistent with what was decided in the conversation? It loses points for stating a different decision, or for presenting names, numbers or settings as agreed when they never appear in the conversation.
+\item \textbf{Instruction following:} does it do what the final message asks, in the form asked?
+\item \textbf{Task completion:} would the developer get everything they asked for, correct and usable?
+\end{itemize}
+
+The judge saw the \emph{active path}, the final question and the answer. It never saw the model name, the condition, or any sibling content, so it could not tell which rule produced the answer. Answers were judged in a shuffled order.
+
+\begin{example}[: quality judgments in the running example]
+\textbf{Gemini, ancestor-only:} 5 / 5 / 4. ``The answer correctly recalls LRU and gives a config line in the requested form.''\par
+\textbf{Gemini, full tree:} 1 / 3 / 2. It named LRU but invented ``made-up setting names (orbit\_q8y, orbit\_y5y, lume\_64b)'' and alternatives that never appear in the conversation.\par
+\textbf{GPT, window:} 2 / 3 / 3. ``The answer wrongly says no eviction policy was chosen \dots though it happens to recommend LRU anyway.''
+\end{example}
+
+\begin{plain}
+Notice the last one. The strict and judged correctness rules both mark GPT's window answer correct, because it contains ``LRU''. The quality judge sees that it is right for the wrong reason. This is why the paper reports both correctness and quality.
+\end{plain}
+
+\begin{ask}
+\textbf{``Why trust an AI to grade AI answers?''}\par
+Three reasons, plus a check. The judge is from a different family than every model tested. It is blind to the condition. Its scores agree with the simple correctness check on most answers (in the pilot, 28 of 30). And the human review measures its agreement with a person directly (next section). The limitation remains and is stated in the paper: its rubric penalizes details absent from the active path even when they are true, which matters for consistent siblings.
+\end{ask}
+
+\section{The human check and Cohen's kappa}
+
+\begin{plain}
+To show the AI judge can be trusted, a person (you) scores a sample of the same answers using the same rubric, without knowing which model or condition produced them. Then you measure how often you and the judge agree, correcting for the agreement you would get by luck. That corrected agreement is Cohen's kappa.
+\end{plain}
+
+\textbf{The sample.} 150 answers, first runs only, spread evenly over the nine model-by-condition groups (15 to 17 each), in random order. The scoring page shows exactly what the judge saw.
+
+\textbf{Why ``corrected for luck''.} If you and the judge both gave almost every answer a 5, you would agree most of the time even if neither of you were paying attention. Kappa subtracts the agreement expected by chance:
+\[\kappa = \frac{p_o - p_e}{1 - p_e},\]
+where $p_o$ is the share of answers you agree on, and $p_e$ is the share you would agree on by chance, given how often each of you uses each score.
+
+\begin{example}[: a made-up illustration]
+Suppose on 100 answers you agree 85 times, so $p_o = 0.85$. Suppose you each give ``high'' to 70\% of answers and ``low'' to 30\%. By chance you would both say high $0.7 \times 0.7 = 49\%$ of the time and both say low $0.3 \times 0.3 = 9\%$ of the time, so $p_e = 0.58$. Then $\kappa = (0.85 - 0.58)/(1 - 0.58) = 0.27/0.42 = 0.64$.
+\end{example}
+
+\textbf{How to read kappa.} A common rule of thumb: below 0.2 slight, 0.2 to 0.4 fair, 0.4 to 0.6 moderate, 0.6 to 0.8 substantial, above 0.8 almost perfect. For 1-to-5 scores a \term{weighted} kappa is used, which counts a 4-versus-5 disagreement as smaller than a 1-versus-5 one. For the yes/no leak question, plain kappa is used.
+
+\begin{why}
+Another AI model cannot replace the human here: the point is to check the AI judge against a person. A second AI judge could be added as an extra check, but not as a substitute. Your scores are saved with timestamps and your account id in the scoring page, then committed to the repository, which is the record that you did the scoring yourself.
+\end{why}

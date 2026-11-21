@@ -1,0 +1,44 @@
+\chapter*{How to read this book}
+\addcontentsline{toc}{chapter}{How to read this book}
+\markboth{How to read this book}{}
+
+This book walks through your paper from the first word to the last and assumes nothing. If a sentence in the paper uses a word, a symbol or a procedure, this book explains it before or right where it is used. You can read it from start to finish like a textbook, or keep it open next to the paper and look up the part you are on.
+
+The paper is short because conference papers have to be. This book is long because it fills in everything the paper leaves out: what each term means, why each decision was made, how each number was produced, and how to read each graph.
+
+\section*{The five kinds of box}
+
+Five kinds of shaded box appear throughout. They always mean the same thing.
+
+\begin{paper}
+A grey box quotes the paper itself, so you always know which sentence is being explained.
+\end{paper}
+
+\begin{plain}
+A blue box says the same thing in ordinary words, with no jargon.
+\end{plain}
+
+\begin{example}
+A green box works through the idea with real numbers from your experiment, usually from one scenario that this book follows all the way through.
+\end{example}
+
+\begin{why}
+A purple box records a decision: what was chosen, what the alternatives were, and why. These are the decisions you made months ago and may no longer remember.
+\end{why}
+
+\begin{ask}
+An amber box gives a question an examiner is likely to ask at this point, with an answer you can give in your own words.
+\end{ask}
+
+\section*{The running example}
+
+Many chapters use the same scenario, \texttt{cache-conflicting-d4-k3-early-root-00}. It is a conversation in which a developer decides to use \textbf{LRU} as the eviction policy for a product cache. Three side branches then explore other policies (LFU, ARC and FIFO) before the developer returns to the main thread and asks, ``which eviction policy did we choose?'' The correct answer is LRU. Following one scenario through every stage (building it, loading it, building the three prompts, sending them to the models, scoring the answers) is the fastest way to see how the pieces fit together.
+
+\section*{A suggested plan}
+
+\begin{enumerate}
+\item Read Chapters 1 to 3 in one sitting. They give the whole picture and the vocabulary.
+\item Read Chapter 4 (the formulas) slowly, with a pencil. Recompute the green boxes yourself.
+\item Read Chapters 5 to 9 alongside the paper's Methodology and Results sections.
+\item Before any meeting with your advisor or your defense, reread Chapters 10 to 12.
+\end{enumerate}

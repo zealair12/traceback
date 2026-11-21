@@ -1,0 +1,84 @@
+\chapter{What it means, and what it does not}
+
+\section{Answering the research question}
+
+\begin{paper}
+At an equal token budget, selecting context by tree structure rather than recency removed sibling leakage entirely and kept answer quality on the active path, while the window lost about half of its correct answers.
+\end{paper}
+
+Each part of the hypothesis, checked:
+
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{@{}XlX@{}}
+\toprule
+Prediction & Held? & Evidence \\
+\midrule
+Ancestor-only uses fewer tokens than the full tree & Yes & 62.7\% fewer on average; exactly the siblings' share \\
+Both baselines show measurable sibling leakage & Yes & Full tree 12.8\%, window 18.1\% of answers; up to 38.5\% by type \\
+Quality preserved when the fact is on the active path & Yes & Ancestor-only 99.9\% correct and highest on all three quality scores \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{The result that went against expectation}
+
+The literature in your related work says longer, noisier context makes models worse. So you might expect the full tree, the longest prompt, to do worst. It did not. It was nearly as correct as ancestor-only (98.6\% against 99.9\%) and far more correct than the window (52.0\%), which was three times shorter.
+
+\begin{plain}
+For this kind of question, \emph{what} is in the prompt mattered far more than \emph{how long} the prompt was. The full tree is long, but it still contains the decision. The window is short, but it may not. A model with the right fact and some clutter does well; a model without the right fact cannot.
+\end{plain}
+
+This supports the gap your thesis set out to fill: the earlier study could not separate ``better chosen'' from ``shorter''. Here, the shorter-but-recency-chosen prompt did much worse, so the advantage of branching is about choosing, not just shortening.
+
+\begin{ask}
+\textbf{``Doesn't this contradict `context rot' and `lost in the middle'?''}\par
+Not really. Those studies show degradation with length, mostly on much longer inputs and on retrieval-style tasks. Your full-tree prompts averaged about 1,400 tokens, short by modern standards, and the full tree still paid a price: lower faithfulness scores and more leakage. At far longer lengths the full tree would likely degrade more. The window's failure is a different mechanism: missing information, not too much information.
+\end{ask}
+
+\section{The full tree's real costs}
+
+Correctness alone would make the full tree look nearly as good as ancestor-only. It is not, for three reasons:
+\begin{enumerate}
+\item \textbf{Three times the tokens}, and the gap grows over a long session (Proposition 2).
+\item \textbf{Leakage}: 12.8\% of full-tree answers used an abandoned-branch detail, rising to 32.4\% with consistent siblings.
+\item \textbf{Lower quality}: faithfulness 3.94 against 4.78, because the answers bring in explored options and details that are not part of the conversation being continued.
+\end{enumerate}
+
+\section{The price of ancestor-only}
+
+\begin{paper}
+Ancestor-only prompting has a measurable price only when a consistent sibling carries information the active path has lost, and in this benchmark that happened only after the window displaced it.
+\end{paper}
+
+Your thesis framed this as a falsifiable test: if consistent-sibling leakage improved quality in the baselines, ancestor-only would have a measurable price. The answer is nuanced. Using a consistent detail rescued correctness when the window had lost the fact, which is a real benefit. But it lowered the judge's quality scores, and under ancestor-only the fact is never lost. So in this benchmark ancestor-only paid no price in correctness. A real conversation could hold useful information only in a side branch; that is the case for future work on retrieving from siblings.
+
+\section{Limitations, in your words}
+
+Be ready to state these yourself before anyone asks.
+
+\begin{enumerate}
+\item \textbf{Synthetic, template-based conversations with forced-choice answers.} Clean measurement, but real conversations are messier and answers are often not a single word. Absolute rates may not transfer; the direction of the comparison is more likely to.
+\item \textbf{Three models.} From three different families, and the pattern held for all three, but other models could behave differently.
+\item \textbf{Temperature.} GPT-6.2 Sol could not be set to temperature 0, and Mistral was not fully repeatable. Both were measured by the repeat runs.
+\item \textbf{An LLM judge.} Quality and the used/mentioned labels come from one model. It is blind to the condition and from a different family, and the human review measures its agreement with a person. Its rubric penalizes true details absent from the active path, which matters for consistent siblings.
+\item \textbf{Exposure in the window.} Planted facts were placed early in each sibling branch, so they were often outside the window. Window leakage is therefore measured among exposed calls, a smaller set than for the full tree.
+\item \textbf{One question per scenario.} The experiment tests the moment of asking, not a whole session; the cost growth over a session is shown mathematically (Proposition 2), not measured.
+\end{enumerate}
+
+\section{What you can and cannot claim}
+
+\textbf{You can say:}
+\begin{itemize}
+\item At an equal token budget, choosing context by tree structure beat choosing by recency on leakage, correctness and judged quality, for three models from different families.
+\item Ancestor-only produced no sibling leakage (0 of 2,160; at most 0.17\%).
+\item The window's failures follow mathematically from how a recency window works on a branched conversation, and every prediction held.
+\item String matching alone overstates leakage; judging how terms are used is necessary.
+\end{itemize}
+
+\textbf{You should not say:}
+\begin{itemize}
+\item That ancestor-only is always best. When useful information lives only in a side branch, it cannot use it.
+\item That the full tree is ``wrong''. It was nearly as correct; its costs were tokens, leakage and quality.
+\item That the exact percentages apply to real users' chats. They come from synthetic conversations.
+\end{itemize}

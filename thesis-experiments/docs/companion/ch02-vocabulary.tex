@@ -1,0 +1,112 @@
+\chapter{Vocabulary, from the ground up}
+
+This chapter defines every technical word the paper uses, in the order you need them. Nothing later in the book assumes a word that is not defined here or in the glossary (Appendix A).
+
+\section{Language models and prompts}
+
+\term{Large language model (LLM).} A program trained on a very large amount of text that, given some text, produces a likely continuation. ChatGPT, Gemini, Claude and Mistral are LLMs. In your experiment the three models under test are Gemini 4 Argon, GPT-6.2 Sol and Mistral Large 4, and a fourth model, Claude Opus 5.5, acts as a judge.
+
+\term{Prompt.} Everything the model is given to read before it answers. In a chat, the prompt is the conversation so far plus your newest message.
+
+\term{Message, turn, exchange.} A \emph{message} is one thing one side says. A \emph{turn} is one message. An \emph{exchange} is a pair: one user message and the assistant's reply. Your design variable ``depth'' is counted in exchanges: depth 4 means four question-and-answer pairs on the active path before the final question.
+
+\term{Role.} Each message is labelled with who said it: \texttt{user} (the person), \texttt{assistant} (the model), or \texttt{system} (instructions set by the app, not shown in the chat).
+
+\term{System prompt.} A fixed instruction placed at the very start of every prompt. Your experiment used one neutral system prompt for every call: ``You are a helpful assistant for a software developer. Answer the user's latest message using the conversation so far. Be concise and specific. When asked for a value, state it explicitly.'' It is deliberately neutral: it neither tells the model to ignore old branches nor to use everything it sees, so any difference between conditions comes from the context alone.
+
+\section{Tokens and the context window}
+
+\term{Token.} Models do not read letters or whole words; they read \emph{tokens}, which are chunks of text, often a word or part of a word. ``Eviction'' might be one token or two. A rough rule is that 100 tokens is about 75 English words.
+
+\begin{example}
+In the running example, the developer's first message (``Our product catalog API is slow under load, \dots let's go with LRU.'') is 39 tokens long. The whole conversation, all 26 messages, is 1,336 tokens. The ancestor-only prompt is 417 tokens.
+\end{example}
+
+\term{Tokenizer.} The rule that splits text into tokens. Different companies use different tokenizers, so the same sentence can be 39 tokens for one model and 42 for another. To compare fairly, your experiment counted everything with one fixed \term{reference tokenizer}, called \texttt{o200k\_base}. The models' own counts (called \term{usage}) were recorded as well. On average the providers counted about 7\% more tokens than the reference tokenizer.
+
+\term{Context window.} The maximum number of tokens a model can read at once. Modern models have very large windows (hundreds of thousands of tokens), so your prompts never came near the limit. The issue is not running out of room; it is cost and reliability.
+
+\term{Input and output tokens.} Providers charge separately for the tokens the model reads (input) and the tokens it writes (output). Output is usually more expensive.
+
+\term{Reasoning tokens.} Some models ``think'' privately before answering, and that thinking also counts as output tokens. Your experiment set every model to its lowest reasoning setting. Gemini and GPT then used no reasoning tokens; Mistral still used about 260 per answer, which matters later (deviation D1, Chapter 6).
+
+\section{Trees}
+
+A conversation in Traceback is a \term{tree}. These words come from computer science and are used exactly as follows.
+
+\begin{itemize}
+\item A \term{node} is one message.
+\item The \term{root} is the very first message. It has no parent.
+\item Every other message has exactly one \term{parent}: the message it replies to.
+\item A message's \term{children} are the messages that reply to it. A message with two or more children is where the conversation \term{branches}.
+\item Two messages with the same parent are \term{siblings}. In your paper, ``sibling'' is also used loosely for a whole \term{sibling branch}: a branch that is not on the current path.
+\item The \term{ancestors} of a message are its parent, its parent's parent, and so on up to the root.
+\item The \term{path} from the root to a message is that message plus all its ancestors, in order. The paper calls this the \term{active path} for the current message.
+\item The \term{depth} of a message is how many steps it is from the root. The root has depth 0.
+\end{itemize}
+
+\begin{plain}
+Think of a family tree drawn upside down. The root is the oldest ancestor at the top. Your active path is your direct line of descent: you, your parent, your grandparent, up to the founder. Your siblings and cousins are on the tree, but they are not in your direct line.
+\end{plain}
+
+\section{How Traceback stores the tree}
+
+\term{Database.} Traceback keeps its data in a PostgreSQL database hosted by Neon. A database stores \term{tables}; a table has \term{rows} (records) and \term{columns} (fields).
+
+\term{The messages table.} Each message is one row. The important columns are \texttt{id} (a unique name for the message), \texttt{session\_id} (which conversation it belongs to), \texttt{parent\_id} (the id of the message it replies to, empty for the root), \texttt{role}, \texttt{content} (the text), \texttt{depth}, and \texttt{created\_at} (when it was written).
+
+\begin{plain}
+The whole tree lives in one simple column, \texttt{parent\_id}. Each row only knows its own parent. To find the full path from the root, you start at the current message and keep following \texttt{parent\_id} upward until you reach a row with no parent.
+\end{plain}
+
+\term{SQL.} The language used to ask a relational database questions.
+
+\term{Recursive common table expression (recursive CTE).} A way of writing a SQL query that repeats a step until it stops finding new rows. This is exactly what ``keep following \texttt{parent\_id} upward'' needs. Here is the query Traceback runs, simplified, with each part explained:
+
+\begin{lstlisting}
+WITH RECURSIVE message_tree AS (
+  SELECT m.* FROM messages m WHERE m.id = <current message>   -- start here
+  UNION ALL
+  SELECT parent.* FROM messages parent
+  JOIN message_tree mt ON parent.id = mt.parent_id             -- step up one level
+)
+SELECT * FROM message_tree ORDER BY depth ASC;                 -- root first
+\end{lstlisting}
+
+\begin{itemize}
+\item The first \texttt{SELECT} is the \emph{base case}: the current message.
+\item \texttt{UNION ALL} plus the second \texttt{SELECT} is the \emph{recursive step}: find the row whose \texttt{id} equals the \texttt{parent\_id} of a row already found. The database repeats this step, climbing one level each time, until the root (which has no parent) produces nothing new.
+\item The final line puts the rows in order from the root (depth 0) down to the current message.
+\end{itemize}
+
+\begin{why}
+The experiment did not rewrite this query from memory. It reads the exact SQL out of Traceback's source file (\texttt{server/src/services/messageService.ts}) at test time and checks that the experiment's ancestor-only builder returns identical rows for every sample tree. It also calls Traceback's own lineage function and compares. This is how the paper can claim to evaluate the \emph{production} rule, not an imitation of it.
+\end{why}
+
+\section{Running models through an API}
+
+\term{API.} A way for one program to call another over the internet. Your experiment sends each prompt to a model through an API and gets the answer back.
+
+\term{OpenRouter.} A service that gives one API for many models from many companies. Your experiment used it so all models were called the same way.
+
+\term{Provider.} The company or data centre that actually runs the model. The same model can be offered by several providers, sometimes at different precision (which can change answers slightly). Your experiment \emph{pinned} each model to one provider and turned off fallbacks, so every call for that model ran in the same place.
+
+\term{Temperature.} A setting that controls randomness. At temperature 0 a model picks its single most likely next token every time, so answers are as repeatable as possible. Higher values make answers more varied. Your experiment used 0 where the API allowed it. GPT-6.2 Sol and Claude Opus 5.5 do not accept a temperature through OpenRouter, so they ran at their default setting.
+
+\term{Seed.} A number that fixes a model's random choices, also for repeatability. Set where supported.
+
+\term{Max output tokens.} A cap on how long an answer can be. Set to 1,024. An answer that hits the cap is cut off; the API reports this as \texttt{finish\_reason = length}.
+
+\section{Data words}
+
+\term{Synthetic.} Made by a program rather than collected from real people. Your 720 conversations are synthetic so that every fact is planted on purpose and the correct answer is known exactly.
+
+\term{Scenario.} One synthetic conversation, with its tree, its timestamps, its final question, its correct answer and its list of planted sibling facts.
+
+\term{Canary.} A random, unguessable string planted in a sibling branch, such as \texttt{orbit\_y5y}. If it shows up in an answer, the model must have read it from the sibling, because nobody could guess it. The name comes from the canary that miners took underground to detect gas.
+
+\term{Hash (sha256).} A short fingerprint of a file. Change one character of the file and the fingerprint changes completely. Recording the hash of \texttt{scenarios.jsonl} before running the models proves the dataset was not changed afterwards.
+
+\term{Git tag.} A permanent label on one version of the code. The tag \texttt{thesis-freeze-v1} marks the exact version used for the full run.
+
+\term{JSONL.} A text file with one JSON record per line. Every scenario, model call and judgment is stored this way.

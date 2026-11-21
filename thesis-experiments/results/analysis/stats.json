@@ -1,0 +1,854 @@
+{
+  "leak_cells": [
+    {
+      "condition": "ancestor",
+      "type": "consistent",
+      "rate": 0,
+      "lo": 0,
+      "hi": 0.006808,
+      "k": 0,
+      "n": 540
+    },
+    {
+      "condition": "full_tree",
+      "type": "consistent",
+      "rate": 0.324074,
+      "lo": 0.284729,
+      "hi": 0.365358,
+      "k": 175,
+      "n": 540
+    },
+    {
+      "condition": "window",
+      "type": "consistent",
+      "rate": 0.253704,
+      "lo": 0.21751,
+      "hi": 0.292617,
+      "k": 137,
+      "n": 540
+    },
+    {
+      "condition": "ancestor",
+      "type": "conflicting",
+      "rate": 0,
+      "lo": 0,
+      "hi": 0.006808,
+      "k": 0,
+      "n": 540
+    },
+    {
+      "condition": "full_tree",
+      "type": "conflicting",
+      "rate": 0.155556,
+      "lo": 0.126015,
+      "hi": 0.188924,
+      "k": 84,
+      "n": 540
+    },
+    {
+      "condition": "window",
+      "type": "conflicting",
+      "rate": 0.385185,
+      "lo": 0.34394,
+      "hi": 0.427694,
+      "k": 208,
+      "n": 540
+    },
+    {
+      "condition": "ancestor",
+      "type": "misleading",
+      "rate": 0,
+      "lo": 0,
+      "hi": 0.006808,
+      "k": 0,
+      "n": 540
+    },
+    {
+      "condition": "full_tree",
+      "type": "misleading",
+      "rate": 0.033333,
+      "lo": 0.019873,
+      "hi": 0.052171,
+      "k": 18,
+      "n": 540
+    },
+    {
+      "condition": "window",
+      "type": "misleading",
+      "rate": 0.085185,
+      "lo": 0.06304,
+      "hi": 0.111991,
+      "k": 46,
+      "n": 540
+    },
+    {
+      "condition": "ancestor",
+      "type": "irrelevant",
+      "rate": 0,
+      "lo": 0,
+      "hi": 0.006808,
+      "k": 0,
+      "n": 540
+    },
+    {
+      "condition": "full_tree",
+      "type": "irrelevant",
+      "rate": 0,
+      "lo": 0,
+      "hi": 0.006821,
+      "k": 0,
+      "n": 539
+    },
+    {
+      "condition": "window",
+      "type": "irrelevant",
+      "rate": 0,
+      "lo": 0,
+      "hi": 0.006808,
+      "k": 0,
+      "n": 540
+    }
+  ],
+  "ancestor_total": {
+    "rate": 0,
+    "lo": 0,
+    "hi": 0.001706,
+    "k": 0,
+    "n": 2160
+  },
+  "m1_or": [
+    {
+      "term": "(Intercept)",
+      "OR": 0.407919,
+      "lo": 0.275449,
+      "hi": 0.604097,
+      "p": 7.614438e-06
+    },
+    {
+      "term": "conditionwindow",
+      "OR": 0.620906,
+      "lo": 0.454352,
+      "hi": 0.848514,
+      "p": 0.002782
+    },
+    {
+      "term": "typeconflicting",
+      "OR": 0.262421,
+      "lo": 0.181273,
+      "hi": 0.379895,
+      "p": 1.363653e-12
+    },
+    {
+      "term": "typemisleading",
+      "OR": 0.036974,
+      "lo": 0.020965,
+      "hi": 0.065208,
+      "p": 4.612652e-30
+    },
+    {
+      "term": "depth_f4",
+      "OR": 3.520767,
+      "lo": 2.566136,
+      "hi": 4.830531,
+      "p": 6.190704e-15
+    },
+    {
+      "term": "depth_f8",
+      "OR": 7.959434,
+      "lo": 5.787802,
+      "hi": 10.945881,
+      "p": 2.713114e-37
+    },
+    {
+      "term": "siblings_f3",
+      "OR": 0.688526,
+      "lo": 0.521637,
+      "hi": 0.908808,
+      "p": 0.00841
+    },
+    {
+      "term": "siblings_f5",
+      "OR": 0.65928,
+      "lo": 0.498699,
+      "hi": 0.871568,
+      "p": 0.003443
+    },
+    {
+      "term": "recencylate",
+      "OR": 2.700582,
+      "lo": 2.130916,
+      "hi": 3.422537,
+      "p": 2.055337e-16
+    },
+    {
+      "term": "fact_positioncurrent",
+      "OR": 0.824786,
+      "lo": 0.656325,
+      "hi": 1.036488,
+      "p": 0.098428
+    },
+    {
+      "term": "model_rolemid",
+      "OR": 0.124454,
+      "lo": 0.094254,
+      "hi": 0.164331,
+      "p": 7.016809e-49
+    },
+    {
+      "term": "model_roleopen_weights",
+      "OR": 0.13288,
+      "lo": 0.101001,
+      "hi": 0.174819,
+      "p": 3.81263e-47
+    },
+    {
+      "term": "conditionwindow:typeconflicting",
+      "OR": 8.798665,
+      "lo": 5.464412,
+      "hi": 14.167399,
+      "p": 3.632514e-19
+    },
+    {
+      "term": "conditionwindow:typemisleading",
+      "OR": 5.017651,
+      "lo": 2.561794,
+      "hi": 9.827809,
+      "p": 2.568595e-06
+    }
+  ],
+  "m1_singular": false,
+  "m1_converged": true,
+  "leak_contrasts": [
+    {
+      "type": "consistent",
+      "model_rd": -0.082276,
+      "model_lo": -0.136131,
+      "model_hi": -0.028422,
+      "p": 0.00275,
+      "p_holm": 0.00275,
+      "raw_rd": -0.07037,
+      "raw_lo": -0.116667,
+      "raw_hi": -0.022222
+    },
+    {
+      "type": "conflicting",
+      "model_rd": 0.254938,
+      "model_lo": 0.202476,
+      "model_hi": 0.3074,
+      "p": 1.659979e-21,
+      "p_holm": 4.979938e-21,
+      "raw_rd": 0.22963,
+      "raw_lo": 0.153704,
+      "raw_hi": 0.305556
+    },
+    {
+      "type": "misleading",
+      "model_rd": 0.026828,
+      "model_lo": 0.011981,
+      "model_hi": 0.041675,
+      "p": 0.000398,
+      "p_holm": 0.000795,
+      "raw_rd": 0.051852,
+      "raw_lo": 0.02037,
+      "raw_hi": 0.083333
+    }
+  ],
+  "leak_emm": [
+    {
+      "condition": "full_tree",
+      "type": "consistent",
+      "prob": 0.265826,
+      "SE": 0.022963,
+      "asymp.LCL": 0.223304,
+      "asymp.UCL": 0.313181
+    },
+    {
+      "condition": "window",
+      "type": "consistent",
+      "prob": 0.18355,
+      "SE": 0.019075,
+      "asymp.LCL": 0.149065,
+      "asymp.UCL": 0.223914
+    },
+    {
+      "condition": "full_tree",
+      "type": "conflicting",
+      "prob": 0.086772,
+      "SE": 0.012594,
+      "asymp.LCL": 0.065058,
+      "asymp.UCL": 0.114842
+    },
+    {
+      "condition": "window",
+      "type": "conflicting",
+      "prob": 0.34171,
+      "SE": 0.025739,
+      "asymp.LCL": 0.293189,
+      "asymp.UCL": 0.393787
+    },
+    {
+      "condition": "full_tree",
+      "type": "misleading",
+      "prob": 0.013211,
+      "SE": 0.003566,
+      "asymp.LCL": 0.007771,
+      "asymp.UCL": 0.022373
+    },
+    {
+      "condition": "window",
+      "type": "misleading",
+      "prob": 0.040039,
+      "SE": 0.007395,
+      "asymp.LCL": 0.02781,
+      "asymp.UCL": 0.057328
+    }
+  ],
+  "uptake_emm": [
+    {
+      "condition": "full_tree",
+      "type": "consistent",
+      "prob": 0.260483,
+      "SE": 0.025872,
+      "asymp.LCL": 0.213039,
+      "asymp.UCL": 0.314273
+    },
+    {
+      "condition": "window",
+      "type": "consistent",
+      "prob": 0.544202,
+      "SE": 0.045002,
+      "asymp.LCL": 0.455538,
+      "asymp.UCL": 0.63015
+    },
+    {
+      "condition": "full_tree",
+      "type": "conflicting",
+      "prob": 0.074612,
+      "SE": 0.012812,
+      "asymp.LCL": 0.05307,
+      "asymp.UCL": 0.103938
+    },
+    {
+      "condition": "window",
+      "type": "conflicting",
+      "prob": 0.868658,
+      "SE": 0.024491,
+      "asymp.LCL": 0.812817,
+      "asymp.UCL": 0.909691
+    },
+    {
+      "condition": "full_tree",
+      "type": "misleading",
+      "prob": 0.010358,
+      "SE": 0.003108,
+      "asymp.LCL": 0.005744,
+      "asymp.UCL": 0.018608
+    },
+    {
+      "condition": "window",
+      "type": "misleading",
+      "prob": 0.092909,
+      "SE": 0.020258,
+      "asymp.LCL": 0.0601,
+      "asymp.UCL": 0.140942
+    }
+  ],
+  "uptake_n": 2430,
+  "leak_by_model": [
+    {
+      "model_role": "frontier",
+      "condition": "ancestor",
+      "leak_used": 0
+    },
+    {
+      "model_role": "mid",
+      "condition": "ancestor",
+      "leak_used": 0
+    },
+    {
+      "model_role": "open_weights",
+      "condition": "ancestor",
+      "leak_used": 0
+    },
+    {
+      "model_role": "frontier",
+      "condition": "full_tree",
+      "leak_used": 0.295833
+    },
+    {
+      "model_role": "mid",
+      "condition": "full_tree",
+      "leak_used": 0.052778
+    },
+    {
+      "model_role": "open_weights",
+      "condition": "full_tree",
+      "leak_used": 0.036161
+    },
+    {
+      "model_role": "frontier",
+      "condition": "window",
+      "leak_used": 0.270833
+    },
+    {
+      "model_role": "mid",
+      "condition": "window",
+      "leak_used": 0.123611
+    },
+    {
+      "model_role": "open_weights",
+      "condition": "window",
+      "leak_used": 0.148611
+    }
+  ],
+  "window_cells": [
+    {
+      "recency": "early",
+      "fact_position": "root",
+      "required_fact_present": 0,
+      "correct": 0.253704
+    },
+    {
+      "recency": "late",
+      "fact_position": "root",
+      "required_fact_present": 0,
+      "correct": 0.377778
+    },
+    {
+      "recency": "early",
+      "fact_position": "current",
+      "required_fact_present": 1,
+      "correct": 1
+    },
+    {
+      "recency": "late",
+      "fact_position": "current",
+      "required_fact_present": 0.161111,
+      "correct": 0.448148
+    }
+  ],
+  "window_did": {
+    "estimate": -0.675926,
+    "lo": -0.788266,
+    "hi": -0.563941
+  },
+  "window_late_minus_early_root": {
+    "estimate": 0.124074,
+    "lo": 0.038214,
+    "hi": 0.212568
+  },
+  "window_late_minus_early_current": {
+    "estimate": -0.551852,
+    "lo": -0.618763,
+    "hi": -0.484321
+  },
+  "window_correct_by_fact": [
+    {
+      "fact_present": 0,
+      "rate": 0.324201,
+      "lo": 0.300799,
+      "hi": 0.348278,
+      "n": 1533
+    },
+    {
+      "fact_present": 1,
+      "rate": 0.998405,
+      "lo": 0.991146,
+      "hi": 0.99996,
+      "n": 627
+    }
+  ],
+  "quality_paired": [
+    {
+      "comparison": "window - ancestor",
+      "measure": "correct",
+      "n_pairs": 2160,
+      "mean_ancestor": 0.999074,
+      "mean_other": 0.519907,
+      "diff": -0.479167,
+      "lo": -0.516667,
+      "hi": -0.443981,
+      "p": 1.206058e-226,
+      "p_holm": 7.236348e-226
+    },
+    {
+      "comparison": "window - ancestor",
+      "measure": "correct_strict",
+      "n_pairs": 2160,
+      "mean_ancestor": 0.991204,
+      "mean_other": 0.50463,
+      "diff": -0.486574,
+      "lo": -0.521296,
+      "hi": -0.451377,
+      "p": 1.086214e-229,
+      "p_holm": 7.603499e-229
+    },
+    {
+      "comparison": "window - ancestor",
+      "measure": "faithfulness",
+      "n_pairs": 2160,
+      "mean_ancestor": 4.78287,
+      "mean_other": 2.270833,
+      "diff": -2.512037,
+      "lo": -2.627315,
+      "hi": -2.391655,
+      "p": 4.097209e-287,
+      "p_holm": 4.097209e-286
+    },
+    {
+      "comparison": "window - ancestor",
+      "measure": "instruction",
+      "n_pairs": 2160,
+      "mean_ancestor": 4.724074,
+      "mean_other": 2.958796,
+      "diff": -1.765278,
+      "lo": -1.865289,
+      "hi": -1.665729,
+      "p": 4.387974e-252,
+      "p_holm": 3.510379e-251
+    },
+    {
+      "comparison": "window - ancestor",
+      "measure": "task",
+      "n_pairs": 2160,
+      "mean_ancestor": 4.361111,
+      "mean_other": 2.423611,
+      "diff": -1.9375,
+      "lo": -2.047234,
+      "hi": -1.830093,
+      "p": 7.89376e-258,
+      "p_holm": 7.104384e-257
+    },
+    {
+      "comparison": "full_tree - ancestor",
+      "measure": "correct",
+      "n_pairs": 2159,
+      "mean_ancestor": 0.999074,
+      "mean_other": 0.986105,
+      "diff": -0.012969,
+      "lo": -0.019463,
+      "hi": -0.006951,
+      "p": 7.851063e-07,
+      "p_holm": 7.851063e-07
+    },
+    {
+      "comparison": "full_tree - ancestor",
+      "measure": "correct_strict",
+      "n_pairs": 2159,
+      "mean_ancestor": 0.9912,
+      "mean_other": 0.867531,
+      "diff": -0.123668,
+      "lo": -0.145043,
+      "hi": -0.104214,
+      "p": 6.49811e-58,
+      "p_holm": 2.599244e-57
+    },
+    {
+      "comparison": "full_tree - ancestor",
+      "measure": "faithfulness",
+      "n_pairs": 2159,
+      "mean_ancestor": 4.783233,
+      "mean_other": 3.937934,
+      "diff": -0.845299,
+      "lo": -0.915665,
+      "hi": -0.780544,
+      "p": 1.562517e-134,
+      "p_holm": 7.812586e-134
+    },
+    {
+      "comparison": "full_tree - ancestor",
+      "measure": "instruction",
+      "n_pairs": 2159,
+      "mean_ancestor": 4.723946,
+      "mean_other": 4.542844,
+      "diff": -0.181102,
+      "lo": -0.216206,
+      "hi": -0.146286,
+      "p": 6.114735e-27,
+      "p_holm": 1.222947e-26
+    },
+    {
+      "comparison": "full_tree - ancestor",
+      "measure": "task",
+      "n_pairs": 2159,
+      "mean_ancestor": 4.361278,
+      "mean_other": 4.057897,
+      "diff": -0.303381,
+      "lo": -0.34213,
+      "hi": -0.266204,
+      "p": 2.846959e-52,
+      "p_holm": 8.540878e-52
+    }
+  ],
+  "consistent_desc": [
+    {
+      "condition": "window",
+      "required_fact_present": 0,
+      "leak_used": 0,
+      "correct": 0.432,
+      "q_faithfulness": 2.085,
+      "q_task": 2.225
+    },
+    {
+      "condition": "full_tree",
+      "required_fact_present": 1,
+      "leak_used": 0,
+      "correct": 1,
+      "q_faithfulness": 4.71,
+      "q_task": 4.373
+    },
+    {
+      "condition": "window",
+      "required_fact_present": 1,
+      "leak_used": 0,
+      "correct": 1,
+      "q_faithfulness": 4.621,
+      "q_task": 4.265
+    },
+    {
+      "condition": "window",
+      "required_fact_present": 0,
+      "leak_used": 1,
+      "correct": 1,
+      "q_faithfulness": 2.234,
+      "q_task": 3.084
+    },
+    {
+      "condition": "full_tree",
+      "required_fact_present": 1,
+      "leak_used": 1,
+      "correct": 1,
+      "q_faithfulness": 2.189,
+      "q_task": 3.029
+    },
+    {
+      "condition": "window",
+      "required_fact_present": 1,
+      "leak_used": 1,
+      "correct": 1,
+      "q_faithfulness": 2.367,
+      "q_task": 3.367
+    }
+  ],
+  "consistent_correct": [
+    {
+      "fact_present": 0,
+      "leak_used": 0,
+      "rate": 0.431734,
+      "lo": 0.371951,
+      "hi": 0.493027,
+      "n": 271
+    },
+    {
+      "fact_present": 1,
+      "leak_used": 0,
+      "rate": 1,
+      "lo": 0.992605,
+      "hi": 1,
+      "n": 497
+    },
+    {
+      "fact_present": 0,
+      "leak_used": 1,
+      "rate": 1,
+      "lo": 0.966112,
+      "hi": 1,
+      "n": 107
+    },
+    {
+      "fact_present": 1,
+      "leak_used": 1,
+      "rate": 1,
+      "lo": 0.982166,
+      "hi": 1,
+      "n": 205
+    }
+  ],
+  "consistent_fisher_displaced": {
+    "p": 5.010695e-31,
+    "OR": "Inf",
+    "lo": 36.263299,
+    "hi": "Inf"
+  },
+  "consistent_models": {
+    "task": {
+      "b": -0.363171,
+      "lo": -0.506642,
+      "hi": -0.219701,
+      "p": 7.001784e-07
+    },
+    "faithfulness": {
+      "b": -1.275105,
+      "lo": -1.430472,
+      "hi": -1.119738,
+      "p": 3.224483e-58
+    }
+  },
+  "efficiency_max_abs_formula_gap": 1.110223e-16,
+  "efficiency": [
+    {
+      "depth": 2,
+      "siblings": 1,
+      "mean": 0.59555,
+      "lo": 0.590031,
+      "hi": 0.601068,
+      "n": 80,
+      "_row": "2.1"
+    },
+    {
+      "depth": 2,
+      "siblings": 3,
+      "mean": 0.816552,
+      "lo": 0.813687,
+      "hi": 0.819416,
+      "n": 80,
+      "_row": "2.3"
+    },
+    {
+      "depth": 2,
+      "siblings": 5,
+      "mean": 0.879352,
+      "lo": 0.877394,
+      "hi": 0.88131,
+      "n": 80,
+      "_row": "2.5"
+    },
+    {
+      "depth": 4,
+      "siblings": 1,
+      "mean": 0.425095,
+      "lo": 0.420279,
+      "hi": 0.429911,
+      "n": 80,
+      "_row": "4.1"
+    },
+    {
+      "depth": 4,
+      "siblings": 3,
+      "mean": 0.693361,
+      "lo": 0.690474,
+      "hi": 0.696248,
+      "n": 80,
+      "_row": "4.3"
+    },
+    {
+      "depth": 4,
+      "siblings": 5,
+      "mean": 0.784402,
+      "lo": 0.781973,
+      "hi": 0.78683,
+      "n": 80,
+      "_row": "4.5"
+    },
+    {
+      "depth": 8,
+      "siblings": 1,
+      "mean": 0.269937,
+      "lo": 0.266507,
+      "hi": 0.273367,
+      "n": 80,
+      "_row": "8.1"
+    },
+    {
+      "depth": 8,
+      "siblings": 3,
+      "mean": 0.525041,
+      "lo": 0.522122,
+      "hi": 0.52796,
+      "n": 80,
+      "_row": "8.3"
+    },
+    {
+      "depth": 8,
+      "siblings": 5,
+      "mean": 0.650165,
+      "lo": 0.647602,
+      "hi": 0.652728,
+      "n": 80,
+      "_row": "8.5"
+    }
+  ],
+  "variance": [
+    {
+      "model": "frontier",
+      "condition": "ancestor",
+      "groups": 73,
+      "leak_agree": 1,
+      "correct_agree": 1,
+      "task_sd": 0.079089,
+      "_row": "frontier.ancestor"
+    },
+    {
+      "model": "mid",
+      "condition": "ancestor",
+      "groups": 73,
+      "leak_agree": 1,
+      "correct_agree": 0.986301,
+      "task_sd": 0.169758,
+      "_row": "mid.ancestor"
+    },
+    {
+      "model": "open_weights",
+      "condition": "ancestor",
+      "groups": 73,
+      "leak_agree": 1,
+      "correct_agree": 1,
+      "task_sd": 0.260426,
+      "_row": "open_weights.ancestor"
+    },
+    {
+      "model": "frontier",
+      "condition": "full_tree",
+      "groups": 73,
+      "leak_agree": 1,
+      "correct_agree": 0.986301,
+      "task_sd": 0.094907,
+      "_row": "frontier.full_tree"
+    },
+    {
+      "model": "mid",
+      "condition": "full_tree",
+      "groups": 73,
+      "leak_agree": 0.986301,
+      "correct_agree": 1,
+      "task_sd": 0.229358,
+      "_row": "mid.full_tree"
+    },
+    {
+      "model": "open_weights",
+      "condition": "full_tree",
+      "groups": 73,
+      "leak_agree": 0.917808,
+      "correct_agree": 1,
+      "task_sd": 0.280482,
+      "_row": "open_weights.full_tree"
+    },
+    {
+      "model": "frontier",
+      "condition": "window",
+      "groups": 73,
+      "leak_agree": 1,
+      "correct_agree": 1,
+      "task_sd": 0.015818,
+      "_row": "frontier.window"
+    },
+    {
+      "model": "mid",
+      "condition": "window",
+      "groups": 73,
+      "leak_agree": 0.986301,
+      "correct_agree": 0.917808,
+      "task_sd": 0.173996,
+      "_row": "mid.window"
+    },
+    {
+      "model": "open_weights",
+      "condition": "window",
+      "groups": 73,
+      "leak_agree": 0.931507,
+      "correct_agree": 0.917808,
+      "task_sd": 0.205632,
+      "_row": "open_weights.window"
+    }
+  ]
+}

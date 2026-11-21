@@ -1,0 +1,142 @@
+\chapter{How the test conversations were built}
+
+The paper's Methodology section, part A, describes the 720 scenarios. This chapter explains every choice behind them.
+
+\section{Why synthetic conversations}
+
+\begin{why}
+Real chat logs would be more natural, but you would not know, for any given answer, which facts lived only in an abandoned branch, or what the right answer was. Synthetic conversations let you plant every fact on purpose, so the correct answer and every possible leak are known exactly before a model sees anything. The price is realism, which the paper lists as a limitation.
+\end{why}
+
+\section{The six topics}
+
+Every scenario is a programming conversation in one of six domains, with a question whose answer is one of seven options:
+
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{@{}lXX@{}}
+\toprule
+Domain & The decision & The seven options \\
+\midrule
+db & primary key type for the users table & uuid, bigserial, ulid, ksuid, cuid2, snowflake, nanoid \\
+http & HTTP client library for a Node service & undici, axios, ky, superagent, ofetch, wretch, phin \\
+cache & eviction policy for a product cache & LRU, LFU, FIFO, ARC, SLRU, 2Q, MRU \\
+flaky & root cause of a flaky checkout test & timezone, locale, unseeded-random, shared-fixture, port-collision, stale-snapshot, mock-leak \\
+queue & message broker for order events & RabbitMQ, Kafka, NATS, SQS, BullMQ, Pulsar, ZeroMQ \\
+auth & password hashing algorithm & argon2id, bcrypt, scrypt, pbkdf2, yescrypt, balloon, sha512crypt \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{why}
+Six domains, so that a result cannot be blamed on one topic (your brief asked for at least six). Each answer is a \term{forced-choice} value: one specific word that is easy to check automatically. Seven options per domain, because a scenario can have up to five conflicting siblings, and each needs its own wrong option, plus the correct one.
+\end{why}
+
+\section{The five things that vary}
+
+\begin{paper}
+Table I lists the controlled variables; with five instances per cell the benchmark has 720 scenarios and 19,680 messages.
+\end{paper}
+
+A \term{controlled variable} is something you deliberately set to different levels to see its effect. There are five:
+
+\begin{enumerate}
+\item \textbf{Active-path depth: 2, 4 or 8 exchanges.} How long the main line is before the question. Longer paths mean bigger ancestor-only prompts and bigger window budgets.
+\item \textbf{Number of sibling branches: 1, 3 or 5}, each 3 exchanges long. More siblings mean more abandoned content.
+\item \textbf{Sibling type: consistent, conflicting, irrelevant or misleading.} What the abandoned branch contains (next section).
+\item \textbf{Sibling recency: early or late.} Whether the side branches were explored before the main line continued (early) or after the main line had finished (late).
+\item \textbf{Position of the required fact: near the root or near the current turn.} Whether the decision was made at the start (exchange 1) or at the end (the last exchange) of the active path.
+\end{enumerate}
+
+\begin{example}
+Every combination is a \term{cell}: $3 \times 3 \times 4 \times 2 \times 2 = 144$ cells. Five scenarios per cell gives $144 \times 5 = 720$. Each domain appears 120 times, each sibling type 180 times, and each depth and sibling count 240 times. The running example sits in the cell ``depth 4, 3 siblings, conflicting, early, root''.
+\end{example}
+
+\section{The four sibling types}
+
+\begin{plain}
+\textbf{Consistent:} the side branch agrees with the main decision and adds an extra true detail. \textbf{Conflicting:} the side branch picks a different option. \textbf{Misleading:} the side branch states something plausible but false. \textbf{Irrelevant:} the side branch is about something unrelated.
+\end{plain}
+
+Real examples from your dataset:
+
+\begin{example}[: consistent sibling]
+Main decision: cuid2 keys. Side branch: ``If we stick with cuid2 keys, how should we generate them?'' Reply: ``\dots name the column \texttt{zr\_9fg} so it is clear it is the external id.'' The detail \texttt{zr\_9fg} is true to the plan but was never said on the active path.
+\end{example}
+
+\begin{example}[: misleading sibling]
+Main decision: bigserial keys. Side branch: ``I read that since Postgres 7.32.32, bigserial keys have to be declared through a special domain type or inserts get slow. Is that right?'' Reply: ``Yes, that matches the release notes \dots'' This is false, and the made-up version number 7.32.32 is its canary.
+\end{example}
+
+\begin{example}[: irrelevant sibling]
+``Off topic: I need a name for the team's internal wiki space and I'm thinking of \texttt{kq\_8wr}.'' Nothing to do with caching; \texttt{kq\_8wr} is the canary.
+\end{example}
+
+\begin{example}[: conflicting sibling]
+Main decision: LRU. Side branch: ``What if we used LFU for the product cache eviction instead?'' Reply: ``LFU could work too. I'd put the policy behind a setting called \texttt{orbit\_y5y} \dots'' Both LFU (a real wrong option) and \texttt{orbit\_y5y} (the canary) are leak markers.
+\end{example}
+
+\begin{why}
+The four types come straight from your thesis outline. The earlier study saw its biggest gains when tangents were ``conceptually distant or conflicting'', but did not vary this on purpose. Making type a controlled variable turns that observation into a test. The consistent type exists specifically to measure the possible \emph{price} of ancestor-only: a consistent sibling holds true, useful information that ancestor-only throws away.
+\end{why}
+
+\section{Canaries}
+
+Every sibling-only detail carries a canary: a random identifier (like \texttt{orbit\_y5y}), a 4-digit number, a hex colour (like \texttt{\#4A7F2C}) or a version number. The generator makes sure each canary appears exactly once, only in its own branch.
+
+\begin{plain}
+If an answer contains \texttt{orbit\_y5y}, the model read it in the side branch. Nobody could guess that string. This turns ``did the model use the abandoned branch?'' into a simple text search, at least as a first step.
+\end{plain}
+
+\section{Where siblings branch off, and when}
+
+\begin{why}
+Siblings branch off the active path at exchange $\lfloor d/2 \rfloor$, the middle of the path (exchange 2 for depth 4). This is what makes ``fact position'' meaningful: a root-side fact was stated \emph{before} the branch point, so the siblings share it in their own history; a current-turn fact was stated \emph{after}, so the siblings never saw it. You chose this default when Phase 1 was built; the alternatives were branching from the root or from the last message.
+\end{why}
+
+Recency is set with the logical clock:
+\begin{itemize}
+\item \textbf{Early:} active exchanges up to the branch point, then all the siblings, then the rest of the active path. The siblings sit in the middle of the timeline.
+\item \textbf{Late:} the whole active path first, then all the siblings. The siblings are the newest messages.
+\end{itemize}
+
+In both cases the question is asked after everything else, at time $\max(t) + 1$, as if the user explores, then comes back to the main line to ask. That is why the full tree contains late siblings too.
+
+\section{The required fact and the question}
+
+The correct option is stated on the active path in exactly one exchange: exchange 1 (root) or the last exchange (current turn). The final question always asks for that value and a line of code or config, so an answer must name it. The question never contains any of the options.
+
+\section{Filling text and padding}
+
+The planted sentences come from templates. To make conversations a realistic length, each message is padded with neutral sentences (``We can revisit this once we have real traffic numbers.'') until it reaches a target token length. User messages are 22 to 52 tokens and assistant messages 45 to 90. Off-topic branches get off-topic padding.
+
+\begin{ask}
+\textbf{``The padding makes the conversations repetitive. Doesn't that hurt realism?''}\par
+Yes, and it is listed as a limitation. It was chosen so that every planted fact stays exactly where it was placed and the dataset is fully reproducible from a seed. An LLM rewrite of the filler was considered and left out to avoid changing planted facts by accident. The padding is the same in every condition, so it cannot explain differences between conditions.
+\end{ask}
+
+\section{Checking every scenario: the validator}
+
+Before the dataset was frozen, a validator checked each of the 720 scenarios and would have refused to write the file if any check failed:
+\begin{itemize}
+\item the tree is well formed, with one root and alternating roles;
+\item each reply is written after its parent;
+\item the active path is exactly the messages marked ``active'';
+\item siblings branch at the right point, with the right size;
+\item the timestamps match the recency level;
+\item each canary appears exactly once, in its own branch;
+\item no sibling value appears anywhere on the active path or in the question;
+\item the required fact sits at the stated position and nowhere else on the path;
+\item every message is within the length band.
+\end{itemize}
+Tests also deliberately corrupted scenarios (for example, copying a canary into the active path) and confirmed the validator caught each one.
+
+\section{Freezing the dataset}
+
+\begin{plain}
+Before any model saw the full dataset, the file was fingerprinted (sha256 \texttt{4c3e5380\dots c37d}), the fingerprint was saved, and the exact code version was labelled with the git tag \texttt{thesis-freeze-v1}. Anyone can regenerate the file from the seed and get the identical fingerprint. This shows the test was not adjusted after seeing results.
+\end{plain}
+
+\section{Loading into Traceback}
+
+The scenarios were loaded into a separate experiment database (a Neon project created only for this), using Traceback's own database schema and code. Each scenario became one normal Traceback session, with message ids like \texttt{exp-<scenario>-m1}, and \texttt{created\_at} set from the logical clock (one tick per minute). A safety guard refused to run any script against the production database. Loading was checked row by row and was repeatable: loading twice produced an identical database fingerprint.

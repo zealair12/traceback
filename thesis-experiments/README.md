@@ -149,3 +149,17 @@ the context are chance hits. The quality judge sees only the active path, the
 final message and the answer, so it cannot tell which condition produced the
 answer. The transcript uses plain speaker labels because OpenRouter's guardrail
 blocks bracketed role tags such as `[USER]` ("bracketed_role_spoofing").
+
+## Phase 7: analysis and paper
+
+```bash
+python3 -I analysis/build_table.py     # results/analysis/answers.csv (one row per answer) + scenarios.csv
+Rscript analysis/models.R              # statistics -> results/analysis/stats.txt and stats.json
+Rscript analysis/figures.R             # figures -> results/figures/ (titled) and results/figures/paper/ (IEEE column)
+cd docs/paper && tectonic -X compile paper.tex   # IEEE-format paper -> docs/paper/paper.pdf
+```
+
+Requires R (with lme4, emmeans, ggplot2, ragg, jsonlite) and Tectonic. Ancestor-only
+answers and irrelevant siblings have no leaks, so they are reported with exact
+Clopper-Pearson intervals and the leakage mixed model is fit on full tree vs
+window for the other three sibling types (complete separation otherwise).

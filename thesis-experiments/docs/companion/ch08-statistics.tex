@@ -1,0 +1,130 @@
+\chapter{The statistics, explained from zero}
+
+The paper's Analysis section packs many statistical terms into one paragraph. This chapter explains each one in the order you need them, with numbers from your results.
+
+\section{Rates and the unit of analysis}
+
+\begin{paper}
+The unit is the first run of each scenario $\times$ model $\times$ rule ($n=6{,}479$ answered).
+\end{paper}
+
+The \term{unit of analysis} is what one data point is. Here, one data point is one answer: one scenario, answered by one model, under one rule, on its first run. $720 \times 3 \times 3 = 6{,}480$, minus the one Mistral call that never produced an answer, is 6,479. The letter $n$ always means ``how many''.
+
+A \term{rate} or \term{proportion} is a count divided by a total. ``The full tree leaked in 32.4\% of answers with consistent siblings'' means 175 of 540 answers.
+
+\section{Confidence intervals}
+
+Your 720 scenarios are a sample of all the branched conversations that could exist. If you generated a different 720, you would get slightly different numbers. A \term{95\% confidence interval} is a range built so that, if you repeated the whole experiment many times, about 95\% of such ranges would contain the true value.
+
+\begin{plain}
+Read ``32.4\% [28.5, 36.5]'' as: ``we measured 32.4\%, and the true rate is very plausibly somewhere between 28.5\% and 36.5\%''. A narrow interval means a precise estimate. In the figures, these intervals are the small black error bars on top of each bar.
+\end{plain}
+
+\textbf{Exact (Clopper--Pearson) intervals.} For a rate, the paper uses the Clopper--Pearson method, which is ``exact'' in the sense that it never claims more precision than the data supports, even when the rate is 0\% or 100\%.
+
+\begin{example}
+Ancestor-only: 0 leaks in 2,160 answers. The rate is 0\%, but you cannot say the true rate is exactly zero from a finite sample. The exact interval is [0\%, 0.17\%]: the true rate is at most about 1 in 590. That is what ``exact 95\% upper bound 0.17\%'' in the abstract means.
+\end{example}
+
+\section{Differences between conditions}
+
+\term{Risk difference.} The difference between two rates, in percentage points. ``The window leaked more than the full tree for conflicting siblings by +25.5 points'' means 38.5\% minus about 15.6\% (adjusted by the model, below). Percentage \emph{points} are a plain subtraction; they are not a percentage of a percentage.
+
+\term{Mean difference.} The same idea for 1-to-5 scores. ``Window faithfulness was $-2.51$ points lower than ancestor-only'' means the average dropped from 4.78 to 2.27.
+
+\section{Odds and odds ratios}
+
+Logistic regression (next section) reports results as odds ratios, so you need these two ideas.
+
+\term{Odds.} If something happens with probability $p$, its odds are $p / (1 - p)$. A 20\% chance has odds $0.2 / 0.8 = 0.25$, ``1 to 4''. A 50\% chance has odds 1.
+
+\term{Odds ratio (OR).} The odds in one group divided by the odds in another. An OR of 1 means no difference. Above 1 means more likely; below 1 means less likely.
+
+\begin{example}
+The model reports an OR of 2.70 for late siblings compared with early ones: holding everything else equal, the odds of leakage are 2.7 times higher when the siblings were the most recent thing discussed. An OR of 0.12 for GPT compared with Gemini means GPT's odds of leaking are about one eighth of Gemini's.
+\end{example}
+
+\section{Logistic regression}
+
+\term{Regression} estimates how an outcome depends on several things at once, holding the others fixed. \term{Logistic} regression is the version for yes/no outcomes, like ``did this answer leak?''. It models the log of the odds as a sum of effects:
+\[\log\frac{p}{1-p} = \beta_0 + \beta_1 x_1 + \beta_2 x_2 + \cdots\]
+Each $\beta$ (``beta'') is an effect. $e^{\beta}$ is the odds ratio for that factor.
+
+\begin{plain}
+Instead of comparing one pair of groups at a time, the regression looks at all the answers together and asks: how much does each factor (condition, sibling type, depth, number of siblings, recency, fact position, model) change the chance of leaking, after accounting for all the others?
+\end{plain}
+
+\term{Interaction.} ``Condition $\times$ sibling type'' means the effect of the condition is allowed to be different for each sibling type. This matters because the window leaked \emph{more} than the full tree for conflicting siblings but \emph{less} for consistent ones; a model without the interaction would average those away.
+
+\section{Mixed models and random effects}
+
+\begin{paper}
+Leakage was modelled with a binomial generalized linear mixed model of condition $\times$ sibling type, depth, sibling count, recency, fact position and model, with a random intercept per scenario.
+\end{paper}
+
+The same scenario was answered under several conditions and by several models, so those answers are not independent: an especially tricky scenario makes every answer to it more likely to leak. A \term{random intercept per scenario} gives each scenario its own baseline tendency, so its quirks are not mistaken for an effect of the condition.
+
+\begin{plain}
+``Mixed'' means the model has \emph{fixed} effects (the things you deliberately varied, whose effects you want to measure) and \emph{random} effects (the things that just vary from one scenario to the next and need to be accounted for). ``Generalized linear'' and ``binomial'' mean it is a logistic regression for yes/no outcomes. The software is the R package \texttt{lme4}.
+\end{plain}
+
+\begin{why}
+``Model'' is a fixed effect, not a random one, because there are only three models; you cannot estimate a spread from three values. Your brief originally listed it as random; this was changed in Phase 0 for that reason.
+\end{why}
+
+\section{Complete separation: why ancestor-only is not in the regression}
+
+\begin{paper}
+Ancestor-only answers and irrelevant siblings produced no leaks, which makes a logistic coefficient for them unestimable (complete separation), so those cells are reported with exact Clopper--Pearson intervals and the mixed model is fit on full tree versus window for the remaining three sibling types.
+\end{paper}
+
+\begin{plain}
+Logistic regression estimates odds. If a group has \emph{zero} leaks, its odds are zero, and the log of zero is minus infinity. The estimate for that group runs off to infinity and the software either fails or reports nonsense. This is called complete separation. It happens here because ancestor-only \emph{cannot} leak (Proposition 3) and irrelevant siblings never leaked. The fix is to report those groups with exact intervals (0 of 2,160, at most 0.17\%) and run the regression only where leakage actually varies.
+\end{plain}
+
+\begin{ask}
+\textbf{``So you excluded your main condition from the main analysis?''}\par
+Its result is not in doubt; it is zero, with an exact bound. Putting a group that is zero by construction into a logistic regression would break the regression without adding information. The comparison the regression makes, full tree versus window, is where there is something to estimate. The same separation appeared in two other places for the same reason (when a fact was in the window, correctness was 99.8\%; when a consistent detail was used, correctness was 100\%), and each was handled with exact or direct methods instead.
+\end{ask}
+
+\section{Estimated marginal means}
+
+\term{Estimated marginal means} (from the R package \texttt{emmeans}) turn a fitted regression back into easy numbers: the predicted leak rate for each condition and sibling type, averaged fairly over the other factors. The model-based risk differences in the paper (for example $+25.5$ points for conflicting siblings) come from these.
+
+\section{p-values and the Holm correction}
+
+A \term{p-value} answers: if there were truly no difference, how surprising would a result this large be? A small p-value (conventionally below 0.05) means ``this would be very surprising by chance, so there probably is a real difference''. It does \emph{not} measure how big the difference is; the confidence interval does that.
+
+\begin{example}
+Window versus full tree, conflicting siblings: $p < 10^{-20}$. That is a 0.00000000000000000001 chance of a difference this large if there were none. With thousands of answers, even modest differences give tiny p-values, which is why the paper always reports the size of the effect and its interval as well.
+\end{example}
+
+\term{Multiple comparisons.} If you run many tests, some will look significant by luck. The \term{Holm correction} adjusts the p-values for the number of tests in a family: sort the p-values from smallest to largest; multiply the smallest by the number of tests, the next by one fewer, and so on, never letting an adjusted value drop below the one before it.
+
+\begin{example}[: a mini Holm example]
+Three tests with p-values 0.01, 0.02 and 0.04. Holm: $0.01 \times 3 = 0.03$; $0.02 \times 2 = 0.04$; $0.04 \times 1 = 0.04$. All three stay below 0.05. Without correction you would compare each raw value to 0.05; Holm is stricter but less strict than multiplying every value by 3.
+\end{example}
+
+\section{Paired comparisons: the Wilcoxon signed-rank test}
+
+For quality, each scenario was answered under ancestor-only and under the window by the same model, so the scores come in \term{pairs}. A paired comparison looks at the difference within each pair, which cancels out how hard each scenario was. The \term{Wilcoxon signed-rank test} asks whether those differences lean consistently to one side. It does not assume the differences follow a bell curve, which suits 1-to-5 scores.
+
+\section{The bootstrap}
+
+The \term{bootstrap} gets a confidence interval by simulation instead of a formula. Pretend your 720 scenarios are the whole world. Draw 720 scenarios from them at random \emph{with replacement} (so some appear twice and some not at all), recompute the statistic, and repeat 2,000 times. The middle 95\% of those 2,000 values is the interval.
+
+\begin{why}
+The paper resamples \emph{scenarios}, not individual answers, so all the answers to one scenario stay together. That respects the same non-independence the random effect handles in the regression.
+\end{why}
+
+\section{Difference-in-differences}
+
+To measure how recency and fact position work together in the window, the paper uses a \term{difference-in-differences}: how much does late versus early change correctness when the fact is near the current turn, minus how much it changes it when the fact is near the root?
+
+\begin{example}
+Fact near the current turn: late 44.8\%, early 100.0\%, a change of $-55.2$ points. Fact near the root: late 37.8\%, early 25.4\%, a change of $+12.4$ points. Difference-in-differences: $-55.2 - 12.4 = -67.6$ points (95\% interval $-78.8$ to $-56.4$). In words: late siblings badly hurt a recent fact, because they push it out of the window, but slightly help a root fact, which was going to be pushed out either way.
+\end{example}
+
+\section{Fisher's exact test}
+
+For a 2-by-2 table of counts (used the consistent detail or not, correct or not), \term{Fisher's exact test} gives the exact probability of a split at least this lopsided if there were no association. It is used where the regression would separate.

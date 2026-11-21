@@ -1,0 +1,266 @@
+\chapter{The formulas, one symbol at a time}
+
+This is the chapter to read slowly. Section III of the paper uses mathematical notation to say precisely what the three rules do, and then proves six short facts (``propositions'') about them. None of the mathematics is hard once each symbol is clear. Each proposition below gets four treatments: the paper's wording, the meaning in plain words, a check with the running example's real numbers, and a walk through the proof.
+
+\section{A notation primer}
+
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{@{}lX@{}}
+\toprule
+Symbol & How to read it and what it means \\
+\midrule
+$\{a, b, c\}$ & ``the set containing $a$, $b$ and $c$''. A \term{set} is a collection with no order and no repeats. \\
+$x \in U$ & ``$x$ is in $U$''; $x$ is one of the members of set $U$. \\
+$U \subseteq V$ & ``$U$ is a subset of $V$''; every member of $U$ is also in $V$. \\
+$U \cap V$ & ``$U$ intersect $V$''; the members in both. \\
+$U \cup V$ & ``$U$ union $V$''; the members in either. \\
+$U \,\dot\cup\, V$ & a \term{disjoint union}: a union where $U$ and $V$ share no members. \\
+$V \setminus U$ & ``$V$ minus $U$''; the members of $V$ that are not in $U$. \\
+$\varnothing$ & the empty set, with no members. \\
+$|U|$ & the number of members of $U$. \\
+$\sum_{u \in U} w(u)$ & ``the sum over every $u$ in $U$ of $w(u)$''; add up $w$ for each member. \\
+$f\colon X \to Y$ & a \term{function} $f$ that takes something from $X$ and gives something in $Y$. \\
+$\Pr(M \mid c)$ & ``the probability of $M$ given $c$''; how often $M$ happens when $c$ holds. \\
+$\mathbf{1}[\ldots]$ & an \term{indicator}: 1 if the statement in brackets is true, 0 if it is false. \\
+$\Theta(n^2)$, $O(n)$ & growth rates. $O(n)$ means ``grows no faster than proportionally to $n$''. $\Theta(n^2)$ means ``grows like $n^2$, both at least and at most up to a constant''. \\
+$\lfloor x \rfloor$ & the \term{floor} of $x$: round down to a whole number. $\lfloor 4/2 \rfloor = 2$, $\lfloor 5/2 \rfloor = 2$. \\
+$\square$ or $\blacksquare$ & end of a proof. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{The setting}
+
+\begin{paper}
+A session is a rooted tree $T=(V,E)$ of messages with root $r$ and parent map $p$. A logical clock $\tau$ is injective and increases along every edge, and each message has a token weight $w(v)>0$ under a fixed reference tokenizer; for $U\subseteq V$, $w(U)=\sum_{u\in U}w(u)$.
+\end{paper}
+
+Taking the sentence apart:
+
+\begin{itemize}
+\item \textbf{Session.} One conversation.
+\item \textbf{$T = (V, E)$.} A tree is described by two sets. $V$ (``vertices'') is the set of messages. $E$ (``edges'') is the set of parent--child links. In the running example, $V = \{m1, m2, \dots, m26\}$, so $|V| = 26$.
+\item \textbf{Root $r$.} The first message. In the example, $r = m1$.
+\item \textbf{Parent map $p$.} A function: $p(v)$ is the parent of message $v$. In the example, $p(m2) = m1$, $p(m5) = m4$, and $p(m23) = m4$. The root has no parent.
+\item \textbf{Logical clock $\tau$.} A function giving each message a whole number for when it was written: $\tau(m1) = 0$, $\tau(m2) = 1$, and so on up to $\tau(m26) = 25$. (The Greek letter $\tau$ is ``tau''.)
+\item \textbf{Injective.} No two messages share a time. Every message has its own number.
+\item \textbf{Increases along every edge.} A reply is always written after the message it replies to: $\tau(p(v)) < \tau(v)$.
+\item \textbf{Token weight $w(v) > 0$.} The number of reference tokens in message $v$. Every message has at least one token.
+\item \textbf{$w(U)$.} The total weight of a set of messages: add up their weights.
+\end{itemize}
+
+\begin{example}
+$w(m1) = 39$, $w(m2) = 67$. For the set $U = \{m1, m2\}$, $w(U) = 39 + 67 = 106$. For the whole tree, $w(V) = 1{,}336$.
+\end{example}
+
+\begin{paper}
+A question $q$ is asked as a child of an ask node $a$, later than every message. The active path is $A(a)=\{a,p(a),\dots,r\}$ and the sibling content is $S(a)=V\setminus A(a)$.
+\end{paper}
+
+\begin{itemize}
+\item \textbf{Ask node $a$.} The last message before the question. In the example, $a = m26$.
+\item \textbf{$A(a)$, the active path.} The ask node, its parent, its parent's parent, and so on up to the root. In the example:
+\[A(m26) = \{m26, m25, m24, m23, m4, m3, m2, m1\}.\]
+Note how the path jumps from m23 straight to m4: m23's parent is m4, because the main line resumed from m4 after the side branches.
+\item \textbf{$S(a) = V \setminus A(a)$, the sibling content.} Every message that is not on the active path. In the example, $S(m26) = \{m5, \dots, m22\}$, the 18 messages of the three side branches.
+\end{itemize}
+
+\begin{example}
+$w(A(a)) = 39+67+31+69+45+57+42+67 = 417$ and $w(S(a)) = 1{,}336 - 417 = 919$.
+\end{example}
+
+\section{The three rules as formulas}
+
+\begin{paper}
+Ancestor-only: $C_\anc=A(a)$, ordered root to node. Full tree: $C_\full=V$, ordered by $\tau$. Sliding window: $C_\win$ is the longest run of newest messages whose total weight is at most $B=w(A(a))$, never splitting a message.
+\end{paper}
+
+$C$ stands for ``context'': the set of messages a rule sends. The subscript names the rule. $B$ is the window's \term{budget}, defined as the weight of the active path.
+
+\begin{example}
+$C_\anc = A(a)$, weight 417. $C_\full = V$, weight 1,336. $B = 417$, and $C_\win = \{m20, \dots, m26\}$, weight 401 (worked out in Chapter 3).
+\end{example}
+
+\section{Proposition 1: token efficiency}
+
+\begin{paper}
+$C_\anc\subseteq C_\full$, and the token efficiency equals the siblings' share of the tree: $E=1-\dfrac{w(C_\anc)}{w(C_\full)}=\dfrac{w(S(a))}{w(V)}$.
+\end{paper}
+
+\begin{plain}
+Two claims. First, everything ancestor-only sends, the full tree also sends, so ancestor-only can never be bigger. Second, the fraction of tokens ancestor-only saves is exactly the fraction of the conversation taken up by abandoned branches. If side branches make up 70\% of the conversation, ancestor-only saves 70\%.
+\end{plain}
+
+\textbf{What $E$ is.} $E$ is \term{token efficiency}: one minus the ratio of the two sizes. If ancestor-only were the same size as the full tree, the ratio is 1 and $E = 0$ (no saving). If ancestor-only were tiny, $E$ is close to 1 (almost everything saved).
+
+\begin{example}
+$E = 1 - 417/1{,}336 = 1 - 0.312 = 0.688$, a saving of 68.8\%.\par
+$w(S(a))/w(V) = 919/1{,}336 = 0.688$. The two numbers agree, as the proposition says.
+\end{example}
+
+\textbf{The proof, step by step.}
+\begin{enumerate}
+\item Every message on the active path is a message of the tree, so $A(a) \subseteq V$, which means $C_\anc \subseteq C_\full$.
+\item Weights are positive, so a subset can never weigh more: $w(C_\anc) \le w(C_\full)$.
+\item Every message is either on the active path or not, never both. So $V$ splits into two non-overlapping parts, $V = A(a) \,\dot\cup\, S(a)$, and the weights add: $w(V) = w(A(a)) + w(S(a))$.
+\item Divide both sides by $w(V)$: $1 = \frac{w(A(a))}{w(V)} + \frac{w(S(a))}{w(V)}$. Rearranged, $1 - \frac{w(A(a))}{w(V)} = \frac{w(S(a))}{w(V)}$, which is the formula.
+\end{enumerate}
+
+\begin{plain}
+The proof is really just ``the whole is the sum of its two parts''. It is short because the claim is simple. Its value is that it turns ``how much does ancestor-only save?'' from an experimental question into arithmetic you can do from the tree alone, before running any model.
+\end{plain}
+
+\begin{ask}
+\textbf{``If it's just arithmetic, why measure it?''}\par
+To check the implementation, not the mathematics. The measured savings matched the formula in all 720 scenarios to within $1.1 \times 10^{-16}$ (the rounding limit of a computer). That shows the code builds the prompts exactly as defined. It also gives a planning tool: Traceback can predict its savings from the shape of a conversation.
+\end{ask}
+
+\section{Proposition 2: growth over a session}
+
+\begin{paper}
+If a session grows one message at a time, each step re-sends its context, weights lie in $[w_{\min},w_{\max}]$ and the answered depth is at most $D$, the cumulative full-tree cost is at least $w_{\min}n(n+1)/2=\Theta(n^2)$, while the cumulative ancestor-only cost is at most $w_{\max}n(D+1)=O(nD)$.
+\end{paper}
+
+\begin{plain}
+In a real chat, the prompt is re-sent on every turn. With the full tree, turn 1 sends 1 message, turn 2 sends 2, turn 3 sends 3, and so on. The total over a long conversation grows with the \emph{square} of its length. With ancestor-only, each turn sends only one path, whose length is limited by how deep the conversation goes. If depth stays bounded, the total grows only in a straight line.
+\end{plain}
+
+\textbf{The pieces.}
+\begin{itemize}
+\item $n$ is the number of messages so far. $V_t$ is the tree after $t$ messages, so $|V_t| = t$.
+\item $w_{\min}$ and $w_{\max}$ are the smallest and largest message weights.
+\item $D$ is the deepest depth that ever gets answered.
+\item $1 + 2 + \dots + n = n(n+1)/2$, a classic formula (try $n = 4$: $1+2+3+4 = 10 = 4 \times 5 / 2$).
+\end{itemize}
+
+\textbf{The proof.} At step $t$ the full tree has $t$ messages, each at least $w_{\min}$ tokens, so it costs at least $t \cdot w_{\min}$. Summing over $t = 1, \dots, n$ gives at least $w_{\min}(1 + 2 + \dots + n) = w_{\min} n(n+1)/2$. A path at depth $d_t$ has $d_t + 1$ messages, each at most $w_{\max}$, so it costs at most $(d_t + 1)w_{\max} \le (D+1)w_{\max}$; summing $n$ of these gives at most $w_{\max} n (D+1)$.
+
+\begin{example}
+Suppose every message is 50 tokens and the conversation reaches 100 messages, with depth never above 20. Full tree, total over the session: at least $50 \times 100 \times 101 / 2 = 252{,}500$ tokens. Ancestor-only: at most $50 \times 100 \times 21 = 105{,}000$. At 1,000 messages the full tree passes 25 million tokens, while ancestor-only stays at about 1 million.
+\end{example}
+
+\begin{why}
+This proposition is not tested in the experiment, which asks one question per scenario. It is there to explain why the token saving matters in practice: over a long session the gap is not a constant percentage but grows.
+\end{why}
+
+\section{Proposition 3: no sibling facts under ancestor-only}
+
+\begin{paper}
+If every message containing a fact $f$ lies in $S(a)$ and $q$ does not contain $f$, then $f$ is absent from the ancestor-only prompt.
+\end{paper}
+
+\begin{plain}
+If a piece of information only appears in abandoned branches (and not in the question), then ancestor-only cannot show it to the model, because ancestor-only only sends the active path and the question.
+\end{plain}
+
+\textbf{The proof.} The ancestor-only prompt is the text of the messages in $A(a)$ followed by $q$. The active path and the siblings share no messages ($A(a) \cap S(a) = \varnothing$). Every message containing $f$ is in $S(a)$, so none is in $A(a)$; and $q$ does not contain $f$. So $f$ is nowhere in the prompt.
+
+\begin{example}
+The canary \texttt{orbit\_y5y} appears only in m6, in branch s1. m6 is not on the active path, so the ancestor-only prompt never contains it. Across all 2,598 ancestor-only answers in the full run (including repeats), not one contained a canary.
+\end{example}
+
+\begin{plain}
+The consequence is important for measurement. Under ancestor-only, a model can only produce a sibling-only fact by \emph{chance}. For a random canary, chance is essentially zero. For a forced-choice value such as ``LRU'', chance is not zero: a model might guess a common option. That is why the paper measures leakage against what ancestor-only produces, not against zero.
+\end{plain}
+
+\section{Proposition 4: exposure times uptake}
+
+\begin{paper}
+Let $X_c(f)$ indicate that $f$ is in the prompt of rule $c$, $\pi_f$ the rate of mentioning $f$ without seeing it, and $u_c(f)$ the rate when exposed. $X_c(f)$ is a function of $(T,\tau,w,a)$ alone, and for a sibling-only fact $\Pr(M\mid c)-\Pr(M\mid\anc)=X_c(f)\,\bigl(u_c(f)-\pi_f\bigr)$.
+\end{paper}
+
+\textbf{The symbols.}
+\begin{itemize}
+\item $c$ is one of the rules: anc, full or win.
+\item $M$ is the event ``the model's answer mentions $f$''.
+\item $X_c(f)$ is the \term{exposure}: 1 if $f$ is in rule $c$'s prompt, 0 if not.
+\item $\pi_f$ (Greek ``pi'') is the \term{chance rate}: how often a model mentions $f$ without ever seeing it.
+\item $u_c(f)$ is the \term{uptake}: how often it mentions $f$ when $f$ is in the prompt.
+\item The left side is the \term{excess} mention rate of rule $c$ over ancestor-only.
+\end{itemize}
+
+\begin{plain}
+Leakage can be split into two parts. \emph{Exposure}: was the sibling fact in the prompt at all? That depends only on the tree and the rule, so it can be computed without running any model. \emph{Uptake}: when the fact was there, did the model use it? That needs the model. If the fact was not exposed, a rule cannot leak it beyond chance; if it was, the extra leakage is uptake minus chance.
+\end{plain}
+
+\textbf{The proof.} By Proposition 3, the ancestor-only rate is just the chance rate: $\Pr(M \mid \anc) = \pi_f$. Under rule $c$, there are two cases. If $X_c(f) = 0$, the fact is not in the prompt, so the rate is again $\pi_f$ and the difference is $0 = 0 \cdot (u_c - \pi_f)$. If $X_c(f) = 1$, the rate is $u_c(f)$ and the difference is $u_c(f) - \pi_f = 1 \cdot (u_c - \pi_f)$. Both cases match the formula.
+
+\begin{example}
+In the running example the window prompt (m20 to m26) contains no canary and no conflicting value: the planted items sit in the first exchange of each branch (m5--m6, m11--m12, m17--m18), and the window only reached m20. So $X_\win = 0$ for every planted item, and the window could not leak them. The full tree contains all of them ($X_\full = 1$); Gemini's full-tree answer used one, \texttt{orbit\_q8y}, in its config line.
+\end{example}
+
+\begin{why}
+This is why the experiment logs exposure for every single call, and why window leakage is analysed among exposed calls (``uptake''). In your dataset only 18\% of canaries landed in a window prompt, because they were planted early in each branch and the window keeps late messages. You chose to keep that design and analyse leakage conditional on exposure, rather than move the planted facts.
+\end{why}
+
+\section{Proposition 5: which messages the window keeps}
+
+\begin{paper}
+A message $m$ is in $C_\win$ if and only if $\sum_{u:\,\tau(u)\ge\tau(m)}w(u)\le B$. Hence, whenever $S(a)\neq\varnothing$, the root is never in the window, since that sum for $r$ is $w(V)=B+w(S(a))>B$.
+\end{paper}
+
+\textbf{Reading the condition.} $\sum_{u:\,\tau(u)\ge\tau(m)} w(u)$ means ``add up the weights of $m$ and every message written after it''. Call this $m$'s \term{suffix sum}. The proposition says: $m$ is in the window exactly when its suffix sum fits in the budget.
+
+\begin{plain}
+The window takes the newest messages first. A message gets in only if it and everything newer than it fit in the budget together. The very first message has everything newer than it, which is the whole conversation. If there are any side branches, the whole conversation is bigger than the active path, so the first message can never fit.
+\end{plain}
+
+\begin{example}
+Budget $B = 417$.\par
+m23: suffix sum $= 45 + 57 + 42 + 67 = 211 \le 417$, so m23 is in.\par
+m20: suffix sum $= 77 + 40 + 73 + 211 = 401 \le 417$, so m20 is in.\par
+m19: suffix sum $= 44 + 401 = 445 > 417$, so m19 is out.\par
+m1 (the root): suffix sum $= w(V) = 1{,}336 > 417$, so m1 is out. The decision ``let's go with LRU'' is gone.
+\end{example}
+
+\textbf{The proof.} The window adds messages newest-first and stops at the first one that does not fit. Because every weight is positive, each running total is bigger than the one before. So the messages that fit form an unbroken run starting from the newest, and a message is included exactly when the running total up to and including it, which is its suffix sum, is at most $B$. For the root, the suffix sum is $w(V)$; by Proposition 1's split, $w(V) = w(A(a)) + w(S(a)) = B + w(S(a))$, which is more than $B$ whenever there is at least one sibling message.
+
+\begin{example}
+Across all 720 scenarios, this test predicted correctly whether the required fact was in the window prompt every time (720 of 720). In the 360 scenarios where the fact sat at the root, it was in the window 0 times.
+\end{example}
+
+\section{Proposition 6: one-for-one displacement}
+
+\begin{paper}
+If $\sigma=w(C_\win\cap S(a))$ sibling tokens enter the window, at least $\sigma$ active-path tokens leave it, and the active messages lost are always the oldest. If all siblings are newer than $a$, the message $m$ holding the required fact survives if and only if $w(S(a))\le w(\{u\in A(a):\tau(u)<\tau(m)\})$.
+\end{paper}
+
+\textbf{The symbols.} $\sigma$ (Greek ``sigma'') is the number of sibling tokens inside the window. $C_\win \cap S(a)$ is ``the window's messages that are sibling messages''.
+
+\begin{plain}
+Three claims. (1) The window has the same budget as the active path, so every sibling token that gets in pushes out at least one active-path token. (2) The active messages pushed out are always the earliest ones. (3) When the siblings were all explored after the active path (``late'' siblings), a fact survives only if the siblings are no bigger than everything on the active path written before that fact.
+\end{plain}
+
+\begin{example}
+Window: m20, m21, m22 are sibling messages, so $\sigma = 77 + 40 + 73 = 190$. The active messages in the window are m23 to m26, weight 211. Active tokens lost: $417 - 211 = 206$, which is at least $\sigma = 190$, as claimed. The lost messages are m1, m2, m3, m4, the oldest four.
+\end{example}
+
+\textbf{The proof.} (1) The window's weight is its active part plus its sibling part, and that cannot exceed the budget: $w(C_\win \cap A(a)) + \sigma \le B = w(A(a))$. Rearranging, $w(A(a)) - w(C_\win \cap A(a)) \ge \sigma$; the left side is exactly the active tokens left out. (2) If an active message is kept, a newer active message has a smaller suffix sum, so by Proposition 5 it is kept too; the kept active messages are therefore always the newest ones. (3) With late siblings, everything newer than $m$ is the siblings plus the active messages from $m$ onward. Put that into Proposition 5's test with $B = w(A(a))$ and cancel the active part.
+
+\begin{example}
+For the 360 late-sibling scenarios, the survival condition in (3) was correct every time (360 of 360). It explains why the required fact survived in only 16.1\% of the late/current-turn cases: in most of them the siblings were heavier than the active messages before the fact.
+\end{example}
+
+\section{How the formulas connect to the results}
+
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{@{}lXl@{}}
+\toprule
+Proposition & What it predicts & What happened \\
+\midrule
+1 & Savings equal the siblings' share & Exact in 720/720 \\
+3 & No sibling canary under ancestor-only & 0 of 2,598 answers \\
+4 & Leakage needs exposure & Window leaks only where exposed \\
+5 & Root facts never in the window & 0 of 360 root scenarios \\
+5 & Exact list of messages the window keeps & 720/720 \\
+6 & Late siblings: survival condition & 360/360 \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{ask}
+\textbf{``Your propositions are trivial. Where is the contribution?''}\par
+They are meant to be simple; your advisor asked for minimal theory. Their contribution is that they turn the results from observations into consequences. Without them, ``the window got half the answers wrong'' is a finding that might depend on the models. With them, it follows from how a recency window works on a branched conversation: whenever side branches take up space, the earliest active messages must be dropped. The models only decide what happens next, once the fact is gone.
+\end{ask}

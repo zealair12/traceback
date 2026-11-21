@@ -1,0 +1,79 @@
+\chapter{Running the models}
+
+\section{Which models and why}
+
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{@{}llX@{}}
+\toprule
+Role & Model & Why this one \\
+\midrule
+Frontier & Gemini 4 Argon & Google's flagship; accepts temperature 0 and a seed, so it is as repeatable as possible. Cheaper than OpenAI's flagship. \\
+Mid-size & GPT-6.2 Sol & OpenAI's model below its flagship; the most widely used family. Cannot be set to temperature 0 through OpenRouter. \\
+Open weights & Mistral Large 4 & Its weights are public; served only by Mistral, so there is no variation between hosting providers. \\
+Judge & Claude Opus 5.5 & A strong model from a family not being tested, so it is not grading its own family. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{why}
+Three families (Google, OpenAI, Mistral) so the result is not about one company's models. A judge from a fourth family (Anthropic) avoids a model grading answers from its own family, which is a known source of bias.
+\end{why}
+
+\section{How each call was made}
+
+\begin{itemize}
+\item Every call went through OpenRouter, \textbf{locked to one provider} with fallbacks off. A log line records which provider actually answered; every call used the intended one.
+\item The \textbf{same system prompt} for every model and condition.
+\item \textbf{Lowest reasoning setting} and a \textbf{1,024-token output cap}.
+\item \textbf{Temperature 0} where the API allowed it.
+\item No tools and no web search: the model sees only the prompt.
+\end{itemize}
+
+\section{How many calls}
+
+Each model answered all 720 scenarios under all 3 conditions: 2,160 calls. A random 10\% of scenarios (73 of them) were run three times instead of once, to measure how much answers change between runs. That adds $73 \times 3 \times 2 = 438$ calls, for $2{,}160 + 438 = 2{,}598$ per model and 7,794 in total.
+
+\begin{plain}
+The ``first run'' of each scenario is the one used in the main analysis (6,479 answered calls across the three models). The two extra runs exist only to check repeatability.
+\end{plain}
+
+\section{The pilot}
+
+Before the full run, 20 scenarios were run on Mistral (60 calls, \$0.08). The pilot checked that canaries could be detected, that ancestor-only produced no false alarms, that window sizes were close to their budget, and that cost matched the estimate (it was 1.06 times the estimate). It also showed that simple string matching over-counts leaks, which is why a judge was added for leaks.
+
+\section{Deviation D1: Mistral answers that were cut off}
+
+\begin{plain}
+On 107 of 2,598 Mistral calls, the model spent almost its whole 1,024-token allowance thinking and ran out before finishing its answer; 62 of those produced no answer at all. These 107 calls were re-sent with exactly the same prompt and a larger allowance of 4,096 tokens. 106 then finished normally. One still did not, and counts as ``no answer''.
+\end{plain}
+
+\begin{why}
+The alternative was to count the 107 as failures. They were spread across all three conditions (4.6\% ancestor, 3.9\% full tree, 3.8\% window), slightly more often under ancestor-only, so leaving them would have wrongly made ancestor-only look worse. Raising the cap only matters for calls that hit it: every other call finished well under 1,024 tokens, so giving them more room would not have changed them. The replay used the exact logged prompt, byte for byte. This is recorded as deviation D1 in \texttt{DEVIATIONS.md}, with the rule that the replayed answers replace the originals.
+\end{why}
+
+A side observation: 59 of the 107 replays finished in under 1,024 tokens even though the identical prompt had not the first time. So Mistral is not fully deterministic even at temperature 0 with a fixed seed. The repeat runs measure how much this matters (Chapter 9).
+
+\section{Cost}
+
+\begin{center}
+\small
+\begin{tabular}{@{}lr@{}}
+\toprule
+Item & Cost (US\$) \\
+\midrule
+Gemini 4 Argon (2,598 calls) & 7.74 \\
+GPT-6.2 Sol (2,598 calls) & 5.96 \\
+Mistral Large 4 (2,598 calls + 107 replays) & 3.79 \\
+Pilot & 0.08 \\
+Judge (9,257 judgments + pilots) & 68.55 \\
+\midrule
+Total (components rounded) & 86.11 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{ask}
+\textbf{``GPT couldn't be run at temperature 0. Doesn't that make its results unreliable?''}\par
+It makes them slightly less repeatable, and that was measured rather than assumed. In the repeated scenarios, GPT's leakage outcome was identical across all three runs in 98.6 to 100\% of cases and its correctness in 91.8 to 100\%. The conclusions are the same for all three models, including the two run at temperature 0.
+\end{ask}

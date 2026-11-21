@@ -1,0 +1,38 @@
+\chapter{Decision log}
+
+Every significant decision, in the order it was made, with the reason. Use this when someone asks ``why did you do it that way?''
+
+{\small
+\begin{xltabular}{\textwidth}{@{}p{3.6cm}XX@{}}
+\toprule
+Decision & Why & Alternative considered \\
+\midrule
+\endhead
+Separate experiment database (new Neon project) & Never touch production data; a branch of production would copy real users' chats & Branch of production DB; local Postgres \\
+Safety guard with a production deny list & Every script refuses to run unless the database is the experiment one & None; required by your brief \\
+Reuse Traceback's schema, client and SQL & Evaluate the production rule, not an imitation & Rewrite the queries in the experiment \\
+Six domains, seven options each & Results not tied to one topic; enough wrong options for five conflicting siblings & Fewer domains \\
+Forced-choice answers & Correctness checkable automatically & Free-form answers judged by a model \\
+Siblings fork at exchange $\lfloor d/2 \rfloor$ & Makes root versus current-turn fact position meaningful & Fork from root, or from last message \\
+Question asked at $\max(t)+1$ & User returns to the main line after exploring; full tree includes late siblings & Ask at the ask node's time \\
+Template filler, no LLM rewrite & Planted facts stay exactly in place; fully reproducible & LLM paraphrase of filler \\
+Canary in each sibling's first exchange (kept) & Your choice after the dry run; analyse window leakage conditional on exposure & Move canaries to the last exchange \\
+Window budget = ancestor-only size & Isolates choosing from size & Fixed budget for all \\
+Whole messages only in the window & Never cut a message mid-sentence & Truncate the last message \\
+Gemini, GPT, Mistral under test; Claude Opus as judge & Three families; judge from a fourth & Other model sets \\
+Each model pinned to one provider, no fallbacks & Same hardware and precision for every call & Default routing \\
+Lowest reasoning, 1,024-token cap & Same setting for all; low cost & Default reasoning \\
+10\% of scenarios run 3 times & Measure run-to-run variance & No repeats \\
+D1: replay 107 cut-off Mistral calls at 4,096 & Avoid bias against ancestor-only; same prompts byte for byte & Count as failures \\
+Leak judge on flagged answers & String matching counts mentions and rejections as leaks & String matching only \\
+Quality judge sees only active path, question, answer & Blind to condition & Show full context \\
+Transcript with plain speaker labels & OpenRouter's guardrail blocked bracketed role tags & None \\
+Judged correctness as main measure & Matches the brief's ``asserted'' definition & Strict string rule only (reported as a check) \\
+Model as a fixed effect & Only three models & Random effect (as in brief) \\
+Exact intervals for zero-leak cells & Logistic regression cannot estimate zero cells & Force them into the model \\
+Scenario-cluster bootstrap & Keeps each scenario's answers together & Resample individual answers \\
+Holm correction within families & Control false positives from many tests & No correction; Bonferroni \\
+Human sample of 150, stratified & Validate the judge; enough for a useful kappa & Smaller sample; second AI judge \\
+\bottomrule
+\end{xltabular}
+}

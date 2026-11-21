@@ -1,0 +1,60 @@
+\chapter{Glossary}
+
+\begin{description}[style=nextline,leftmargin=0pt,font=\bfseries]
+\item[Active path] The messages from the root down to the current message: the ask node and all its ancestors. Written $A(a)$.
+\item[Ancestor] A message's parent, its parent's parent, and so on to the root.
+\item[Ancestor-only prompting] Sending only the active path to the model. Traceback's rule; condition ``ancestor''.
+\item[API] A way for one program to call another over the internet.
+\item[Ask node] The last message before the final question. Written $a$.
+\item[Bootstrap] Getting a confidence interval by resampling the data many times.
+\item[Budget ($B$)] The window's token limit, equal to the active path's weight.
+\item[Canary] A random, unguessable string planted in a sibling branch to detect leaks.
+\item[Cell] One combination of the five controlled variables; 144 in total.
+\item[Chance hit] A sibling value in an answer that was not in the prompt; a guess, not a leak.
+\item[Clopper--Pearson interval] An exact confidence interval for a rate.
+\item[Cohen's kappa] Agreement between two raters, corrected for chance.
+\item[Complete separation] When a group has no positive outcomes, so logistic regression cannot estimate it.
+\item[Condition] One of the three context rules: ancestor-only, full tree, sliding window.
+\item[Confidence interval] A range that very plausibly contains the true value; 95\% here.
+\item[Consistent sibling] A side branch that agrees with the main decision and adds a true detail.
+\item[Conflicting sibling] A side branch that chooses a different option.
+\item[Context window] The maximum number of tokens a model can read at once.
+\item[Correct (judged)] States the required value and does not assert a conflicting one (judge decides).
+\item[Correct (strict)] States the required value and contains no conflicting value at all.
+\item[CTE, recursive] A SQL query that repeats a step; used to climb from a message to the root.
+\item[Depth] Number of steps from the root; also the number of active exchanges before the question.
+\item[Deviation D1] The documented re-run of 107 cut-off Mistral calls.
+\item[Difference-in-differences] How much one factor's effect changes across levels of another.
+\item[Exchange] One user message and the assistant's reply.
+\item[Exposure ($X_c$)] Whether a sibling fact is in a rule's prompt.
+\item[Fisher's exact test] Exact test of association in a 2-by-2 table.
+\item[Fork point] The active message the sibling branches split from; exchange $\lfloor d/2 \rfloor$.
+\item[Full tree] Sending every message, in time order. Condition ``full\_tree''.
+\item[Hash (sha256)] A fingerprint of a file; proves it did not change.
+\item[Holm correction] An adjustment of p-values for running many tests.
+\item[Irrelevant sibling] A side branch about an unrelated topic.
+\item[Judge] Claude Opus 5.5, used to label leaks and score quality.
+\item[Leakage] The answer uses (not just mentions) a detail found only in a sibling branch.
+\item[Logical clock ($\tau$)] Whole numbers giving the order messages were written.
+\item[Logistic regression] Regression for yes/no outcomes; effects reported as odds ratios.
+\item[Misleading sibling] A side branch with a plausible but false claim.
+\item[Mixed model] A regression with fixed effects and random effects (here, per scenario).
+\item[Odds, odds ratio] $p/(1-p)$; and the ratio of two odds.
+\item[OpenRouter] A service that gives one API for many models.
+\item[p-value] How surprising a result would be if there were no real difference.
+\item[Provider] The company that actually runs a model for OpenRouter.
+\item[Reference tokenizer] \texttt{o200k\_base}, used to count tokens the same way for all models.
+\item[Risk difference] The difference between two rates, in percentage points.
+\item[Root] The first message ($r$).
+\item[Scenario] One synthetic test conversation with a known answer.
+\item[Sibling, sibling branch] A branch not on the active path; $S(a)$ is all sibling content.
+\item[Sliding window] Sending the newest whole messages up to the budget. Condition ``window''.
+\item[Suffix sum] A message's weight plus the weight of every newer message.
+\item[System prompt] The fixed instruction at the start of every prompt.
+\item[Temperature] A randomness setting; 0 is as repeatable as possible.
+\item[Token] A chunk of text that models read; about three quarters of a word.
+\item[Token efficiency ($E$)] The share of the full tree's tokens that ancestor-only leaves out.
+\item[Uptake ($u_c$)] How often a model uses a sibling fact when it is in the prompt.
+\item[Weight ($w$)] A message's token count under the reference tokenizer.
+\item[Wilcoxon signed-rank test] A paired test that does not assume a bell curve.
+\end{description}

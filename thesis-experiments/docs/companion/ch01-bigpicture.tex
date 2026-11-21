@@ -1,0 +1,67 @@
+\chapter{The big picture}
+
+\section{The problem in one story}
+
+Imagine you are building an invoicing app and you ask an AI assistant for help with the database. You decide the users table will use a particular kind of primary key. Later you wonder whether another kind would be better, so you explore it for a few messages, decide against it, and go back to what you were doing. Then you explore a third option, and abandon that too. Twenty messages later you ask: ``remind me, which key type did we settle on?''
+
+In a normal chat app, everything you typed is one long list. When you send a new message, the app sends the model the whole list, including all the options you explored and rejected. Two things go wrong:
+
+\begin{enumerate}
+\item \textbf{Cost.} The model is paid by the amount of text it reads. Re-sending abandoned explorations on every turn wastes money, and the waste grows as the conversation gets longer.
+\item \textbf{Confusion.} The rejected options are still in front of the model. It may answer with one of them, mix them together, or mention them when they no longer matter. Research shows models get less reliable as their input gets longer and noisier.
+\end{enumerate}
+
+\section{What Traceback does differently}
+
+Traceback, the app you built, stores a conversation as a \term{tree} instead of a list. Every time you explore an alternative, you make a new \term{branch}. When you are back on your main line of thought and send a message, Traceback sends the model only the messages on the path from the very first message down to where you are now. The abandoned branches are left out. Your paper calls this \term{ancestor-only prompting}, because the messages on that path are the \emph{ancestors} of your current message.
+
+\begin{plain}
+A list-based chat shows the model your whole diary, rejected ideas included. Traceback shows the model only the pages that lead to where you are now.
+\end{plain}
+
+\section{Why this needed an experiment}
+
+That sounds obviously better, so why test it? Because there is a simpler alternative that also saves money: just send the most recent messages, up to some size limit. This is called a \term{sliding window}, and many products do it. A sliding window is also short and cheap. So the real question is not ``is a shorter prompt better than a longer one?'' (earlier work already showed that) but:
+
+\begin{quote}
+\emph{If two prompts are the same size, does choosing the messages by their position in the tree beat choosing them by how recent they are?}
+\end{quote}
+
+That is the gap your thesis fills. The earlier branching study by Chickmagalur Nanjundappa and Maaheshwari (reference [4] in the paper) compared branching with the full history only, so it could not tell whether branching helped because the prompt was \emph{better chosen} or merely \emph{shorter}. Your experiment holds the size fixed by giving the sliding window exactly the same number of tokens as the ancestor-only prompt.
+
+\section{The research question and the hypothesis}
+
+\begin{paper}
+This paper asks whether, at an equal token budget, selecting context by tree structure rather than by recency reduces sibling leakage (the model using facts from inactive branches), how leakage varies by sibling type, and whether answer quality on the active path is preserved.
+\end{paper}
+
+\begin{plain}
+Three questions in one sentence:
+\begin{enumerate}
+\item With the same amount of text, does Traceback's way of choosing messages stop the model from using information from abandoned branches more often than the ``most recent messages'' way does?
+\item Does that depend on what kind of information the abandoned branch contained?
+\item Do the answers stay just as good?
+\end{enumerate}
+\end{plain}
+
+The hypothesis predicted three things: ancestor-only uses fewer tokens than sending the whole tree; both other methods let abandoned-branch information leak into answers; and ancestor-only keeps answer quality high when the needed fact is on the current path. All three held.
+
+\section{The answer in one paragraph}
+
+Across 720 test conversations and three AI models, ancestor-only prompting used 62.7\% fewer tokens than sending the whole tree. It never once used information from an abandoned branch (0 of 2,160 answers). It was correct 99.9\% of the time. Sending the whole tree was almost as correct (98.6\%) but cost three times as much, used abandoned-branch details in up to a third of answers, and scored lower on quality. The equal-size sliding window was correct only 52.0\% of the time, because it throws away the \emph{oldest} messages first, which is often exactly where the important decision was made. A short piece of mathematics predicts all of this exactly, and the experiment confirmed every prediction in every scenario.
+
+\begin{ask}
+\textbf{``In one sentence, what did you find?''}\par
+At the same prompt size, choosing context by the conversation tree kept every abandoned-branch detail out of the answer and kept answers correct, while choosing by recency lost the early decisions and got about half the answers wrong.
+\end{ask}
+
+\section{Words you will see constantly}
+
+You will meet these many times; Chapter 2 defines them properly.
+\begin{itemize}
+\item \term{Active path}: the messages from the first message down to the current one. What ancestor-only sends.
+\item \term{Sibling} or \term{sibling branch}: a branch that split off and is not on the active path. An abandoned exploration.
+\item \term{Leakage}: the model using a fact that only existed in a sibling branch.
+\item \term{Condition} or \term{rule}: one of the three ways of building the prompt (ancestor-only, full tree, sliding window).
+\item \term{Scenario}: one synthetic test conversation with a known correct answer.
+\end{itemize}
